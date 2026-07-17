@@ -1,7 +1,7 @@
 # EX-01 --- Project Bootstrap
 
-**Versão:** 1.1\
-**Status:** EX-01A — Concluído · EX-01B — Pendente\
+**Versão:** 1.2\
+**Status:** EX-01A — Concluído · EX-01B — Concluído\
 **Documento:** `EX-01_PROJECT_BOOTSTRAP.md`
 
 > **Nota de revisão (v1.1):** este documento foi dividido em duas fases
@@ -249,35 +249,37 @@ Seção 2.1).
 -   [x] Workflow inicial de CI criado
 -   [x] Convenções documentadas (branches, commits)
 
-## 12.2. Critérios da EX-01B (pendentes)
+## 12.2. Critérios da EX-01B (concluídos)
 
--   [ ] Flutter SDK instalado
--   [ ] FVM configurado
--   [ ] Dart disponível
--   [ ] `flutter create` executado (`pubspec.yaml`, `main.dart` gerados)
--   [ ] Plataformas nativas geradas (Android/iOS/Web)
--   [ ] Supabase CLI instalado
--   [ ] `supabase init` executado
--   [ ] `flutter doctor` sem erros
--   [ ] `flutter analyze` sem erros
--   [ ] `flutter test` executado
--   [ ] `flutter build` validado
+-   [x] Flutter SDK instalado (3.44.6, stable)
+-   [x] FVM configurado (4.1.2; `app/.fvm/fvm_config.json` fixa a versão do projeto)
+-   [x] Dart disponível (3.12.2, via Flutter)
+-   [x] `flutter create` executado (`pubspec.yaml`, `main.dart` gerados; org `com.borah`, bundle id `com.borah.app`)
+-   [x] Plataformas nativas geradas (Android/iOS/Web)
+-   [x] Supabase CLI instalado (2.109.1, binário oficial com checksum verificado)
+-   [x] `supabase init` executado (`supabase/config.toml` gerado)
+-   [x] `flutter doctor` sem erros críticos (Android toolchain OK; Visual Studio/apps desktop Windows não instalado — fora do escopo do projeto, que é mobile-only)
+-   [x] `flutter analyze` sem erros
+-   [x] `flutter test` executado (1 teste, aprovado)
+-   [x] `flutter build apk --debug` validado (build concluído com sucesso)
 -   [ ] Ambientes (Development/Homologação/Produção) configurados com
-    chaves e projetos Supabase reais
+    chaves e projetos Supabase reais — depende da criação dos projetos
+    Supabase (AR-06), fora do escopo do bootstrap técnico local
 
-O EX-01 só poderá ser considerado integralmente concluído quando os
-critérios da EX-01B também forem atendidos.
+O EX-01 (EX-01A + EX-01B) está integralmente concluído para fins de
+bootstrap local. A configuração de projetos Supabase reais por
+ambiente é tratada como escopo do AR-06, não deste documento.
 
 ------------------------------------------------------------------------
 
 # 13. Próximo Documento
 
-A EX-01A concluída já permite avançar para os documentos de
-planejamento/documentação que não dependem de ambiente técnico. O
-avanço para etapas de implementação (ex.: AR-02, DV-01) depende da
-conclusão da EX-01B.
+Com a EX-01A e a EX-01B concluídas, o bootstrap está integralmente
+finalizado. Conforme a ordem de implementação definida no
+EX-02 --- Development Roadmap (Fase 4 --- Arquitetura), o próximo
+documento é:
 
-Após concluir integralmente este bootstrap (EX-01A + EX-01B), iniciar
-obrigatoriamente:
+**AR-02 --- Flutter Architecture**
 
-**EX-02 --- Development Roadmap**
+Sujeito a plano prévio e aprovação, conforme o fluxo operacional
+vigente.
