@@ -7,6 +7,7 @@ app/.flutter-plugins-dependencies
 app/.packages
 app/build/
 app/.fvm/flutter_sdk
+app/.fvm/versions/
 
 # Supabase local
 supabase/.branches/
