@@ -1,8 +1,18 @@
 # EX-01 --- Project Bootstrap
 
-**Versão:** 1.0\
-**Status:** Approved\
+**Versão:** 1.1\
+**Status:** EX-01A — Concluído · EX-01B — Pendente\
 **Documento:** `EX-01_PROJECT_BOOTSTRAP.md`
+
+> **Nota de revisão (v1.1):** este documento foi dividido em duas fases
+> independentes, EX-01A e EX-01B (ver Seção 2.1), para refletir que a
+> preparação do repositório não depende de ferramentas de ambiente
+> (Flutter SDK, FVM, Supabase CLI, Docker), enquanto o bootstrap técnico
+> depende. A Seção 3 (Stack Oficial) e a Seção 4 (Estrutura do Monorepo)
+> permanecem como registro histórico da concepção original deste
+> documento e não foram alteradas por esta revisão — a arquitetura de
+> backend vigente do projeto é a definida no
+> `docs/knowledge-base/adr/ADR-0001-backend-architecture-supabase.md`.
 
 ------------------------------------------------------------------------
 
@@ -25,6 +35,47 @@ Este documento estabelece:
 -   Git Flow
 -   CI/CD
 -   Ferramentas obrigatórias
+
+------------------------------------------------------------------------
+
+# 2.1. Divisão em Fases — EX-01A e EX-01B
+
+O bootstrap do BORAH é dividido em duas fases independentes, com
+critérios de aceite e status próprios (ver Seção 12).
+
+## EX-01A — Estrutura do Projeto
+
+Preparação do repositório, executável em qualquer ambiente, sem
+dependência de Flutter SDK, Docker, Supabase CLI ou outras ferramentas
+externas:
+
+-   Estrutura de diretórios
+-   README mínimo
+-   `.gitignore`
+-   `.env.example`
+-   Estrutura de pastas do Supabase
+-   Workflow inicial de CI
+-   Preparação do repositório (inicialização Git, commit inicial)
+
+**Status: Concluído.**
+
+## EX-01B — Bootstrap Técnico
+
+Atividades dependentes do ambiente de desenvolvimento:
+
+-   `flutter create`
+-   `pubspec.yaml`
+-   FVM
+-   Flutter SDK
+-   Plataformas Android/iOS/Web
+-   Supabase CLI
+-   `supabase init`
+-   `flutter doctor`
+-   `flutter analyze`
+-   `flutter test`
+-   `flutter build`
+
+**Status: Pendente**, até que um ambiente com essas ferramentas esteja disponível.
 
 ------------------------------------------------------------------------
 
@@ -184,19 +235,49 @@ Toda alteração relevante deve atualizar:
 
 # 12. Critérios de Aceite
 
-O projeto estará pronto para desenvolvimento quando:
+Os critérios foram divididos entre as duas fases do bootstrap (ver
+Seção 2.1).
 
--   Estrutura criada
--   Ambientes definidos
--   CI configurado
--   Convenções documentadas
--   Ferramentas instaladas
--   Repositório inicializado
+## 12.1. Critérios da EX-01A (concluídos)
+
+-   [x] Estrutura de diretórios criada
+-   [x] Repositório inicializado (Git + commit inicial)
+-   [x] README mínimo criado
+-   [x] `.gitignore` configurado
+-   [x] `.env.example` criado
+-   [x] Estrutura de pastas do Supabase criada
+-   [x] Workflow inicial de CI criado
+-   [x] Convenções documentadas (branches, commits)
+
+## 12.2. Critérios da EX-01B (pendentes)
+
+-   [ ] Flutter SDK instalado
+-   [ ] FVM configurado
+-   [ ] Dart disponível
+-   [ ] `flutter create` executado (`pubspec.yaml`, `main.dart` gerados)
+-   [ ] Plataformas nativas geradas (Android/iOS/Web)
+-   [ ] Supabase CLI instalado
+-   [ ] `supabase init` executado
+-   [ ] `flutter doctor` sem erros
+-   [ ] `flutter analyze` sem erros
+-   [ ] `flutter test` executado
+-   [ ] `flutter build` validado
+-   [ ] Ambientes (Development/Homologação/Produção) configurados com
+    chaves e projetos Supabase reais
+
+O EX-01 só poderá ser considerado integralmente concluído quando os
+critérios da EX-01B também forem atendidos.
 
 ------------------------------------------------------------------------
 
 # 13. Próximo Documento
 
-Após concluir este bootstrap, iniciar obrigatoriamente:
+A EX-01A concluída já permite avançar para os documentos de
+planejamento/documentação que não dependem de ambiente técnico. O
+avanço para etapas de implementação (ex.: AR-02, DV-01) depende da
+conclusão da EX-01B.
+
+Após concluir integralmente este bootstrap (EX-01A + EX-01B), iniciar
+obrigatoriamente:
 
 **EX-02 --- Development Roadmap**
