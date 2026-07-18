@@ -93,3 +93,11 @@ class AuthController extends Notifier<AuthStatus> {
 final authControllerProvider = NotifierProvider<AuthController, AuthStatus>(
   AuthController.new,
 );
+
+/// Deriva o id do usuário logado a partir do AuthStatus, evitando repetir
+/// `if (auth is Authenticated)` em cada módulo que precisa da identidade
+/// do usuário atual (ex.: DV-02).
+final currentUserIdProvider = Provider<String?>((ref) {
+  final status = ref.watch(authControllerProvider);
+  return status is Authenticated ? status.userId : null;
+});

@@ -1,5 +1,5 @@
-/// Validadores de formulário compartilhados entre Login, Cadastro e
-/// Recuperação de Senha (DV-01).
+/// Validadores de formulário compartilhados entre módulos (promovido do
+/// DV-01 para `core/` quando o DV-02 passou a precisar dos mesmos).
 String? validateEmail(String? value) {
   if (value == null || !value.contains('@')) {
     return 'Informe um e-mail válido.';

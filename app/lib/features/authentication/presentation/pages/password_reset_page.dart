@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/validators/app_validators.dart';
+import '../../../../core/widgets/app_primary_button.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
-import '../validators/auth_validators.dart';
 import '../widgets/auth_error_listener.dart';
-import '../widgets/auth_primary_button.dart';
-import '../widgets/auth_text_field.dart';
 
 class PasswordResetPage extends ConsumerStatefulWidget {
   const PasswordResetPage({super.key});
@@ -63,14 +63,14 @@ class _PasswordResetPageState extends ConsumerState<PasswordResetPage> {
             key: _formKey,
             child: Column(
               children: [
-                AuthTextField(
+                AppTextField(
                   controller: _emailController,
                   label: 'E-mail',
                   keyboardType: TextInputType.emailAddress,
                   validator: validateEmail,
                 ),
                 const SizedBox(height: 24),
-                AuthPrimaryButton(
+                AppPrimaryButton(
                   label: 'Enviar link',
                   isLoading: isLoading,
                   onPressed: _submit,

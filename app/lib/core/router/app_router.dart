@@ -9,12 +9,25 @@ import '../../features/authentication/presentation/pages/password_reset_page.dar
 import '../../features/authentication/presentation/pages/signup_page.dart';
 import '../../features/authentication/presentation/pages/splash_page.dart';
 import '../../features/authentication/presentation/states/auth_status.dart';
+import '../../features/users/presentation/pages/change_avatar_page.dart';
+import '../../features/users/presentation/pages/edit_profile_page.dart';
+import '../../features/users/presentation/pages/profile_page.dart';
+import '../../features/users/presentation/pages/settings_page.dart';
 
 const _authRoutes = {
   '/login',
   '/signup',
   '/password-reset',
   '/email-verification',
+};
+
+/// Rotas que exigem usuário autenticado (DV-01 "proteção de rotas").
+const _protectedRoutes = {
+  '/home',
+  '/profile',
+  '/profile/edit',
+  '/profile/avatar',
+  '/settings',
 };
 
 /// Notifica o GoRouter quando o AuthStatus muda, sem recriar o router
@@ -41,9 +54,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       final status = ref.read(authControllerProvider);
       final isAuthRoute = _authRoutes.contains(location);
+      final isProtectedRoute = _protectedRoutes.contains(location);
 
       if (status is Authenticated && isAuthRoute) return '/home';
-      if (status is! Authenticated && location == '/home') return '/login';
+      if (status is! Authenticated && isProtectedRoute) return '/login';
 
       return null;
     },
@@ -63,15 +77,46 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/home',
         builder: (context, state) => const _BootstrapPlaceholderPage(),
       ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfilePage(),
+      ),
+      GoRoute(
+        path: '/profile/avatar',
+        builder: (context, state) => const ChangeAvatarPage(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsPage(),
+      ),
     ],
   );
 });
 
+/// Placeholder até a implementação da Home real (fora do escopo do DV-01/DV-02).
 class _BootstrapPlaceholderPage extends StatelessWidget {
   const _BootstrapPlaceholderPage();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('BORAH')));
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('BORAH'),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/profile'),
+              child: const Text('Ver perfil'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

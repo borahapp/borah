@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/validators/app_validators.dart';
+import '../../../../core/widgets/app_primary_button.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
-import '../validators/auth_validators.dart';
 import '../widgets/auth_error_listener.dart';
-import '../widgets/auth_primary_button.dart';
-import '../widgets/auth_text_field.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -60,21 +60,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 32),
-                  AuthTextField(
+                  AppTextField(
                     controller: _emailController,
                     label: 'E-mail',
                     keyboardType: TextInputType.emailAddress,
                     validator: validateEmail,
                   ),
                   const SizedBox(height: 16),
-                  AuthTextField(
+                  AppTextField(
                     controller: _passwordController,
                     label: 'Senha',
                     obscureText: true,
                     validator: (value) => validateRequired(value, 'sua senha'),
                   ),
                   const SizedBox(height: 24),
-                  AuthPrimaryButton(
+                  AppPrimaryButton(
                     label: 'Entrar',
                     isLoading: isLoading,
                     onPressed: _submit,
