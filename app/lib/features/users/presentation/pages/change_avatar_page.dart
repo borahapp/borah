@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/services/image_picker_service.dart';
 import '../../../../core/widgets/app_primary_button.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/user_profile_controller.dart';
@@ -23,41 +23,28 @@ class ChangeAvatarPage extends ConsumerStatefulWidget {
 }
 
 class _ChangeAvatarPageState extends ConsumerState<ChangeAvatarPage> {
+  final _imagePickerService = ImagePickerService();
   Uint8List? _pickedBytes;
   String? _pickedExtension;
 
   Future<void> _pickImage() async {
-    final file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
-    if (file == null) return;
-
-    final bytes = await file.readAsBytes();
-    if (bytes.lengthInBytes > _maxAvatarBytes) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A imagem deve ter no máximo 5 MB.')),
+    try {
+      final picked = await _imagePickerService.pickAndValidate(
+        maxBytes: _maxAvatarBytes,
+        allowedExtensions: _allowedExtensions,
       );
-      return;
-    }
+      if (picked == null) return;
 
-    final extension = file.name.split('.').last.toLowerCase();
-    if (!_allowedExtensions.contains(extension)) {
+      setState(() {
+        _pickedBytes = picked.bytes;
+        _pickedExtension = picked.extension;
+      });
+    } on ImageValidationException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Formato não suportado. Use JPG, PNG ou WEBP.'),
-        ),
-      );
-      return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
-
-    setState(() {
-      _pickedBytes = bytes;
-      _pickedExtension = extension;
-    });
   }
 
   void _upload() {

@@ -8,6 +8,7 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.validator,
+    this.onSubmit,
   });
 
   final TextEditingController controller;
@@ -16,6 +17,10 @@ class AppTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
+  /// Chamado quando o usuário confirma o campo (Enter/"concluído" no
+  /// teclado) — usado por campos de busca/filtro (DV-03).
+  final void Function(String?)? onSubmit;
+
   @override
   Widget build(BuildContext context) {
     return TextFormField(
@@ -23,6 +28,7 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
+      onFieldSubmitted: onSubmit,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),

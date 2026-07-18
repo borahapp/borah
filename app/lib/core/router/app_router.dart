@@ -9,6 +9,9 @@ import '../../features/authentication/presentation/pages/password_reset_page.dar
 import '../../features/authentication/presentation/pages/signup_page.dart';
 import '../../features/authentication/presentation/pages/splash_page.dart';
 import '../../features/authentication/presentation/states/auth_status.dart';
+import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
+import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
+import '../../features/restaurants/presentation/pages/restaurants_search_page.dart';
 import '../../features/users/presentation/pages/change_avatar_page.dart';
 import '../../features/users/presentation/pages/edit_profile_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
@@ -21,14 +24,21 @@ const _authRoutes = {
   '/email-verification',
 };
 
-/// Rotas que exigem usuário autenticado (DV-01 "proteção de rotas").
-const _protectedRoutes = {
+/// Prefixos de rota que exigem usuário autenticado (DV-01 "proteção de
+/// rotas"). Prefixo (não igualdade exata) para cobrir sub-rotas e rotas
+/// com parâmetro, como `/restaurants/:id`.
+const _protectedRoutePrefixes = [
   '/home',
   '/profile',
-  '/profile/edit',
-  '/profile/avatar',
   '/settings',
-};
+  '/restaurants',
+];
+
+bool _isProtectedRoute(String location) {
+  return _protectedRoutePrefixes.any(
+    (prefix) => location == prefix || location.startsWith('$prefix/'),
+  );
+}
 
 /// Notifica o GoRouter quando o AuthStatus muda, sem recriar o router
 /// inteiro (evita reset da pilha de navegação a cada mudança de estado).
@@ -54,10 +64,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       final status = ref.read(authControllerProvider);
       final isAuthRoute = _authRoutes.contains(location);
-      final isProtectedRoute = _protectedRoutes.contains(location);
 
       if (status is Authenticated && isAuthRoute) return '/home';
-      if (status is! Authenticated && isProtectedRoute) return '/login';
+      if (status is! Authenticated && _isProtectedRoute(location)) {
+        return '/login';
+      }
 
       return null;
     },
@@ -93,6 +104,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (context, state) => const SettingsPage(),
       ),
+      GoRoute(
+        path: '/restaurants',
+        builder: (context, state) => const RestaurantsSearchPage(),
+      ),
+      GoRoute(
+        path: '/restaurants/new',
+        builder: (context, state) => const CreateRestaurantPage(),
+      ),
+      GoRoute(
+        path: '/restaurants/:id',
+        builder: (context, state) =>
+            RestaurantDetailPage(restaurantId: state.pathParameters['id']!),
+      ),
     ],
   );
 });
@@ -113,6 +137,10 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
             TextButton(
               onPressed: () => GoRouter.of(context).push('/profile'),
               child: const Text('Ver perfil'),
+            ),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/restaurants'),
+              child: const Text('Ver restaurantes'),
             ),
           ],
         ),
