@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
+import '../validators/auth_validators.dart';
+import '../widgets/auth_error_listener.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 
@@ -41,13 +43,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final status = ref.watch(authControllerProvider);
     final isLoading = status is AuthLoading;
 
-    ref.listen<AuthStatus>(authControllerProvider, (previous, next) {
-      if (next is AuthError) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(next.message)));
-      }
-    });
+    listenForAuthErrors(ref, context);
 
     return Scaffold(
       body: SafeArea(
@@ -68,19 +64,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     controller: _emailController,
                     label: 'E-mail',
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) =>
-                        (value == null || !value.contains('@'))
-                        ? 'Informe um e-mail válido.'
-                        : null,
+                    validator: validateEmail,
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
                     controller: _passwordController,
                     label: 'Senha',
                     obscureText: true,
-                    validator: (value) => (value == null || value.length < 6)
-                        ? 'A senha deve ter ao menos 6 caracteres.'
-                        : null,
+                    validator: (value) => validateRequired(value, 'sua senha'),
                   ),
                   const SizedBox(height: 24),
                   AuthPrimaryButton(

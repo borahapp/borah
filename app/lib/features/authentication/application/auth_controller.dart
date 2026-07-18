@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../data/auth_repository_impl.dart';
 import '../domain/auth_repository.dart';
@@ -44,7 +43,7 @@ class AuthController extends Notifier<AuthStatus> {
     try {
       await _repository.signUp(name: name, email: email, password: password);
       state = EmailVerificationPending(email);
-    } on AuthException catch (e) {
+    } on AuthRepositoryException catch (e) {
       state = AuthError(e.message);
     } catch (_) {
       state = const AuthError('Não foi possível concluir o cadastro.');
@@ -59,7 +58,7 @@ class AuthController extends Notifier<AuthStatus> {
       state = current == null
           ? const Unauthenticated()
           : Authenticated(userId: current.userId, email: current.email);
-    } on AuthException catch (e) {
+    } on AuthRepositoryException catch (e) {
       state = AuthError(e.message);
     } catch (_) {
       state = const AuthError(
@@ -83,7 +82,7 @@ class AuthController extends Notifier<AuthStatus> {
     try {
       await _repository.requestPasswordReset(email);
       state = PasswordResetSent(email);
-    } on AuthException catch (e) {
+    } on AuthRepositoryException catch (e) {
       state = AuthError(e.message);
     } catch (_) {
       state = const AuthError('Não foi possível enviar o link de recuperação.');

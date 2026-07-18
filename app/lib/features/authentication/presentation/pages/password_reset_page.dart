@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
+import '../validators/auth_validators.dart';
+import '../widgets/auth_error_listener.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
 
@@ -35,13 +37,7 @@ class _PasswordResetPageState extends ConsumerState<PasswordResetPage> {
     final status = ref.watch(authControllerProvider);
     final isLoading = status is AuthLoading;
 
-    ref.listen<AuthStatus>(authControllerProvider, (previous, next) {
-      if (next is AuthError) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(next.message)));
-      }
-    });
+    listenForAuthErrors(ref, context);
 
     if (status is PasswordResetSent) {
       return Scaffold(
@@ -71,9 +67,7 @@ class _PasswordResetPageState extends ConsumerState<PasswordResetPage> {
                   controller: _emailController,
                   label: 'E-mail',
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) => (value == null || !value.contains('@'))
-                      ? 'Informe um e-mail válido.'
-                      : null,
+                  validator: validateEmail,
                 ),
                 const SizedBox(height: 24),
                 AuthPrimaryButton(

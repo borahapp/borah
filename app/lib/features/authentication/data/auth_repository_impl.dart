@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/auth_repository.dart';
@@ -15,20 +16,32 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) {
-    return _datasource.signUp(name: name, email: email, password: password);
+    return _guard(
+      () => _datasource.signUp(name: name, email: email, password: password),
+    );
   }
 
   @override
   Future<void> signIn({required String email, required String password}) {
-    return _datasource.signIn(email: email, password: password);
+    return _guard(() => _datasource.signIn(email: email, password: password));
   }
 
   @override
-  Future<void> signOut() => _datasource.signOut();
+  Future<void> signOut() => _guard(_datasource.signOut);
 
   @override
   Future<void> requestPasswordReset(String email) {
-    return _datasource.requestPasswordReset(email);
+    return _guard(() => _datasource.requestPasswordReset(email));
+  }
+
+  /// Traduz `AuthException` (supabase_flutter) para `AuthRepositoryException`,
+  /// para que nenhuma camada acima de `data/` precise conhecer o Supabase.
+  Future<void> _guard(Future<void> Function() action) async {
+    try {
+      await action();
+    } on AuthException catch (e) {
+      throw AuthRepositoryException(e.message);
+    }
   }
 
   @override

@@ -5,7 +5,6 @@ import 'package:app/features/authentication/presentation/states/auth_status.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -75,7 +74,7 @@ void main() {
           email: any(named: 'email'),
           password: any(named: 'password'),
         ),
-      ).thenThrow(const AuthException('Invalid login credentials'));
+      ).thenThrow(const AuthRepositoryException('Invalid login credentials'));
 
       await container
           .read(authControllerProvider.notifier)
@@ -111,7 +110,7 @@ void main() {
           email: any(named: 'email'),
           password: any(named: 'password'),
         ),
-      ).thenThrow(const AuthException('User already registered'));
+      ).thenThrow(const AuthRepositoryException('User already registered'));
 
       await container
           .read(authControllerProvider.notifier)
@@ -147,7 +146,7 @@ void main() {
     test('falha no envio -> AuthError', () async {
       when(
         () => repository.requestPasswordReset(any()),
-      ).thenThrow(const AuthException('User not found'));
+      ).thenThrow(const AuthRepositoryException('User not found'));
 
       await container
           .read(authControllerProvider.notifier)
