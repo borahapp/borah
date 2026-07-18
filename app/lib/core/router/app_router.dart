@@ -12,6 +12,10 @@ import '../../features/authentication/presentation/states/auth_status.dart';
 import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
 import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
 import '../../features/restaurants/presentation/pages/restaurants_search_page.dart';
+import '../../features/reviews/presentation/pages/create_review_page.dart';
+import '../../features/reviews/presentation/pages/edit_review_page.dart';
+import '../../features/reviews/presentation/pages/review_detail_page.dart';
+import '../../features/reviews/presentation/pages/reviews_list_page.dart';
 import '../../features/users/presentation/pages/change_avatar_page.dart';
 import '../../features/users/presentation/pages/edit_profile_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
@@ -32,6 +36,7 @@ const _protectedRoutePrefixes = [
   '/profile',
   '/settings',
   '/restaurants',
+  '/reviews',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -116,6 +121,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/restaurants/:id',
         builder: (context, state) =>
             RestaurantDetailPage(restaurantId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/restaurants/:id/reviews',
+        builder: (context, state) =>
+            ReviewsListPage(restaurantId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/restaurants/:id/reviews/new',
+        builder: (context, state) =>
+            CreateReviewPage(restaurantId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reviews/:id',
+        builder: (context, state) =>
+            ReviewDetailPage(reviewId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reviews/:id/edit',
+        builder: (context, state) =>
+            EditReviewPage(reviewId: state.pathParameters['id']!),
       ),
     ],
   );

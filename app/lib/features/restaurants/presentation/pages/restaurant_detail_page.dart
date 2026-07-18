@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/image_picker_service.dart';
 import '../../application/restaurant_detail_controller.dart';
@@ -81,6 +82,8 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
           averageRating: restaurant.averageRating,
           totalReviews: restaurant.totalReviews,
           onChangeCoverImage: _changeCoverImage,
+          onViewReviews: () =>
+              context.push('/restaurants/${widget.restaurantId}/reviews'),
         ),
       },
     );
@@ -98,6 +101,7 @@ class _DetailView extends StatelessWidget {
     required this.averageRating,
     required this.totalReviews,
     required this.onChangeCoverImage,
+    required this.onViewReviews,
   });
 
   final String name;
@@ -109,6 +113,7 @@ class _DetailView extends StatelessWidget {
   final double? averageRating;
   final int totalReviews;
   final VoidCallback onChangeCoverImage;
+  final VoidCallback onViewReviews;
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +149,11 @@ class _DetailView extends StatelessWidget {
           OutlinedButton(
             onPressed: onChangeCoverImage,
             child: const Text('Alterar foto de capa'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: onViewReviews,
+            child: const Text('Ver avaliações'),
           ),
         ],
       ),
