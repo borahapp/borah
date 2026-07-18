@@ -15,10 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Versao alinhada ao .fvm/fvm_config.json assim que o FVM for inicializado (AR-03).
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: app/.fvm/fvm_config.json
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
 
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
