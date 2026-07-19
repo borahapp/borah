@@ -45,6 +45,43 @@ class RestaurantRemoteDatasource {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// Ranking (DV-05 §6): média desc, total de avaliações desc, mais
+  /// recente desc, nome asc como desempate final. Sem `ranking_position`
+  /// armazenado - a posição é derivada de `page`/`limit`/índice pela
+  /// camada de aplicação (DV-05 não tem tabela própria).
+  Future<List<Map<String, dynamic>>> listRanked({
+    String? city,
+    String? category,
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+
+    var builder = _client
+        .from(_table)
+        .select()
+        .eq('status', 'active')
+        .isFilter('deleted_at', null)
+        .not('average_rating', 'is', null);
+
+    if (city != null && city.isNotEmpty) {
+      builder = builder.eq('city', city);
+    }
+    if (category != null && category.isNotEmpty) {
+      builder = builder.eq('category', category);
+    }
+
+    final rows = await builder
+        .order('average_rating', ascending: false)
+        .order('total_reviews', ascending: false)
+        .order('updated_at', ascending: false)
+        .order('name', ascending: true)
+        .range(from, to);
+
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<Map<String, dynamic>> fetchById(String id) {
     return _client.from(_table).select().eq('id', id).single();
   }

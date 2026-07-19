@@ -19,6 +19,17 @@ class RestaurantRepositoryException implements Exception {
 abstract interface class RestaurantRepository {
   Future<PagedResult<Restaurant>> search(RestaurantSearchFilters filters);
 
+  /// Consulta ordenada por relevância (média desc, total de avaliações
+  /// desc, mais recente desc, nome asc - DV-05 §6) - usada pelo
+  /// `RankingRepository`, que delega para este método em vez de duplicar
+  /// a construção de consulta em um datasource próprio.
+  Future<PagedResult<Restaurant>> listRanked({
+    String? city,
+    String? category,
+    required int page,
+    required int limit,
+  });
+
   Future<Restaurant> getById(String id);
 
   Future<Restaurant> create({

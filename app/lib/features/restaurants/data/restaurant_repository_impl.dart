@@ -40,6 +40,33 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
   }
 
   @override
+  Future<PagedResult<Restaurant>> listRanked({
+    String? city,
+    String? category,
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listRanked(
+        city: city,
+        category: category,
+        page: page,
+        limit: limit,
+      );
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      return PagedResult<Restaurant>(
+        items: pageRows.map(_mapRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
+    });
+  }
+
+  @override
   Future<Restaurant> getById(String id) {
     return _guard(() async {
       final row = await _datasource.fetchById(id);
