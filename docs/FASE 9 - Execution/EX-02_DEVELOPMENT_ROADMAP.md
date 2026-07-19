@@ -120,6 +120,10 @@ Nunca iniciar DV seguinte sem concluir o atual.
 
 ## Fase 6 --- QA
 
+**Status: Em andamento.** Ver `EX-10_FASE_6_QA_STATUS.md` para o
+progresso detalhado (diagnóstico, rodadas concluídas, evolução da
+suíte de testes e itens explicitamente fora do escopo atual).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
