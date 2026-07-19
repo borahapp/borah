@@ -153,10 +153,12 @@ autorrevisão → Code Review Final → aprovação → merge para `develop`.
 # 7. Estado para Retomada
 
 - **Branch principal de desenvolvimento:** `develop`
-- **Último commit estável:** `5bc35fa` (`docs(ex-09): close FASE 5 with
-  completion report and roadmap status`, em
-  `feature/fase-5-completion-report`, mesclado a `develop` na aprovação
-  deste relatório)
+- **Último commit estável:** conteúdo consolidado no commit `57def28`
+  (`docs(ex-09): fix merge count and add Estado para Retomada section`);
+  um commit adicional apenas ajusta esta própria referência de hash
+  (sem mudança de conteúdo) antes do merge por fast-forward para
+  `develop` - o HEAD de `develop` após a aprovação deste relatório é o
+  commit estável de referência.
 - **Fase concluída:** FASE 5 --- Desenvolvimento
 - **Próxima fase do roadmap:** FASE 6 --- QA (EX-02 §4)
 - **Data da última atualização da SSOT:** 2026-07-20
