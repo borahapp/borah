@@ -16,6 +16,10 @@ import '../../features/administration/presentation/pages/admin_users_page.dart';
 import '../../features/administration/presentation/pages/audit_log_page.dart';
 import '../../features/administration/presentation/pages/moderation_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
+import '../../features/notifications/domain/app_notification.dart';
+import '../../features/notifications/presentation/pages/notification_detail_page.dart';
+import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/rankings/presentation/pages/rankings_page.dart';
 import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
 import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
@@ -55,6 +59,7 @@ const _protectedRoutePrefixes = [
   '/feed',
   '/users',
   '/admin',
+  '/notifications',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -217,6 +222,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/audit-logs',
         builder: (context, state) => const AuditLogPage(),
       ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: '/notifications/preferences',
+        builder: (context, state) => const NotificationPreferencesPage(),
+      ),
+      GoRoute(
+        path: '/notifications/:id',
+        builder: (context, state) => NotificationDetailPage(
+          notification: state.extra! as AppNotification,
+        ),
+      ),
     ],
   );
 });
@@ -257,6 +276,10 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
             TextButton(
               onPressed: () => GoRouter.of(context).push('/admin'),
               child: const Text('Painel administrativo'),
+            ),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/notifications'),
+              child: const Text('Ver notificações'),
             ),
           ],
         ),
