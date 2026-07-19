@@ -9,6 +9,7 @@ import '../../features/authentication/presentation/pages/password_reset_page.dar
 import '../../features/authentication/presentation/pages/signup_page.dart';
 import '../../features/authentication/presentation/pages/splash_page.dart';
 import '../../features/authentication/presentation/states/auth_status.dart';
+import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/rankings/presentation/pages/rankings_page.dart';
 import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
 import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
@@ -39,6 +40,7 @@ const _protectedRoutePrefixes = [
   '/restaurants',
   '/reviews',
   '/rankings',
+  '/favorites',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -148,6 +150,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/rankings',
         builder: (context, state) => const RankingsPage(),
       ),
+      GoRoute(
+        path: '/favorites',
+        builder: (context, state) => const FavoritesPage(),
+      ),
     ],
   );
 });
@@ -176,6 +182,10 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
             TextButton(
               onPressed: () => GoRouter.of(context).push('/rankings'),
               child: const Text('Ver ranking'),
+            ),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/favorites'),
+              child: const Text('Ver favoritos'),
             ),
           ],
         ),

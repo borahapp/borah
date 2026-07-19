@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/image_picker_service.dart';
+import '../../../authentication/application/auth_controller.dart';
+import '../../../favorites/application/favorite_toggle_controller.dart';
+import '../../../favorites/presentation/states/favorite_toggle_status.dart';
 import '../../application/restaurant_detail_controller.dart';
 import '../states/restaurant_detail_status.dart';
 
@@ -10,9 +13,8 @@ import '../states/restaurant_detail_status.dart';
 const _maxCoverBytes = 10 * 1024 * 1024;
 const _allowedExtensions = {'jpg', 'jpeg', 'png', 'webp'};
 
-/// Tela de Detalhes (DV-03 §6/UX-02 §9). "Favoritar" e "Adicionar ao
-/// evento" do wireframe pertencem a outros módulos (DV-06/DV-07) e não
-/// são exibidos aqui ainda.
+/// Tela de Detalhes (DV-03 §6/UX-02 §9). "Adicionar ao evento" do
+/// wireframe pertence ao DV-07 e não é exibido aqui ainda.
 class RestaurantDetailPage extends ConsumerStatefulWidget {
   const RestaurantDetailPage({super.key, required this.restaurantId});
 
@@ -33,7 +35,20 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
       ref
           .read(restaurantDetailControllerProvider.notifier)
           .load(widget.restaurantId);
+      final userId = ref.read(currentUserIdProvider);
+      if (userId == null) return;
+      ref
+          .read(favoriteToggleControllerProvider.notifier)
+          .load(userId, widget.restaurantId);
     });
+  }
+
+  void _toggleFavorite() {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    ref
+        .read(favoriteToggleControllerProvider.notifier)
+        .toggle(userId, widget.restaurantId);
   }
 
   Future<void> _changeCoverImage() async {
@@ -61,9 +76,24 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(restaurantDetailControllerProvider);
+    final favoriteStatus = ref.watch(favoriteToggleControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Restaurante')),
+      appBar: AppBar(
+        title: const Text('Restaurante'),
+        actions: [
+          IconButton(
+            icon: Icon(switch (favoriteStatus) {
+              FavoriteToggleLoaded(:final isFavorited) ||
+              FavoriteToggleError(
+                :final isFavorited,
+              ) => isFavorited ? Icons.favorite : Icons.favorite_border,
+              _ => Icons.favorite_border,
+            }),
+            onPressed: _toggleFavorite,
+          ),
+        ],
+      ),
       body: switch (status) {
         RestaurantDetailInitial() ||
         RestaurantDetailLoading() ||
