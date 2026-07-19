@@ -35,6 +35,25 @@ class ReviewRemoteDatasource {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  Future<List<Map<String, dynamic>>> listByUser(
+    String userId, {
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+
+    final rows = await _client
+        .from(_table)
+        .select()
+        .eq('user_id', userId)
+        .isFilter('deleted_at', null)
+        .order('created_at', ascending: false)
+        .range(from, to);
+
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<Map<String, dynamic>> fetchById(String id) {
     return _client
         .from(_table)

@@ -21,6 +21,14 @@ abstract interface class ReviewRepository {
     required int limit,
   });
 
+  /// Avaliações de um usuário específico (DV-07 - aba "avaliações" do
+  /// Perfil público). Mesma entidade `Review`, apenas outro filtro.
+  Future<PagedResult<Review>> listByUser(
+    String userId, {
+    required int page,
+    required int limit,
+  });
+
   Future<Review> getById(String id);
 
   Future<Review> create({

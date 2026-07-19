@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/reviews_controller.dart';
 import '../states/reviews_status.dart';
+import '../widgets/review_summary_tile.dart';
 
 /// Tela de Lista de avaliações de um restaurante (DV-04).
 class ReviewsListPage extends ConsumerStatefulWidget {
@@ -50,11 +51,8 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
           itemCount: result.items.length,
           itemBuilder: (context, index) {
             final review = result.items[index];
-            return ListTile(
-              title: Text(review.rating.toStringAsFixed(1)),
-              subtitle: review.comment != null && review.comment!.isNotEmpty
-                  ? Text(review.comment!)
-                  : null,
+            return ReviewSummaryTile(
+              review: review,
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

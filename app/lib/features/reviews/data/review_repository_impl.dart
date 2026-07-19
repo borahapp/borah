@@ -41,6 +41,31 @@ class ReviewRepositoryImpl implements ReviewRepository {
   }
 
   @override
+  Future<PagedResult<Review>> listByUser(
+    String userId, {
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listByUser(
+        userId,
+        page: page,
+        limit: limit,
+      );
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      return PagedResult<Review>(
+        items: pageRows.map(_mapRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
+    });
+  }
+
+  @override
   Future<Review> getById(String id) {
     return _guard(() async {
       final row = await _datasource.fetchById(id);

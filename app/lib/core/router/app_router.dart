@@ -18,6 +18,11 @@ import '../../features/reviews/presentation/pages/create_review_page.dart';
 import '../../features/reviews/presentation/pages/edit_review_page.dart';
 import '../../features/reviews/presentation/pages/review_detail_page.dart';
 import '../../features/reviews/presentation/pages/reviews_list_page.dart';
+import '../../features/social/presentation/pages/comments_page.dart';
+import '../../features/social/presentation/pages/feed_page.dart';
+import '../../features/social/presentation/pages/follow_list_page.dart';
+import '../../features/social/presentation/pages/public_profile_page.dart';
+import '../../features/social/presentation/states/follow_list_status.dart';
 import '../../features/users/presentation/pages/change_avatar_page.dart';
 import '../../features/users/presentation/pages/edit_profile_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
@@ -41,6 +46,8 @@ const _protectedRoutePrefixes = [
   '/reviews',
   '/rankings',
   '/favorites',
+  '/feed',
+  '/users',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -154,6 +161,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/favorites',
         builder: (context, state) => const FavoritesPage(),
       ),
+      GoRoute(path: '/feed', builder: (context, state) => const FeedPage()),
+      GoRoute(
+        path: '/reviews/:id/comments',
+        builder: (context, state) =>
+            CommentsPage(reviewId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/users/:id',
+        builder: (context, state) =>
+            PublicProfilePage(userId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/users/:id/followers',
+        builder: (context, state) => FollowListPage(
+          userId: state.pathParameters['id']!,
+          type: FollowListType.followers,
+        ),
+      ),
+      GoRoute(
+        path: '/users/:id/following',
+        builder: (context, state) => FollowListPage(
+          userId: state.pathParameters['id']!,
+          type: FollowListType.following,
+        ),
+      ),
     ],
   );
 });
@@ -186,6 +218,10 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
             TextButton(
               onPressed: () => GoRouter.of(context).push('/favorites'),
               child: const Text('Ver favoritos'),
+            ),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/feed'),
+              child: const Text('Ver feed'),
             ),
           ],
         ),

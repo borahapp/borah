@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/services/image_picker_service.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -14,7 +15,8 @@ const _maxPhotoBytes = 10 * 1024 * 1024;
 const _allowedExtensions = {'jpg', 'jpeg', 'png', 'webp'};
 
 /// Tela de Detalhes de uma avaliação (DV-04). Curtir, editar, excluir
-/// (lógico) e anexar fotos - comentários (DV-07) não são exibidos aqui.
+/// (lógico) e anexar fotos - comentários e compartilhamento (DV-07) têm
+/// tela/ação próprias, acessadas a partir daqui.
 class ReviewDetailPage extends ConsumerStatefulWidget {
   const ReviewDetailPage({super.key, required this.reviewId});
 
@@ -73,6 +75,14 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
     ref.read(reviewDetailControllerProvider.notifier).delete(widget.reviewId);
   }
 
+  /// Compartilhamento nativo de texto simples (DV-07 decisão 6) - sem
+  /// Deep Link nesta versão.
+  void _share(double rating) {
+    Share.share(
+      'Confira esta avaliação no BORAH: nota ${rating.toStringAsFixed(1)}.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(reviewDetailControllerProvider);
@@ -119,6 +129,9 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
           onAddPhoto: _addPhoto,
           onEdit: () => context.push('/reviews/${widget.reviewId}/edit'),
           onDelete: _delete,
+          onShare: () => _share(review.rating),
+          onViewComments: () =>
+              context.push('/reviews/${widget.reviewId}/comments'),
         ),
       },
     );
@@ -138,6 +151,8 @@ class _DetailView extends StatelessWidget {
     required this.onAddPhoto,
     required this.onEdit,
     required this.onDelete,
+    required this.onShare,
+    required this.onViewComments,
   });
 
   final double rating;
@@ -151,6 +166,8 @@ class _DetailView extends StatelessWidget {
   final VoidCallback onAddPhoto;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onShare;
+  final VoidCallback onViewComments;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +194,14 @@ class _DetailView extends StatelessWidget {
                 onPressed: onToggleLike,
               ),
               Text('$likesCount'),
+              const Spacer(),
+              IconButton(icon: const Icon(Icons.share), onPressed: onShare),
             ],
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: onViewComments,
+            child: const Text('Ver comentários'),
           ),
           if (photoUrls.isNotEmpty) ...[
             const SizedBox(height: 16),
