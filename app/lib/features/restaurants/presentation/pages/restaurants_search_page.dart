@@ -45,6 +45,7 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
+            tooltip: 'Adicionar restaurante',
             onPressed: () => context.push('/restaurants/new'),
           ),
         ],
