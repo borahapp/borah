@@ -98,6 +98,11 @@ dados - APIs - Infraestrutura
 
 ## Fase 5 --- Desenvolvimento
 
+**Status: Concluída (2026-07-20).** Ver
+`EX-09_FASE_5_COMPLETION_REPORT.md` para o relatório de encerramento
+(módulos entregues, decisões arquiteturais, lacunas documentais e
+dependências adiadas por infraestrutura).
+
 Implementar todos os documentos DV-\* individualmente.
 
 Para cada DV:
