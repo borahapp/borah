@@ -131,18 +131,39 @@ autorrevisão → Code Review Final → aprovação → merge para `develop`.
   sem percentual-alvo medido nesta fase, sem serviço externo de
   cobertura (Codecov/SonarCloud) integrado
 - **`flutter analyze`:** sem problemas em toda a FASE 5
-- **Feature branches criadas:** 13 (`feature/ar-06-...`,
+- **Feature branches criadas até o fim da FASE 5:** 13 (`feature/ar-06-...`,
   `feature/ar-12-...`, `feature/dv-01-...` a `feature/dv-11-dv-12-closure`) -
-  todas mantidas vivas, nenhuma excluída
-- **`develop`:** avançou de `3a37f0f` (fim da FASE 4) até `af4a805`
-  (fim da FASE 5) via 12 merges fast-forward, um por módulo/fechamento
-- **`main`:** intocada desde `3a37f0f` - nenhuma promoção para produção
-  ocorreu durante a FASE 5 (decisão consistente: `main` só recebe merge
-  mediante aprovação explícita separada, ainda não solicitada)
+  todas mantidas vivas, nenhuma excluída. (Uma 14ª,
+  `feature/fase-5-completion-report`, foi criada depois, só para este
+  próprio relatório - não contabilizada acima porque não existia
+  enquanto `develop` estava em `af4a805`.)
+- **`develop`:** avançou de `6702de0` (último commit da FASE 4,
+  `feature/ar-12-secrets-management`) até `af4a805` (fim da FASE 5) via
+  **11 merges fast-forward** - um por módulo (DV-01 a DV-10) mais o
+  fechamento do DV-11/DV-12. Os merges de `ar-06`/`ar-12` (`fdf9bbb`,
+  `6702de0`) antecedem esse intervalo: são FASE 4, não FASE 5, mesmo
+  tendo ocorrido cronologicamente depois de `3a37f0f`.
+- **`main`:** intocada em `3a37f0f` desde o fim da FASE 4 - nenhuma
+  promoção para produção ocorreu durante toda a FASE 5 (decisão
+  consistente: `main` só recebe merge mediante aprovação explícita
+  separada, ainda não solicitada)
 
 ------------------------------------------------------------------------
 
-# 7. Encerramento
+# 7. Estado para Retomada
+
+- **Branch principal de desenvolvimento:** `develop`
+- **Último commit estável:** `5bc35fa` (`docs(ex-09): close FASE 5 with
+  completion report and roadmap status`, em
+  `feature/fase-5-completion-report`, mesclado a `develop` na aprovação
+  deste relatório)
+- **Fase concluída:** FASE 5 --- Desenvolvimento
+- **Próxima fase do roadmap:** FASE 6 --- QA (EX-02 §4)
+- **Data da última atualização da SSOT:** 2026-07-20
+
+------------------------------------------------------------------------
+
+# 8. Encerramento
 
 Com a aprovação deste relatório, a **FASE 5 --- Desenvolvimento** é
 considerada oficialmente encerrada, com uma arquitetura consistente,
