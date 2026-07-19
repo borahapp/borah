@@ -9,6 +9,12 @@ import '../../features/authentication/presentation/pages/password_reset_page.dar
 import '../../features/authentication/presentation/pages/signup_page.dart';
 import '../../features/authentication/presentation/pages/splash_page.dart';
 import '../../features/authentication/presentation/states/auth_status.dart';
+import '../../features/administration/presentation/pages/admin_dashboard_page.dart';
+import '../../features/administration/presentation/pages/admin_restaurants_page.dart';
+import '../../features/administration/presentation/pages/admin_roles_page.dart';
+import '../../features/administration/presentation/pages/admin_users_page.dart';
+import '../../features/administration/presentation/pages/audit_log_page.dart';
+import '../../features/administration/presentation/pages/moderation_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/rankings/presentation/pages/rankings_page.dart';
 import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
@@ -48,6 +54,7 @@ const _protectedRoutePrefixes = [
   '/favorites',
   '/feed',
   '/users',
+  '/admin',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -186,6 +193,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           type: FollowListType.following,
         ),
       ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminDashboardPage(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const AdminUsersPage(),
+      ),
+      GoRoute(
+        path: '/admin/restaurants',
+        builder: (context, state) => const AdminRestaurantsPage(),
+      ),
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (context, state) => const ModerationPage(),
+      ),
+      GoRoute(
+        path: '/admin/roles',
+        builder: (context, state) => const AdminRolesPage(),
+      ),
+      GoRoute(
+        path: '/admin/audit-logs',
+        builder: (context, state) => const AuditLogPage(),
+      ),
     ],
   );
 });
@@ -222,6 +253,10 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
             TextButton(
               onPressed: () => GoRouter.of(context).push('/feed'),
               child: const Text('Ver feed'),
+            ),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/admin'),
+              child: const Text('Painel administrativo'),
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import '../../../core/models/paged_result.dart';
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/comment.dart';
+import '../domain/comment_report.dart';
 import '../domain/comment_repository.dart';
 import 'comment_remote_datasource.dart';
 
@@ -73,6 +74,41 @@ class CommentRepositoryImpl implements CommentRepository {
     required String reason,
   }) {
     return _guard(() => _datasource.report(commentId, reportedBy, reason));
+  }
+
+  @override
+  Future<void> hideAsAdmin(String id) {
+    return _guard(() => _datasource.softDelete(id));
+  }
+
+  @override
+  Future<PagedResult<CommentReport>> listAllReports({
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listAllReports(page: page, limit: limit);
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      return PagedResult<CommentReport>(
+        items: pageRows.map(_mapReportRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
+    });
+  }
+
+  CommentReport _mapReportRow(Map<String, dynamic> row) {
+    return CommentReport(
+      id: row['id'] as String,
+      commentId: row['comment_id'] as String,
+      reportedBy: row['reported_by'] as String,
+      reason: row['reason'] as String,
+      createdAt: DateTime.parse(row['created_at'] as String),
+    );
   }
 
   Comment _mapRow(Map<String, dynamic> row) {

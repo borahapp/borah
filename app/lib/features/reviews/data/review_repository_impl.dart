@@ -107,6 +107,15 @@ class ReviewRepositoryImpl implements ReviewRepository {
     return _guard(() => _datasource.softDelete(id));
   }
 
+  /// Mesma operação de `delete` - a diferença está inteiramente na RLS
+  /// (policy de admin criada no DV-08 permite isso para qualquer
+  /// avaliação, não só a do próprio autor). Nomeado separadamente por
+  /// clareza de intenção na camada de aplicação.
+  @override
+  Future<void> hideAsAdmin(String id) {
+    return _guard(() => _datasource.softDelete(id));
+  }
+
   @override
   Future<Review> addPhoto(
     String id, {

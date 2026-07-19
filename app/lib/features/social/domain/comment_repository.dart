@@ -1,5 +1,6 @@
 import '../../../core/models/paged_result.dart';
 import 'comment.dart';
+import 'comment_report.dart';
 
 /// Erro traduzido pela camada de dados (mesmo padrão do DV-01 em diante) -
 /// nenhuma camada acima de `data/` conhece exceções do Supabase.
@@ -38,5 +39,16 @@ abstract interface class CommentRepository {
     String commentId, {
     required String reportedBy,
     required String reason,
+  });
+
+  /// Oculta (exclusão lógica) qualquer comentário, independente do autor
+  /// (DV-08 - Moderação de Comentários, exceção documentada ao AR-13).
+  Future<void> hideAsAdmin(String id);
+
+  /// Todas as denúncias, não apenas as do denunciante atual (DV-08 -
+  /// Moderação de Denúncias).
+  Future<PagedResult<CommentReport>> listAllReports({
+    required int page,
+    required int limit,
   });
 }

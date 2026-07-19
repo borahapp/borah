@@ -67,6 +67,56 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
   }
 
   @override
+  Future<PagedResult<Restaurant>> listAllForAdmin({
+    String? query,
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listAllForAdmin(
+        query: query,
+        page: page,
+        limit: limit,
+      );
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      return PagedResult<Restaurant>(
+        items: pageRows.map(_mapRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
+    });
+  }
+
+  @override
+  Future<Restaurant> updateAsAdmin(
+    String id, {
+    String? name,
+    String? category,
+    String? description,
+    String? address,
+    String? city,
+    String? stateProvince,
+    String? status,
+  }) {
+    return _guard(() async {
+      final row = await _datasource.updatePatch(id, {
+        'name': ?name,
+        'category': ?category,
+        'description': ?description,
+        'address': ?address,
+        'city': ?city,
+        'state': ?stateProvince,
+        'status': ?status,
+      });
+      return _mapRow(row);
+    });
+  }
+
+  @override
   Future<Restaurant> getById(String id) {
     return _guard(() async {
       final row = await _datasource.fetchById(id);

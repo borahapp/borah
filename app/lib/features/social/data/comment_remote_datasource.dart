@@ -62,4 +62,18 @@ class CommentRemoteDatasource {
       'reason': reason,
     });
   }
+
+  Future<List<Map<String, dynamic>>> listAllReports({
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+    final rows = await _client
+        .from(_reportsTable)
+        .select()
+        .order('created_at', ascending: false)
+        .range(from, to);
+    return List<Map<String, dynamic>>.from(rows);
+  }
 }

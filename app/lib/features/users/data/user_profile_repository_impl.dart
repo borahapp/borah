@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     show PostgrestException, StorageException;
 
+import '../../../core/models/paged_result.dart';
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/user_profile.dart';
 import '../domain/user_profile_repository.dart';
@@ -19,6 +20,31 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     return _guard(() async {
       final row = await _datasource.fetchProfile(userId);
       return _mapRow(row);
+    });
+  }
+
+  @override
+  Future<PagedResult<UserProfile>> listAll({
+    String? query,
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listAll(
+        query: query,
+        page: page,
+        limit: limit,
+      );
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      return PagedResult<UserProfile>(
+        items: pageRows.map(_mapRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
     });
   }
 

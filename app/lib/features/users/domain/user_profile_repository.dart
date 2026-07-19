@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../../core/models/paged_result.dart';
 import 'user_profile.dart';
 
 /// Erro traduzido pela camada de dados — nenhuma camada acima de `data/`
@@ -13,6 +14,15 @@ class UserProfileRepositoryException implements Exception {
 /// Contrato do domínio, independente de Flutter e Supabase (AR-02).
 abstract interface class UserProfileRepository {
   Future<UserProfile> getProfile(String userId);
+
+  /// Lista todos os perfis (DV-08 - Gestão de Usuários "Consultar"), com
+  /// busca opcional por nome. Mesmo padrão de reuso de entidade já
+  /// aplicado por `listRanked`/`listByUser` em módulos anteriores.
+  Future<PagedResult<UserProfile>> listAll({
+    String? query,
+    required int page,
+    required int limit,
+  });
 
   Future<UserProfile> updateProfile(
     String userId, {

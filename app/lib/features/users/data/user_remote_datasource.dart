@@ -17,6 +17,25 @@ class UserRemoteDatasource {
     return _client.from(_table).select().eq('id', userId).single();
   }
 
+  Future<List<Map<String, dynamic>>> listAll({
+    String? query,
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+
+    var builder = _client.from(_table).select();
+    if (query != null && query.isNotEmpty) {
+      builder = builder.ilike('full_name', '%$query%');
+    }
+
+    final rows = await builder
+        .order('created_at', ascending: false)
+        .range(from, to);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<Map<String, dynamic>> updateProfile(
     String userId,
     Map<String, dynamic> patch,

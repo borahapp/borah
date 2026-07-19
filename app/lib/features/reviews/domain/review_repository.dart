@@ -43,6 +43,11 @@ abstract interface class ReviewRepository {
   /// Exclusão lógica (DV-04) — define `deleted_at`, nunca remove a linha.
   Future<void> delete(String id);
 
+  /// Oculta (exclusão lógica) qualquer avaliação, independente do autor
+  /// (DV-08 - Moderação de Avaliações, exceção documentada ao AR-13,
+  /// autorizada por RLS baseada em papel).
+  Future<void> hideAsAdmin(String id);
+
   /// Bucket `review-photos` é público - o path é armazenado implicitamente
   /// na estrutura de pastas do bucket (`<reviewId>/<arquivo>`); não há
   /// tabela de fotos no modelo aprovado do DV-04 §9 (apenas `photos_count`).

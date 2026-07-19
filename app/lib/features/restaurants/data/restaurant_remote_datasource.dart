@@ -86,6 +86,25 @@ class RestaurantRemoteDatasource {
     return _client.from(_table).select().eq('id', id).single();
   }
 
+  Future<List<Map<String, dynamic>>> listAllForAdmin({
+    String? query,
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+
+    var builder = _client.from(_table).select();
+    if (query != null && query.isNotEmpty) {
+      builder = builder.ilike('name', '%$query%');
+    }
+
+    final rows = await builder
+        .order('created_at', ascending: false)
+        .range(from, to);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<Map<String, dynamic>> insert(Map<String, dynamic> data) {
     return _client.from(_table).insert(data).select().single();
   }

@@ -32,6 +32,29 @@ abstract interface class RestaurantRepository {
 
   Future<Restaurant> getById(String id);
 
+  /// Lista TODOS os restaurantes, incluindo arquivados/inativos (DV-08 -
+  /// Gestão de Restaurantes) - diferente de `search`, que só mostra
+  /// restaurantes ativos ao público.
+  Future<PagedResult<Restaurant>> listAllForAdmin({
+    String? query,
+    required int page,
+    required int limit,
+  });
+
+  /// Edita/arquiva/reativa qualquer restaurante, independente do
+  /// `created_by` (DV-08 - exceção documentada ao AR-13, autorizada por
+  /// RLS baseada em papel, não pelo dono da linha).
+  Future<Restaurant> updateAsAdmin(
+    String id, {
+    String? name,
+    String? category,
+    String? description,
+    String? address,
+    String? city,
+    String? stateProvince,
+    String? status,
+  });
+
   Future<Restaurant> create({
     required String createdBy,
     required String name,
