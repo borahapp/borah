@@ -16,6 +16,8 @@ import '../../features/administration/presentation/pages/admin_users_page.dart';
 import '../../features/administration/presentation/pages/audit_log_page.dart';
 import '../../features/administration/presentation/pages/moderation_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
+import '../../features/gamification/presentation/pages/gamification_profile_page.dart';
+import '../../features/gamification/presentation/pages/ranking_users_page.dart';
 import '../../features/notifications/domain/app_notification.dart';
 import '../../features/notifications/presentation/pages/notification_detail_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
@@ -60,6 +62,7 @@ const _protectedRoutePrefixes = [
   '/users',
   '/admin',
   '/notifications',
+  '/gamification',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -236,6 +239,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           notification: state.extra! as AppNotification,
         ),
       ),
+      GoRoute(
+        path: '/gamification',
+        builder: (context, state) => const GamificationProfilePage(),
+      ),
+      GoRoute(
+        path: '/gamification/ranking',
+        builder: (context, state) => const RankingUsersPage(),
+      ),
     ],
   );
 });
@@ -280,6 +291,10 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
             TextButton(
               onPressed: () => GoRouter.of(context).push('/notifications'),
               child: const Text('Ver notificações'),
+            ),
+            TextButton(
+              onPressed: () => GoRouter.of(context).push('/gamification'),
+              child: const Text('Gamificação'),
             ),
           ],
         ),
