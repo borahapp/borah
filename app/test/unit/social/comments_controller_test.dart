@@ -120,6 +120,51 @@ void main() {
     expect(container.read(commentsControllerProvider), isA<CommentsError>());
   });
 
+  group('delete', () {
+    test('sucesso remove e recarrega a lista -> CommentsLoaded', () async {
+      when(
+        () => repository.listByReview('rv-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => repository.delete('c-1')).thenAnswer((_) async {});
+
+      final notifier = container.read(commentsControllerProvider.notifier);
+      await notifier.loadForReview('rv-1');
+      await notifier.delete('c-1');
+
+      expect(container.read(commentsControllerProvider), isA<CommentsEmpty>());
+      verify(() => repository.delete('c-1')).called(1);
+    });
+
+    test('falha -> CommentsError', () async {
+      when(
+        () => repository.listByReview('rv-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_comment()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => repository.delete('c-1'),
+      ).thenThrow(const CommentRepositoryException('Não é o autor.'));
+
+      final notifier = container.read(commentsControllerProvider.notifier);
+      await notifier.loadForReview('rv-1');
+      await notifier.delete('c-1');
+
+      expect(container.read(commentsControllerProvider), isA<CommentsError>());
+    });
+  });
+
   test('report envia denúncia', () async {
     when(() => repository.listByReview('rv-1', page: 1, limit: 20)).thenAnswer(
       (_) async => PagedResult(

@@ -38,6 +38,20 @@ void main() {
       expect(status, isA<FollowLoaded>());
       expect((status as FollowLoaded).isFollowing, isFalse);
     });
+
+    test('falha ao verificar -> FollowError', () async {
+      when(() => repository.isFollowing('user-1', 'user-2')).thenThrow(
+        const FollowerRepositoryException('Não foi possível verificar.'),
+      );
+
+      await container
+          .read(followControllerProvider.notifier)
+          .load('user-1', 'user-2');
+
+      final status = container.read(followControllerProvider);
+      expect(status, isA<FollowError>());
+      expect((status as FollowError).message, 'Não foi possível verificar.');
+    });
   });
 
   group('toggle', () {
@@ -75,6 +89,23 @@ void main() {
       expect(status, isA<FollowLoaded>());
       expect((status as FollowLoaded).isFollowing, isFalse);
       verify(() => repository.unfollow('user-1', 'user-2')).called(1);
+    });
+
+    test('falha ao seguir -> FollowError', () async {
+      when(
+        () => repository.isFollowing('user-1', 'user-2'),
+      ).thenAnswer((_) async => false);
+      when(() => repository.follow('user-1', 'user-2')).thenThrow(
+        const FollowerRepositoryException('Não foi possível seguir.'),
+      );
+
+      final notifier = container.read(followControllerProvider.notifier);
+      await notifier.load('user-1', 'user-2');
+      await notifier.toggle('user-1', 'user-2');
+
+      final status = container.read(followControllerProvider);
+      expect(status, isA<FollowError>());
+      expect((status as FollowError).message, 'Não foi possível seguir.');
     });
   });
 }
