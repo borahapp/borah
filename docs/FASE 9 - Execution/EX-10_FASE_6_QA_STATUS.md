@@ -61,10 +61,61 @@ em `develop` por fast-forward).
     (`flutter test --coverage`, 155/155 aprovados; `flutter analyze` e
     `dart format --set-exit-if-changed .` limpos).
 
-## Rodada 2 --- Tier 2 (não iniciada)
+## Rodada 2 --- Tier 2 (ainda não iniciada — reordenada, ver §5)
 
-Favoritar, Editar Perfil e Feed — aguardando confirmação explícita de
-escopo antes de começar, mesmo ritual de aprovação da Rodada 1.
+------------------------------------------------------------------------
+
+# 3.1 FASE 6C --- Gap Analysis (concluída, sem código, 2026-07-19)
+
+Etapa intermediária, puramente analítica (nenhum arquivo de código
+alterado) para decidir com evidência onde investir antes de continuar
+o Tier 2. Cobertura real medida por arquivo (não mais estimativas):
+Domain 45,7%, Application 71,6% — a maior parte do "gap" em Domain é
+um artefato do instrumentador de cobertura (construtores `const` de
+exceção nunca registram *hit*), não uma lacuna real.
+
+**Achados que mudaram a ordem prevista da FASE 6:**
+
+-   Três arquivos de Application com **0% de cobertura**:
+    `current_user_role_provider.dart` (controla acesso ao painel
+    admin), `public_profile_provider.dart` e
+    `user_reviews_controller.dart`.
+-   Ações inteiras nunca exercitadas por nenhum teste unitário:
+    `follow_controller.dart` (erro de `load()`/`toggle()`),
+    `comments_controller.dart` (`delete()`),
+    `review_detail_controller.dart` (`update()`, sucesso de
+    `addPhoto()`, ramo "descurtir" de `toggleLike()`, erro de
+    `delete()`) — este último era o controller mais frágil da
+    auditoria (57,6%).
+-   **Duas telas de Alto Risco sem nenhum Widget Test e fora de
+    qualquer Tier até então**: Detalhe do Restaurante e Detalhe da
+    Avaliação — ambas ponte obrigatória entre buscar/criar avaliação
+    (Tier 1, já cobertos) e o resto do app.
+-   **Recomendação resultante:** reforçar Testes Unitários antes de
+    continuar o Tier 2 de Widget Tests — risco confirmado (não
+    hipotético) e mais barato de corrigir do que abrir novas telas.
+
+------------------------------------------------------------------------
+
+# 3.2 FASE 6D --- Unit Test Reinforcement (concluída, 2026-07-19)
+
+Commit `539cacd` (branch `feature/qa-07-unit-test-reinforcement`).
+Cobriu exclusivamente os 4 itens de prioridade máxima da Gap Analysis
+— nenhuma cobertura artificial (sem testes de construtores `const`,
+exceções, guard clauses triviais ou ramos `catch (_)` genéricos):
+
+-   `current_user_role_provider.dart`: 0% → **100%**.
+-   `review_detail_controller.dart`: 57,6% → **89,8%**.
+-   `follow_controller.dart`: 71,4% → **90,5%**.
+-   `comments_controller.dart`: 86,0% → **90,7%**.
+
+**Cobertura da camada Application: 71,6% → 75,4%** (538/751 → 566/751
+linhas). `public_profile_provider.dart` e `user_reviews_controller.dart`
+permanecem em 0% — não estavam na lista de prioridade máxima desta
+rodada, ficam registrados para uma rodada futura. Validado com
+`flutter analyze` (limpo), `dart format --set-exit-if-changed .`
+(limpo) e `flutter test --coverage` (169/169 aprovados, suíte
+155 → **169** testes).
 
 ------------------------------------------------------------------------
 
@@ -81,7 +132,19 @@ Registrado explicitamente para não ser reintroduzido sem decisão nova:
 
 ------------------------------------------------------------------------
 
-# 5. Próximo passo
+# 5. Próximo passo --- Tier 2 reordenado (2026-07-19)
 
-Aguardar instrução explícita para: (a) confirmar escopo e iniciar a
-Rodada 2 (Tier 2), ou (b) iniciar outro documento QA-\*.
+Com base nos achados da Gap Analysis (§3.1), a ordem prevista original
+do Tier 2 foi revista: **Detalhe do Restaurante** e **Detalhe da
+Avaliação** (Alto Risco, identificados só nesta análise) entram **antes**
+de Favoritar, Feed e Editar Perfil (que já eram conhecidos desde a
+FASE 6A). Ordem atual do Tier 2:
+
+1.  Detalhe do Restaurante
+2.  Detalhe da Avaliação
+3.  Favoritar
+4.  Feed
+5.  Editar Perfil
+
+Aguardando instrução explícita para confirmar escopo e iniciar a
+Rodada 2 nessa nova ordem.
