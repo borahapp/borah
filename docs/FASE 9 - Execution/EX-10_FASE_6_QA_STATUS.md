@@ -123,8 +123,50 @@ mesclada em `develop` por merge commit `20f6f1f`).
     Application permanece em 75,4% (nenhum código de aplicação foi
     alterado nesta rodada).
 
-**Próximo item (3/5):** Favoritar --- aguardando aprovação explícita
-antes de iniciar.
+### Item 3 --- Favoritar (concluído, 2026-07-21)
+
+Commit `dfbae4c` (branch `feature/qa-10-widget-tests-favorites`,
+mesclada em `develop` por merge commit `f5f0b4e`).
+
+-   13 cenários cobertos em `FavoritesPage`: renderização inicial,
+    estado de carregamento, estado vazio, estado com favoritos, estado
+    de erro, busca por nome, filtro por cidade, ordenação (nome),
+    navegação para o detalhe do restaurante, estado "syncing"
+    (mantendo a lista anterior visível durante uma atualização em
+    segundo plano, incluindo o caso de um favorito ser removido na
+    sincronização seguinte), responsividade (3 tamanhos) e
+    acessibilidade básica. Mesma estratégia dos rounds anteriores
+    (`ProviderScope` + `MaterialApp.router` + mocktail + rotas
+    placeholder), sem `golden_toolkit`/`integration_test`.
+-   **Nenhuma alteração de código de produção foi necessária nesta
+    rodada:** a suíte de acessibilidade foi aprovada sem exigir
+    ajustes em `FavoritesPage` (diferente do Tier 1 e dos Itens 1 e 2
+    deste Tier, que exigiram correções de `tooltip`).
+-   **Divergências documentadas (não corrigidas nesta rodada):**
+    -   DV-06 §5 lista filtro por "cidade e categoria", mas
+        `FavoritesPage` só expõe campo de busca por cidade na UI; o
+        parâmetro `category` existe em `FavoritesController` e
+        `FavoriteRepository`, mas não tem controle de UI associado.
+    -   DV-06 §5 descreve "Remover" (desfavoritar) como ação da lista
+        de favoritos, mas a única forma de remover um favorito na
+        implementação atual é navegando até `RestaurantDetailPage` e
+        usando o ícone de favorito de lá (já coberto pelos testes do
+        Item 1 deste Tier); `FavoritesPage` não possui ação de
+        remoção direta na própria lista.
+    -   `FavoritesController` expõe `refresh()` e `loadNextPage()`
+        (estados Syncing/paginação, DV-06 §10/§11), mas `FavoritesPage`
+        não tem nenhum gesto de UI (puxar para atualizar, scroll
+        infinito) ligado a eles; o cenário "syncing" foi validado
+        disparando `refresh()` diretamente via `ProviderContainer`.
+-   **Evolução da suíte:** 196 → **209** testes (`flutter test`,
+    209/209 aprovados; `flutter analyze` e
+    `dart format --set-exit-if-changed .` limpos).
+-   **Cobertura da camada Presentation:** 31,2% → **34,9%**
+    (569/1631 linhas). Application permanece em 75,4% (nenhum código
+    de aplicação foi alterado nesta rodada).
+
+**Próximo item (4/5):** Feed --- aguardando aprovação explícita antes
+de iniciar.
 
 ------------------------------------------------------------------------
 
@@ -205,9 +247,9 @@ FASE 6A). Ordem atual do Tier 2:
 
 1.  ~~Detalhe do Restaurante~~ --- **concluído** (§3, commit `377ebc9`)
 2.  ~~Detalhe da Avaliação~~ --- **concluído** (§3, commit `1f6367f`)
-3.  Favoritar
+3.  ~~Favoritar~~ --- **concluído** (§3, commit `dfbae4c`)
 4.  Feed
 5.  Editar Perfil
 
 Aguardando instrução explícita para confirmar escopo e iniciar o
-item 3 (Favoritar).
+item 4 (Feed).
