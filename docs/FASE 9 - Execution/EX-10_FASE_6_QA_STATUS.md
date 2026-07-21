@@ -86,8 +86,45 @@ mesclada em `develop` por merge commit `f603240`).
     (353/1629 → 422/1629 linhas). Application permanece em 75,4%
     (nenhum código de aplicação foi alterado nesta rodada).
 
-**Próximo item (2/5):** Detalhe da Avaliação — aguardando aprovação
-explícita antes de iniciar.
+### Item 2 --- Detalhe da Avaliação (concluído, 2026-07-21)
+
+Commit `1f6367f` (branch `feature/qa-09-widget-tests-review-detail`,
+mesclada em `develop` por merge commit `20f6f1f`).
+
+-   16 cenários cobertos em `ReviewDetailPage`: renderização inicial
+    (nota/comentário/curtidas), conteúdo sem comentário, estado de
+    carregamento, estado de erro (exibido tanto no corpo quanto via
+    snackbar --- divergência intencional em relação a
+    `CreateReviewPage`, que usa apenas snackbar), ações do autor
+    (Editar/Excluir exibidas apenas quando `review.userId ==
+    currentUserId`, ambos os casos), imagens (com fotos + botão
+    "Adicionar foto", sem fotos, limite de 5 escondendo o botão),
+    toggle de curtida, navegação ("Ver comentários" e "Editar"),
+    responsividade (3 tamanhos) e acessibilidade básica. Mesma
+    estratégia dos rounds anteriores (`ProviderScope` +
+    `MaterialApp.router` + mocktail + rotas placeholder), sem
+    `golden_toolkit`/`integration_test`.
+-   **Achados reais corrigidos durante a rodada:** os `IconButton`s de
+    curtir e de compartilhar não tinham rótulo semântico --- mesma
+    classe de achado já corrigida no Tier 1 e no Item 1 deste Tier.
+    Adicionado `tooltip` dinâmico ao botão de curtir
+    (`'Remover curtida'` / `'Curtir avaliação'`, conforme
+    `likedByCurrentUser`) e `tooltip: 'Compartilhar avaliação'` ao
+    botão de compartilhar.
+-   **Divergência documentada (não corrigida nesta rodada):** DV-04 §5
+    lista Data e Autor entre as informações exibidas na avaliação;
+    a implementação atual de `ReviewDetailPage` não exibe nenhum dos
+    dois campos. Registrado como divergência entre documentação e
+    implementação, sem alteração de escopo nesta rodada.
+-   **Evolução da suíte:** 180 → **196** testes (`flutter test`,
+    196/196 aprovados; `flutter analyze` e
+    `dart format --set-exit-if-changed .` limpos).
+-   **Cobertura da camada Presentation:** 25,9% → **31,2%**.
+    Application permanece em 75,4% (nenhum código de aplicação foi
+    alterado nesta rodada).
+
+**Próximo item (3/5):** Favoritar --- aguardando aprovação explícita
+antes de iniciar.
 
 ------------------------------------------------------------------------
 
@@ -167,10 +204,10 @@ de Favoritar, Feed e Editar Perfil (que já eram conhecidos desde a
 FASE 6A). Ordem atual do Tier 2:
 
 1.  ~~Detalhe do Restaurante~~ --- **concluído** (§3, commit `377ebc9`)
-2.  Detalhe da Avaliação
+2.  ~~Detalhe da Avaliação~~ --- **concluído** (§3, commit `1f6367f`)
 3.  Favoritar
 4.  Feed
 5.  Editar Perfil
 
 Aguardando instrução explícita para confirmar escopo e iniciar o
-item 2 (Detalhe da Avaliação).
+item 3 (Favoritar).
