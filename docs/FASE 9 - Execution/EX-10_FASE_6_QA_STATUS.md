@@ -165,8 +165,60 @@ mesclada em `develop` por merge commit `f5f0b4e`).
     (569/1631 linhas). Application permanece em 75,4% (nenhum código
     de aplicação foi alterado nesta rodada).
 
-**Próximo item (4/5):** Feed --- aguardando aprovação explícita antes
-de iniciar.
+### Item 4 --- Feed (concluído, 2026-07-21)
+
+Commit `fb96bc0` (branch `feature/qa-11-widget-tests-feed`, mesclada
+em `develop` por merge commit `7dad437`).
+
+-   10 cenários cobertos em `FeedPage`: renderização inicial/estado de
+    carregamento, listagem do feed, estado vazio, estado de erro,
+    navegação para o detalhe da avaliação, "puxar para atualizar"
+    (`RefreshIndicator` mantendo a lista anterior visível durante a
+    atualização em segundo plano, incluindo o caso do feed ficar vazio
+    ao concluir), responsividade (3 tamanhos) e acessibilidade básica.
+    Mesma estratégia dos rounds anteriores (`ProviderScope` +
+    `MaterialApp.router` + mocktail + rotas placeholder), sem
+    `golden_toolkit`/`integration_test`. `FeedPage` não possui filtros
+    nem ações inline (curtir/comentar/compartilhar ficam em
+    `ReviewDetailPage`, já cobertas no Item 2 deste Tier); nenhum
+    achado de acessibilidade nesta rodada.
+-   **Bug real de produção encontrado e corrigido (autorizado antes da
+    implementação):** `FeedController.loadNextPage()` substituía a
+    lista inteira pelos itens da página buscada em vez de concatená-
+    los aos já carregados, quebrando o "Infinite Scroll" exigido por
+    DV-07 §11 --- hoje dormente, pois `FeedPage` não possui nenhum
+    gatilho de UI (scroll) que acione `loadNextPage()`. Correção
+    mínima: `_run()` passou a aceitar `previousItems` (vazio por
+    padrão para `loadForUser`/`refresh`, que continuam substituindo a
+    lista inteira; preenchido apenas por `loadNextPage()`, que
+    concatena os itens da nova página aos já carregados). Teste de
+    regressão adicionado em `feed_controller_test.dart`, confirmado
+    falhando antes da correção e aprovado depois.
+-   **Divergências documentadas (não corrigidas nesta rodada):**
+    -   DV-07 §5 lista "Conquistas da gamificação" como conteúdo do
+        Feed sem marcá-la como "(futuro)" (só "Novos favoritos
+        públicos" tem essa marca); a implementação exclui gamificação
+        e favoritos do Feed por decisão já registrada em comentário no
+        código, mas o texto do DV-07 nunca foi atualizado para
+        refletir isso.
+    -   DV-07 §11 exige "Paginação"/"Infinite Scroll"; `loadNextPage()`
+        existe no controller, mas `FeedPage` não tem nenhum gatilho de
+        UI (scroll) que o acione.
+    -   ET-09 (FASE 2, Draft) descreve um modelo de Feed baseado em
+        posts/eventos/grupos/Wrapped já superado pelo DV-07 (FASE 5,
+        Approved) --- mesmo padrão de supersessão já visto em rodadas
+        anteriores.
+-   **Evolução da suíte:** 209 → **220** testes (10 novos Widget Tests
+    + 1 novo teste unitário de regressão; `flutter test`, 220/220
+    aprovados; `flutter analyze` e `dart format --set-exit-if-changed .`
+    limpos).
+-   **Cobertura da camada Presentation:** 34,9% → **37,1%**
+    (605/1631 linhas). **Cobertura da camada Application:** 75,4% →
+    **76,5%** (579/757 linhas --- aumento pela nova ramificação de
+    `_run()` coberta pelo teste de regressão).
+
+**Próximo item (5/5):** Editar Perfil --- aguardando aprovação
+explícita antes de iniciar.
 
 ------------------------------------------------------------------------
 
@@ -248,8 +300,8 @@ FASE 6A). Ordem atual do Tier 2:
 1.  ~~Detalhe do Restaurante~~ --- **concluído** (§3, commit `377ebc9`)
 2.  ~~Detalhe da Avaliação~~ --- **concluído** (§3, commit `1f6367f`)
 3.  ~~Favoritar~~ --- **concluído** (§3, commit `dfbae4c`)
-4.  Feed
+4.  ~~Feed~~ --- **concluído** (§3, commit `fb96bc0`)
 5.  Editar Perfil
 
 Aguardando instrução explícita para confirmar escopo e iniciar o
-item 4 (Feed).
+item 5 (Editar Perfil).
