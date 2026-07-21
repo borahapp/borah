@@ -19,13 +19,22 @@ Isso é intencional — impede que qualquer usuário autenticado se autopromova 
 
 ---
 
-## ⚠️ Aviso — bloqueador conhecido nesta versão
+## Correção histórica — recursão em `is_admin()`/`has_admin_role()`/`can_moderate()`
 
-A Validação Funcional do Backend (2026-07-20) confirmou, com evidência empírica, que **`is_admin()`, `has_admin_role()` e `can_moderate()` entram em recursão infinita** (`stack depth limit exceeded`) assim que o usuário consultado passa a ter uma linha em `user_roles` — ou seja, **o próprio super_admin criado por este processo não consegue usar seus privilégios** através de nenhuma política que dependa dessas três funções (`user_roles`, `restaurants`, `reviews`, `comments`, `comment_reports`, `audit_logs`).
+A Validação Funcional do Backend (2026-07-20) encontrou, com evidência empírica (`stack depth limit exceeded`), que essas três funções entravam em recursão infinita assim que o usuário consultado passava a ter uma linha em `user_roles` — o próprio super_admin criado por este processo não conseguia usar seus privilégios através de nenhuma política dependente delas (`user_roles`, `restaurants`, `reviews`, `comments`, `comment_reports`, `audit_logs`).
 
-**Causa:** as três funções não são `SECURITY DEFINER`, então a consulta interna delas a `user_roles` fica sujeita à própria RLS da tabela — que exige `is_admin()` para ser lida, inclusive a própria linha do usuário.
+**Causa:** as três funções não eram `SECURITY DEFINER`, então a consulta interna delas a `user_roles` ficava sujeita à própria RLS da tabela — que exige `is_admin()` para ser lida, inclusive a própria linha do usuário.
 
-**Correção necessária antes deste bootstrap ter efeito prático:** marcar as três funções como `SECURITY DEFINER SET search_path = public` (mesmo padrão já usado em `handle_new_user()`), em uma migration futura dedicada. Até essa correção ser aplicada, este processo cria a linha no banco corretamente, mas o painel administrativo (DV-08) permanece inoperante para esse usuário.
+**Corrigido** na branch `feature/backend-fixes-phase1`, migration `20260720130030_fix_rbac_functions_security_definer.sql`: as três funções agora são
+
+```sql
+security definer
+set search_path = public, pg_temp
+```
+
+— mesmo padrão usado em `handle_new_user()` e nas demais funções `SECURITY DEFINER` do projeto. Confirmado por reteste completo (mesmo cenário: super_admin real verificando a própria permissão) sem regressão em nenhuma policy existente.
+
+**Estado atual:** o bootstrap manual descrito abaixo continua sendo o único passo necessário para *inicializar* o sistema (a política de INSERT de `user_roles` sempre vai exigir um `super_admin` prévio para conceder o primeiro papel — isso é uma decisão de segurança permanente, não o bug). Uma vez que essa única linha exista, as funções RBAC já operam corretamente de imediato, sem passo adicional.
 
 ---
 
@@ -61,7 +70,7 @@ select id, email from auth.users where email = 'seu-email@dominio.com';
    select user_id, role, created_at from public.user_roles where user_id = '<UUID_DO_USUARIO>';
    ```
 
-Isso é suficiente e definitivo — não há passo adicional de "ativação". A partir daqui, `is_admin(auth.uid())` retornaria `true` para esse usuário **assim que o bug de recursão acima for corrigido**.
+Isso é suficiente e definitivo — não há passo adicional de "ativação". A partir daqui, `is_admin(auth.uid())` (e `has_admin_role`/`can_moderate`) já retornam `true` para esse usuário imediatamente, sem nenhuma correção pendente.
 
 ## Registrando o bootstrap
 
@@ -73,4 +82,4 @@ Diferente de toda ação administrativa feita pela própria aplicação (que gra
 
 ## Revogando ou trocando o super_admin
 
-Depois que ao menos um `super_admin` existir e o bug de recursão estiver corrigido, revogações e novas concessões passam a ser possíveis **pela própria aplicação** (tela de Papéis do DV-08), já que a política de UPDATE/DELETE de `user_roles` também exige `super_admin` — não é mais necessário SQL manual a partir daí, exceto para recuperar acesso caso o único `super_admin` existente seja perdido (mesmo processo deste documento, de novo).
+Depois que ao menos um `super_admin` existir, revogações e novas concessões já são possíveis **pela própria aplicação** (tela de Papéis do DV-08), já que a política de UPDATE/DELETE de `user_roles` também exige `super_admin` — não é mais necessário SQL manual a partir daí, exceto para recuperar acesso caso o único `super_admin` existente seja perdido (mesmo processo deste documento, de novo).
