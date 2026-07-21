@@ -191,11 +191,18 @@ class _DetailView extends StatelessWidget {
                 icon: Icon(
                   likedByCurrentUser ? Icons.favorite : Icons.favorite_border,
                 ),
+                tooltip: likedByCurrentUser
+                    ? 'Remover curtida'
+                    : 'Curtir avaliação',
                 onPressed: onToggleLike,
               ),
               Text('$likesCount'),
               const Spacer(),
-              IconButton(icon: const Icon(Icons.share), onPressed: onShare),
+              IconButton(
+                icon: const Icon(Icons.share),
+                tooltip: 'Compartilhar avaliação',
+                onPressed: onShare,
+              ),
             ],
           ),
           const SizedBox(height: 8),
