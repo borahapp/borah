@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
+import '../../reviews/domain/review.dart';
 import '../data/feed_repository_impl.dart';
 import '../domain/feed_repository.dart';
 import '../presentation/states/feed_status.dart';
@@ -30,7 +32,7 @@ class FeedController extends Notifier<FeedStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current);
+    return _run(current, previousItems: current.result.items);
   }
 
   /// Atualiza o feed já carregado sem esconder o resultado anterior
@@ -45,7 +47,13 @@ class FeedController extends Notifier<FeedStatus> {
     return _run(refreshingState);
   }
 
-  Future<void> _run(FeedStatus loadingState) async {
+  /// [previousItems] permite acumular páginas anteriores (Infinite Scroll,
+  /// DV-07 §11) quando chamado por `loadNextPage` - vazio por padrão, para
+  /// que `loadForUser`/`refresh` continuem substituindo a lista inteira.
+  Future<void> _run(
+    FeedStatus loadingState, {
+    List<Review> previousItems = const [],
+  }) async {
     state = loadingState;
     try {
       final result = await _repository.listForUser(
@@ -53,7 +61,17 @@ class FeedController extends Notifier<FeedStatus> {
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty ? const FeedEmpty() : FeedLoaded(result);
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
+          ? const FeedEmpty()
+          : FeedLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on FeedRepositoryException catch (e) {
       state = FeedError(e.message);
     } catch (_) {

@@ -99,4 +99,33 @@ void main() {
       expect(container.read(feedControllerProvider), isA<FeedLoaded>());
     },
   );
+
+  test('loadNextPage concatena os itens da nova página aos já carregados '
+      '(DV-07 §11 "Infinite Scroll") em vez de substituir a lista', () async {
+    when(() => repository.listForUser('user-1', page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_review(id: 'rv-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(() => repository.listForUser('user-1', page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_review(id: 'rv-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+
+    final notifier = container.read(feedControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+    await notifier.loadNextPage();
+
+    final state = container.read(feedControllerProvider);
+    expect(state, isA<FeedLoaded>());
+    final items = (state as FeedLoaded).result.items;
+    expect(items.map((r) => r.id), ['rv-1', 'rv-2']);
+  });
 }
