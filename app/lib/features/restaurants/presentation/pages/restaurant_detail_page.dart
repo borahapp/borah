@@ -90,6 +90,7 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
               ) => isFavorited ? Icons.favorite : Icons.favorite_border,
               _ => Icons.favorite_border,
             }),
+            tooltip: 'Favoritar restaurante',
             onPressed: _toggleFavorite,
           ),
         ],
