@@ -61,7 +61,33 @@ em `develop` por fast-forward).
     (`flutter test --coverage`, 155/155 aprovados; `flutter analyze` e
     `dart format --set-exit-if-changed .` limpos).
 
-## Rodada 2 --- Tier 2 (ainda não iniciada — reordenada, ver §5)
+## Rodada 2 --- Tier 2 (em andamento — reordenada, ver §5)
+
+### Item 1 --- Detalhe do Restaurante (concluído, 2026-07-21)
+
+Commit `377ebc9` (branch `feature/qa-08-widget-tests-restaurant-detail`,
+mesclada em `develop` por merge commit `f603240`).
+
+-   11 cenários cobertos em `RestaurantDetailPage`: renderização
+    inicial, estado de carregamento, estado de erro, ícone de favorito
+    (favoritado e não favoritado), toggle de favorito, navegação para
+    "Ver avaliações", responsividade (3 tamanhos) e acessibilidade
+    básica. Mesma estratégia do Tier 1 (`ProviderScope` +
+    `MaterialApp.router` + mocktail + rotas placeholder), sem
+    `golden_toolkit`/`integration_test`.
+-   **Achado real corrigido durante a rodada:** o `IconButton` de
+    favoritar não tinha rótulo semântico — adicionado
+    `tooltip: 'Favoritar restaurante'` (mesma classe de achado já
+    corrigida no Tier 1 para o botão "+" de `RestaurantsSearchPage`).
+-   **Evolução da suíte:** 169 → **180** testes (`flutter test`,
+    180/180 aprovados; `flutter analyze` e
+    `dart format --set-exit-if-changed .` limpos).
+-   **Cobertura da camada Presentation:** 21,7% → **25,9%**
+    (353/1629 → 422/1629 linhas). Application permanece em 75,4%
+    (nenhum código de aplicação foi alterado nesta rodada).
+
+**Próximo item (2/5):** Detalhe da Avaliação — aguardando aprovação
+explícita antes de iniciar.
 
 ------------------------------------------------------------------------
 
@@ -132,7 +158,7 @@ Registrado explicitamente para não ser reintroduzido sem decisão nova:
 
 ------------------------------------------------------------------------
 
-# 5. Próximo passo --- Tier 2 reordenado (2026-07-19)
+# 5. Próximo passo --- Tier 2 reordenado (2026-07-19, atualizado 2026-07-21)
 
 Com base nos achados da Gap Analysis (§3.1), a ordem prevista original
 do Tier 2 foi revista: **Detalhe do Restaurante** e **Detalhe da
@@ -140,11 +166,11 @@ Avaliação** (Alto Risco, identificados só nesta análise) entram **antes**
 de Favoritar, Feed e Editar Perfil (que já eram conhecidos desde a
 FASE 6A). Ordem atual do Tier 2:
 
-1.  Detalhe do Restaurante
+1.  ~~Detalhe do Restaurante~~ --- **concluído** (§3, commit `377ebc9`)
 2.  Detalhe da Avaliação
 3.  Favoritar
 4.  Feed
 5.  Editar Perfil
 
-Aguardando instrução explícita para confirmar escopo e iniciar a
-Rodada 2 nessa nova ordem.
+Aguardando instrução explícita para confirmar escopo e iniciar o
+item 2 (Detalhe da Avaliação).
