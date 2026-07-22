@@ -448,5 +448,68 @@ mesclada em `develop` por merge commit `45fda6c`).
 -   Nenhum código Flutter, `pubspec.yaml` ou CI foi alterado nesta
     rodada.
 
+## Rodada A --- Scaffolding e homologação da infraestrutura local (concluída, 2026-07-22)
+
+Commit `b44fb33` (branch `feature/qa-14-integration-scaffolding`).
+
+-   **Estrutura criada**: pacote oficial `integration_test` (SDK do
+    Flutter) adicionado ao `pubspec.yaml`; diretório padrão
+    `integration_test/` criado na raiz do `app/` (substituindo o
+    placeholder vazio de `test/integration/`); helpers organizados em
+    `integration_test/helpers/`:
+    -   `qa_environment.dart` --- guard-rail que aborta a suíte se
+        `SUPABASE_URL` não apontar para o `borah-qa` (ref
+        `fgzokfkvccgkclkmfqui`), evitando rodar contra
+        Development/Production por engano.
+    -   `test_user_helper.dart` --- scaffolding (ainda não exercido)
+        para criar/remover usuários de teste via Admin API do
+        Supabase, pronto para a Rodada B. `SERVICE_ROLE_KEY` nunca
+        hardcoded --- sempre lida via `--dart-define` em tempo de
+        execução.
+-   **Smoke test implementado** (`app_smoke_test.dart`): inicializa a
+    aplicação real (`main.dart`/`app.dart`) contra o ambiente QA,
+    aguarda a Splash restaurar sessão (sem sessão salva) e confirma a
+    navegação até o Login. Nenhum cadastro, login ou dado persistido.
+-   **Bloqueador de execução encontrado e resolvido nesta rodada**:
+    a primeira tentativa de rodar o smoke test falhou por ausência de
+    dispositivo capaz de executar `integration_test` nesta máquina
+    (Windows desktop não configurado --- mobile-only por decisão do
+    EX-01; Web sem suporte a `integration_test`; nenhum emulador
+    Android disponível). Preparação de infraestrutura local realizada
+    em rodada específica (fora do repositório): instalação da system
+    image `system-images;android-36;google_apis;x86_64`, criação do
+    AVD `borah_qa_test` (perfil Pixel 6), e habilitação do Windows
+    Hypervisor Platform (WHPX) --- esta última exigiu ação
+    administrativa e reinicialização da máquina, executada por você.
+-   **Integração ponta a ponta validada com sucesso**: smoke test
+    executado no emulador Android **`emulator-5554`** (sdk gphone64
+    x86_64, Android 16 / API 36), com o comando
+    `flutter test integration_test/app_smoke_test.dart
+    --dart-define-from-file=.env.qa -d emulator-5554`.
+    -   **Resultado: 1/1 aprovado ("All tests passed!").**
+    -   **Tempo de execução:** ~147s no total (130,3s de build Gradle
+        `assembleDebug` --- build inicial, sem cache --- + instalação
+        do APK + ~2s de execução real do teste).
+    -   Confirmado: inicialização real do app (build/instalação/
+        execução no emulador), conexão real com o `borah-qa` (log
+        `Supabase init completed`, sem exceção de URL/chave inválida),
+        e navegação real da Splash até o Login (campos `E-mail`/
+        `Senha` e botão `Entrar` confirmados).
+-   **Nenhuma regressão**: suíte de unit/widget tests inalterada,
+    **242/242 aprovados**, `flutter analyze` e
+    `dart format --set-exit-if-changed .` limpos.
+-   **Observação registrada (não é pendência)**: o build do Gradle
+    emitiu um aviso de que o plugin `share_plus` aplica o Kotlin
+    Gradle Plugin (KGP) de uma forma que versões futuras do Flutter
+    deixarão de suportar. Não afetou o resultado desta rodada; é uma
+    observação de manutenção futura do plugin, sem ação necessária
+    agora.
+
+**Infraestrutura local de Integration Tests oficialmente homologada.**
+Rodadas B--E (Autenticação, Restaurantes+Avaliações, Favoritos+Feed,
+Perfil) liberadas para implementação. Rodada F (CI) permanece
+pendente apenas da configuração manual dos 4 GitHub Secrets (ver
+Rodada 0 acima).
+
 **Próximo passo:** aguardando autorização explícita para iniciar a
-Rodada A (scaffolding do `integration_test`) do QA-03.
+Rodada B (primeiro fluxo real: Autenticação) do QA-03.
