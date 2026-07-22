@@ -103,6 +103,28 @@ void main() {
       expect((status as EmailVerificationPending).email, 'ana@borah.com');
     });
 
+    test('confirmação de e-mail desabilitada (sessão criada imediatamente) '
+        '-> Authenticated', () async {
+      when(
+        () => repository.signUp(
+          name: any(named: 'name'),
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => repository.currentUser,
+      ).thenReturn((userId: 'user-1', email: 'ana@borah.com'));
+
+      await container
+          .read(authControllerProvider.notifier)
+          .signUp(name: 'Ana', email: 'ana@borah.com', password: '123456');
+
+      final status = container.read(authControllerProvider);
+      expect(status, isA<Authenticated>());
+      expect((status as Authenticated).userId, 'user-1');
+    });
+
     test('e-mail já utilizado -> AuthError', () async {
       when(
         () => repository.signUp(

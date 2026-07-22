@@ -511,5 +511,108 @@ Perfil) liberadas para implementação. Rodada F (CI) permanece
 pendente apenas da configuração manual dos 4 GitHub Secrets (ver
 Rodada 0 acima).
 
+## Rodada B --- Autenticação (concluída, 2026-07-22)
+
+Commits `4b8ec67` (branch `feature/qa-15-authentication-integration`,
+implementação inicial dos 4 cenários) e um segundo commit de
+estabilização/correção nesta mesma branch (ver hash ao final desta
+seção).
+
+-   **4 cenários implementados**, um arquivo por cenário
+    (`integration_test/authentication/{signup,login,logout,
+    persistence}_test.dart`), cada um com seu próprio
+    `Supabase.initialize()` (evita reinicialização dupla no mesmo
+    processo) --- independentes entre si, sem depender de ordem de
+    execução:
+    -   **Cadastro**: dirige o formulário real de `SignupPage` (único
+        cenário que não usa `QaTestUserHelper` para criar o usuário,
+        já que o próprio fluxo de cadastro é o que está sendo
+        validado). Usa domínio `mailinator.com` (domínios reservados
+        de teste são rejeitados pela validação de e-mail do GoTrue,
+        achado da Rodada 0).
+    -   **Login/Logout/Persistência**: usuário pré-criado via
+        `QaTestUserHelper` (Admin API, já confirmado).
+-   **Helpers adicionados**: `helpers/pump_helpers.dart` (`pumpUntil`
+    compartilhado), `helpers/qa_test_config.dart` (constrói
+    `QaTestUserHelper` lendo `SUPABASE_QA_SERVICE_ROLE_KEY` via
+    `--dart-define`, nunca hardcoded/gravada em `.env.qa`),
+    `helpers/test_user_helper.dart` estendido com `findUserByEmail()`
+    e `fetchProfile()`.
+
+### Achado 1 --- Rate limit de e-mail (infraestrutura, resolvido)
+
+Na primeira execução, o cenário de Cadastro foi bloqueado por
+`over_email_send_rate_limit` (HTTP 429) --- o Supabase usa um SMTP
+compartilhado com limite baixo por padrão para projetos novos, e duas
+tentativas de cadastro em poucos minutos já esgotaram a cota. **Não
+era um bug de código.** Resolvido por você desabilitando "Confirm
+email" para o projeto `borah-qa` (Dashboard --- Authentication ---
+Sign In / Providers --- Email).
+
+### Achado 2 --- Condição de corrida no cadastro (bug real de produção, corrigido)
+
+Ao desabilitar "Confirm email", o cenário de Cadastro passou a falhar
+de forma diferente: a navegação esperada para `/email-verification`
+nunca acontecia. Investigação confirmou uma condição de corrida real
+em `AuthController.signUp()`
+(`app/lib/features/authentication/application/auth_controller.dart`):
+o método definia `EmailVerificationPending` **incondicionalmente**
+após `signUp()`, sem checar se uma sessão já havia sido criada. Com
+"Confirm email" desabilitado, `signUp()` já retorna com sessão ativa
+--- e o listener assíncrono de `onAuthStateChange` (que define
+`Authenticated` ao detectar a sessão) competia com essa atribuição
+incondicional, sem ordem garantida entre os dois caminhos assíncronos.
+
+**Comportamento antes da correção:** resultado indeterminístico
+--- dependendo de qual dos dois caminhos assíncronos executasse por
+último, o app podia ficar preso num estado inconsistente (a
+navegação para `/email-verification` nunca se consolidava).
+
+**Correção aplicada** (menor alteração possível, sem duplicar regra
+de negócio nem criar estado novo): `signUp()` passou a consultar
+`_repository.currentUser` logo após o `await` --- a mesma técnica já
+usada em `signIn()`/`restoreSession()` no mesmo arquivo --- e decide
+o estado final de forma determinística:
+
+```dart
+final current = _repository.currentUser;
+state = current == null
+    ? EmailVerificationPending(email)
+    : Authenticated(userId: current.userId, email: current.email);
+```
+
+**Comportamento depois da correção**, funcionando corretamente para
+os dois cenários de configuração:
+-   **Confirm email = ON**: `currentUser` é `null` logo após
+    `signUp()` --- `EmailVerificationPending`, navega para
+    `/email-verification` (comportamento original, preservado).
+-   **Confirm email = OFF** (cenário atual do `borah-qa`):
+    `currentUser` já reflete a sessão criada --- `Authenticated`
+    diretamente, navega para `/home`.
+
+Teste unitário adicionado em `auth_controller_test.dart` cobrindo o
+cenário "confirm email OFF -> Authenticated". O teste de integração
+`signup_test.dart` foi atualizado para aguardar e validar
+corretamente **qualquer um dos dois desfechos válidos**, falhando
+explicitamente (sem mascarar erros) caso nenhum dos dois --- ou um
+terceiro estado inesperado --- ocorra.
+
+### Resultado final da Rodada B
+
+-   **4/4 cenários de Integration Test aprovados** em emulador
+    Android real (`emulator-5554`), executados individualmente contra
+    o `borah-qa`: Cadastro, Login, Logout, Persistência.
+-   **Nenhum usuário órfão**: confirmado via `select count(*) from
+    auth.users` no `borah-qa` = 0 após todas as execuções.
+-   **Nenhuma regressão**: suíte de unit/widget tests
+    **243/243 aprovados** (242 + 1 novo teste unitário do
+    `AuthController`), `flutter analyze` e
+    `dart format --set-exit-if-changed .` limpos.
+
+**Autenticação ponta a ponta homologada no ambiente `borah-qa`.**
+Rodadas C--E (Restaurantes+Avaliações, Favoritos+Feed, Perfil)
+liberadas para implementação, reaproveitando a mesma arquitetura
+(arquivos separados por cenário, `QaTestUserHelper`, `pumpUntil`).
+
 **Próximo passo:** aguardando autorização explícita para iniciar a
-Rodada B (primeiro fluxo real: Autenticação) do QA-03.
+Rodada C do QA-03.

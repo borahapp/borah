@@ -134,8 +134,16 @@ scaffolding do pacote `integration_test` implementado e smoke test
 aprovado (1/1) em emulador Android real (`emulator-5554`, Android 16),
 com conexão validada ponta a ponta contra o `borah-qa` (commit
 `b44fb33`). Suíte de unit/widget tests sem regressão (242/242).
-Rodadas B--E liberadas para implementação; Rodada F (CI) pendente da
-configuração manual de 4 GitHub Secrets. Ver
+**Rodada B concluída — Autenticação homologada ponta a ponta**: 4/4
+cenários (Cadastro, Login, Logout, Persistência) aprovados em
+emulador Android real contra o `borah-qa` (commit `4b8ec67` +
+estabilização). Durante a rodada, um bug real de condição de corrida
+em `AuthController.signUp()` foi encontrado e corrigido (estado
+indeterminístico quando "Confirm email" está desabilitado) — corrigido
+de forma determinística, sem duplicar regra de negócio, funcionando
+para os dois cenários de configuração. Suíte de unit/widget tests sem
+regressão (243/243). Rodadas C--E liberadas para implementação;
+Rodada F (CI) pendente da configuração manual de 4 GitHub Secrets. Ver
 `EX-10_FASE_6_QA_STATUS.md` §7 para o progresso detalhado e
 pendências (rotação de `SERVICE_ROLE_KEY`, criação de buckets de
 Storage, GitHub Secrets).
