@@ -280,3 +280,37 @@ Toda alteração no Design System deverá:
 - Motion documentado
 - Acessibilidade registrada
 - Governança estabelecida
+
+---
+
+# 19. Arquitetura em Camadas (Implementação FASE 7A)
+
+Implementado em `app/lib/design_system/`, com uma separação explícita
+entre identidade de marca e a tradução para Material Design — nunca o
+inverso:
+
+```text
+Brand Tokens (design_system/brand/)
+  BrandColors, BrandGradients, BrandTypography
+       ↓
+Material Tokens (design_system/tokens/, design_system/typography/)
+  AppColors, AppGradients (ThemeExtension), AppRadius, AppShadows,
+  AppElevation, AppSpacing, AppTypography — consomem os Brand Tokens
+  para derivar o que o ColorScheme/TextTheme/ThemeData conseguem usar
+  (escala neutra, semânticas, pares de contraste, tamanhos/pesos)
+       ↓
+ThemeData (core/theme/app_theme.dart)
+       ↓
+Widgets (Theme.of(context) — nunca importam Brand Tokens diretamente)
+```
+
+**Regra de dependência:** `Brand Tokens` só é importado por
+`design_system/tokens/`, `design_system/typography/` e
+`core/theme/app_theme.dart`. Nenhum widget de tela deve importar
+`design_system/brand/` diretamente — sempre via `Theme.of(context)`.
+
+**Por que essa separação:** `BrandColors`/`BrandGradients`/
+`BrandTypography` são a tradução 1:1 do Manual Oficial da Marca — só
+mudam se o manual mudar. `AppColors`/`AppGradients`/`AppTypography` são
+decisões de engenharia (contraste WCAG, escala neutra, ColorScheme do
+Material) que podem evoluir independentemente da marca em si.

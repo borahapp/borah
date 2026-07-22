@@ -29,17 +29,22 @@ A tipografia do BORAH deve ser:
 
 # 3. Fonte Principal
 
-**Família recomendada:**
+**Atualizado na FASE 7A (UI-01, Design System oficial)** — a fonte foi
+revisada para reforçar a identidade visual, conforme o Manual Oficial
+da Marca BORAH (v1.0, jul/2026), que é a fonte única de verdade para
+tipografia a partir desta fase:
 
-- Inter
+- **Fredoka** — títulos e chamadas (Display/Headline/Title). Pesos
+  recomendados: Semibold 600 e Bold 700.
+- **Manrope** — textos, interface e dados (Body/Label). Pesos
+  recomendados: Regular 400, Semibold 600 e Bold 700.
 
-Alternativas (fallback):
+Ambas são fontes variáveis (Google Fonts, licença SIL Open Font
+License 1.1), bundladas localmente em `app/assets/fonts/` — sem
+dependência de rede em runtime.
 
-- Roboto
-- SF Pro (iOS)
-- Sans-serif
-
-A escolha poderá ser revisada caso haja necessidade de reforçar a identidade visual.
+**Recomendação anterior (substituída):** Inter, com fallback
+Roboto/SF Pro/sans-serif.
 
 ---
 

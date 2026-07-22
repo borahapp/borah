@@ -1,113 +1,153 @@
 import 'package:flutter/material.dart';
 
-/// Centralizes ThemeData (UI-03/UI-04: "nunca utilizar valores diretamente
-/// nos widgets, apenas tokens/ThemeData").
+import '../../design_system/design_system.dart';
+
+/// Centraliza o `ThemeData` (UI-03/UI-04: "nunca utilizar valores
+/// diretamente nos widgets, apenas tokens/ThemeData").
 ///
-/// Tipografia: segue exatamente a escala, pesos e faixas de altura de linha
-/// definidos em UI-04_TYPOGRAPHY.md (fonte Inter, hierarquia Material 3).
-/// Pesos por estilo e o valor exato de altura de linha (dentro da faixa
-/// documentada) seguem a convenção padrão do Material Design 3, citada
-/// como referência pelo próprio UI-04 (§4).
+/// Design System oficial do BORAH (UI-01, FASE 7A) — arquitetura em
+/// camadas, nunca o inverso:
+/// ```text
+/// Brand Tokens (design_system/brand/)     - identidade pura da marca
+///        ↓
+/// Material Tokens (tokens/, typography/)  - traduz Brand Tokens para
+///        ↓                                  algo que ColorScheme/
+///        ↓                                  TextTheme consegue usar
+/// ThemeData (este arquivo)
+///        ↓
+/// Widgets (Theme.of(context) - nunca importam Brand Tokens direto)
+/// ```
 ///
-/// Cores: UI-02/UI-03 definem apenas categorias (Primary/Secondary/Accent,
-/// Neutral 50-900, etc.), sem nenhum valor de cor (hex/RGB) real. Como não
-/// há valor especificado, o ColorScheme usa o padrão do Material 3 até que
-/// a FASE 3 defina a paleta oficial.
+/// [BrandColors] é importado aqui diretamente só onde a marca exige um
+/// valor **sempre exato**, independente do tema (o preenchimento do
+/// `FilledButton`, que deve ser o Roxo BORAH puro tanto no Light quanto
+/// no Dark Theme) - todo o resto do `ColorScheme` vem de [AppColors]
+/// (camada Material, já deriva de [BrandColors] internamente).
 abstract final class AppTheme {
-  static const _fontFamily = 'Inter';
-  static const _fontFamilyFallback = ['Roboto', 'SF Pro Text', 'sans-serif'];
+  static ColorScheme get _lightColorScheme =>
+      ColorScheme.fromSeed(
+        seedColor: AppColors.roxoBorah,
+        brightness: Brightness.light,
+      ).copyWith(
+        primary: AppColors.roxoBorah,
+        onPrimary: AppColors.onRoxo,
+        tertiary: AppColors.verdeBorah,
+        onTertiary: AppColors.onVerde,
+        error: AppColors.error,
+        onError: Colors.white,
+        surface: Colors.white,
+        onSurface: AppColors.pretoUva,
+      );
 
-  static const _headingHeight = 1.15; // UI-04 §7: títulos 110%-120%
-  static const _bodyHeight = 1.5; // UI-04 §7: corpo 140%-160%
-  static const _labelHeight = 1.3; // UI-04 §7: labels 120%-140%
+  /// Dark Theme usa [AppColors.roxoBorahLight] (não o Roxo BORAH puro)
+  /// como `primary` - ver doc do token: Roxo BORAH puro como cor de
+  /// texto/ícone sobre fundo escuro fica abaixo do contraste mínimo do
+  /// WCAG AA. Botões preenchidos (`FilledButtonThemeData` abaixo)
+  /// continuam usando o Roxo BORAH exato ([BrandColors.purple]) em
+  /// ambos os temas.
+  static ColorScheme get _darkColorScheme =>
+      ColorScheme.fromSeed(
+        seedColor: AppColors.roxoBorah,
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: AppColors.roxoBorahLight,
+        onPrimary: AppColors.pretoUva,
+        tertiary: AppColors.verdeBorah,
+        onTertiary: AppColors.onVerde,
+        error: AppColors.error,
+        onError: Colors.white,
+        surface: AppColors.neutral800,
+        onSurface: Colors.white,
+      );
 
-  static final TextTheme _textTheme = TextTheme(
-    displayLarge: TextStyle(
-      fontSize: 57,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
+  /// Preenchimento sempre [BrandColors.purple] exato — decisão de
+  /// marca, não de tema (independe de `ColorScheme.primary`, que no
+  /// Dark Theme usa a tinta clara [AppColors.roxoBorahLight] por
+  /// motivo de contraste de texto, não de preenchimento de botão).
+  static FilledButtonThemeData get _filledButtonTheme => FilledButtonThemeData(
+    style: FilledButton.styleFrom(
+      backgroundColor: BrandColors.purple,
+      foregroundColor: AppColors.onRoxo,
+      minimumSize: const Size.fromHeight(48),
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
+      textStyle: AppTypography.textTheme.labelLarge,
     ),
-    displayMedium: TextStyle(
-      fontSize: 45,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
+  );
+
+  static OutlinedButtonThemeData get _outlinedButtonTheme =>
+      OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
+          textStyle: AppTypography.textTheme.labelLarge,
+        ),
+      );
+
+  static TextButtonThemeData get _textButtonTheme => TextButtonThemeData(
+    style: TextButton.styleFrom(
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
+      textStyle: AppTypography.textTheme.labelLarge,
     ),
-    displaySmall: TextStyle(
-      fontSize: 36,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
-    ),
-    headlineLarge: TextStyle(
-      fontSize: 32,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
-    ),
-    headlineMedium: TextStyle(
-      fontSize: 28,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
-    ),
-    headlineSmall: TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
-    ),
-    titleLarge: TextStyle(
-      fontSize: 22,
-      fontWeight: FontWeight.w400,
-      height: _headingHeight,
-    ),
-    titleMedium: TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w500,
-      height: _headingHeight,
-    ),
-    titleSmall: TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      height: _headingHeight,
-    ),
-    bodyLarge: TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w400,
-      height: _bodyHeight,
-    ),
-    bodyMedium: TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w400,
-      height: _bodyHeight,
-    ),
-    bodySmall: TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w400,
-      height: _bodyHeight,
-    ),
-    labelLarge: TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      height: _labelHeight,
-    ),
-    labelMedium: TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w500,
-      height: _labelHeight,
-    ),
-    labelSmall: TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w500,
-      height: _labelHeight,
-    ),
-  ).apply(fontFamily: _fontFamily, fontFamilyFallback: _fontFamilyFallback);
+  );
+
+  static InputDecorationTheme _inputDecorationTheme(ColorScheme scheme) {
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: scheme.surfaceContainerHighest,
+      border: OutlineInputBorder(
+        borderRadius: AppRadius.radiusMd,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: AppRadius.radiusMd,
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: AppRadius.radiusMd,
+        borderSide: BorderSide(color: scheme.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: AppRadius.radiusMd,
+        borderSide: BorderSide(color: scheme.error, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+    );
+  }
+
+  static CardThemeData get _cardTheme => CardThemeData(
+    elevation: AppElevation.level1,
+    shape: const RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+    margin: EdgeInsets.zero,
+  );
 
   static ThemeData get light => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    textTheme: _textTheme,
+    colorScheme: _lightColorScheme,
+    scaffoldBackgroundColor: Colors.white,
+    textTheme: AppTypography.textTheme,
+    filledButtonTheme: _filledButtonTheme,
+    outlinedButtonTheme: _outlinedButtonTheme,
+    textButtonTheme: _textButtonTheme,
+    inputDecorationTheme: _inputDecorationTheme(_lightColorScheme),
+    cardTheme: _cardTheme,
+    extensions: const [AppGradients.brand],
   );
 
   static ThemeData get dark => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    textTheme: _textTheme,
+    colorScheme: _darkColorScheme,
+    scaffoldBackgroundColor: AppColors.pretoUva,
+    textTheme: AppTypography.textTheme,
+    filledButtonTheme: _filledButtonTheme,
+    outlinedButtonTheme: _outlinedButtonTheme,
+    textButtonTheme: _textButtonTheme,
+    inputDecorationTheme: _inputDecorationTheme(_darkColorScheme),
+    cardTheme: _cardTheme,
+    extensions: const [AppGradients.brand],
   );
 }
