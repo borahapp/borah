@@ -61,7 +61,7 @@ em `develop` por fast-forward).
     (`flutter test --coverage`, 155/155 aprovados; `flutter analyze` e
     `dart format --set-exit-if-changed .` limpos).
 
-## Rodada 2 --- Tier 2 (em andamento — reordenada, ver §5)
+## Rodada 2 --- Tier 2 (concluída — reordenada, ver §5, 2026-07-21)
 
 ### Item 1 --- Detalhe do Restaurante (concluído, 2026-07-21)
 
@@ -217,8 +217,67 @@ em `develop` por merge commit `7dad437`).
     **76,5%** (579/757 linhas --- aumento pela nova ramificação de
     `_run()` coberta pelo teste de regressão).
 
-**Próximo item (5/5):** Editar Perfil --- aguardando aprovação
-explícita antes de iniciar.
+### Item 5 --- Editar Perfil (concluído, 2026-07-21)
+
+Commit `809206a` (branch `feature/qa-12-widget-tests-profile`,
+mesclada em `develop` por merge commit `4aabfab`).
+
+-   12 cenários cobertos em `EditProfilePage`: renderização inicial
+    mesmo sem perfil carregado, formulário preenchido a partir do
+    perfil, validação de nome obrigatório, salvar com sucesso
+    (navegando de volta), estado de salvamento (indicador no botão),
+    erro via snackbar, cancelamento (botão voltar sem enviar
+    alterações), navegação para a troca de avatar, responsividade e
+    acessibilidade básica.
+-   10 cenários cobertos em `ChangeAvatarPage`: renderização inicial
+    com ícone padrão, resolução da URL assinada para avatar existente,
+    botão "Salvar foto" desabilitado até uma imagem ser selecionada,
+    estado de envio com indicador e navegação de volta ao concluir,
+    erro via snackbar, voltar sem selecionar foto, responsividade e
+    acessibilidade básica. A seleção real de imagem (`ImagePicker`,
+    sem canal de plataforma mockado) e o disparo de `updateAvatar()`
+    via toque em "Salvar foto" não são testáveis por interação de UI
+    --- mesma limitação já estabelecida para os demais fluxos baseados
+    em `ImagePickerService`; os estados de carregamento/sucesso/erro
+    de `updateAvatar()` foram validados invocando o controller
+    diretamente via `ProviderContainer` (mesma técnica usada nos
+    rounds de Favoritos/Feed para estados sem gatilho de UI
+    equivalente). Ambas as páginas usam uma seed de
+    `UserProfileStatus` inicial, já que nenhuma delas dispara
+    carregamento próprio (assumem que o perfil já foi carregado por
+    `ProfilePage` antes da navegação, DV-02 §4). Mesma estratégia dos
+    rounds anteriores (`ProviderScope` + `MaterialApp.router` +
+    mocktail + rotas placeholder), sem
+    `golden_toolkit`/`integration_test`.
+-   **Nenhuma alteração de código de produção foi necessária nesta
+    rodada:** nenhum bug de acessibilidade foi encontrado em
+    `EditProfilePage` ou `ChangeAvatarPage`.
+-   **Achado de acessibilidade fora do escopo (documentado, não
+    corrigido nem testado):** `ProfilePage` (tela de visualização,
+    diferente de "Editar Perfil") tem um `IconButton` de configurações
+    (`Icons.settings`, navega para `/settings`) sem `tooltip` --- mesma
+    classe de bug já corrigida em rodadas anteriores (Tier 1, Itens 1
+    e 2 deste Tier), mas em uma tela fora do escopo desta entrega.
+-   **Divergências documentadas (não corrigidas nesta rodada):**
+    -   DV-02 §10 modela estados genéricos (Initial/Loading/Loaded/
+        Updating/Success/Error) para o módulo inteiro, mas
+        `EditProfilePage` não renderiza estados distintos de corpo
+        para Initial/Loading/Error --- o formulário é sempre exibido;
+        erro via snackbar e sucesso via pop (mesmo padrão já visto em
+        `CreateReviewPage`).
+    -   DV-02 §14 "Integração > Storage" lista "Remoção da foto
+        anterior (quando aplicável)"; `updateAvatar()` não remove o
+        arquivo de avatar anterior do Storage ao fazer upload do novo
+        (achado na camada de dados, fora do escopo de Widget Tests).
+-   **Evolução da suíte:** 220 → **242** testes (12 novos em
+    `EditProfilePage` + 10 novos em `ChangeAvatarPage`; `flutter test`,
+    242/242 aprovados; `flutter analyze` e
+    `dart format --set-exit-if-changed .` limpos).
+-   **Cobertura da camada Presentation:** 37,1% → **42,7%**
+    (697/1631 linhas). **Cobertura da camada Application:** 76,5% →
+    **77,0%** (583/757 linhas).
+
+**Tier 2 --- encerrado (5/5 itens concluídos, 2026-07-21).**
 
 ------------------------------------------------------------------------
 
@@ -301,7 +360,6 @@ FASE 6A). Ordem atual do Tier 2:
 2.  ~~Detalhe da Avaliação~~ --- **concluído** (§3, commit `1f6367f`)
 3.  ~~Favoritar~~ --- **concluído** (§3, commit `dfbae4c`)
 4.  ~~Feed~~ --- **concluído** (§3, commit `fb96bc0`)
-5.  Editar Perfil
+5.  ~~Editar Perfil~~ --- **concluído** (§3, commit `809206a`)
 
-Aguardando instrução explícita para confirmar escopo e iniciar o
-item 5 (Editar Perfil).
+**Tier 2 encerrado (5/5 itens concluídos, 2026-07-21).**

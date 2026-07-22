@@ -120,9 +120,13 @@ Nunca iniciar DV seguinte sem concluir o atual.
 
 ## Fase 6 --- QA
 
-**Status: Em andamento.** Ver `EX-10_FASE_6_QA_STATUS.md` para o
-progresso detalhado (diagnóstico, rodadas concluídas, evolução da
-suíte de testes e itens explicitamente fora do escopo atual).
+**Status: Em andamento** (Tier 2 de Widget Tests **concluído** em
+2026-07-21 — 5/5 itens: Detalhe do Restaurante, Detalhe da Avaliação,
+Favoritar, Feed e Editar Perfil). Ver `EX-10_FASE_6_QA_STATUS.md` para
+o progresso detalhado (diagnóstico, rodadas concluídas, evolução da
+suíte de testes e itens explicitamente fora do escopo atual) e o
+relatório de encerramento da fase para a recomendação formal de
+promoção de status.
 
 Executar QA-\* em sequência.
 
