@@ -1,6 +1,7 @@
 import 'package:app/core/environment/app_environment.dart';
 
 import 'qa_restaurant_helper.dart';
+import 'qa_social_helper.dart';
 import 'test_user_helper.dart';
 
 /// Configuração compartilhada dos Integration Tests que precisam criar
@@ -35,6 +36,14 @@ abstract final class QaTestConfig {
   static QaRestaurantHelper buildRestaurantHelper() {
     _assertServiceRoleKeyProvided();
     return QaRestaurantHelper(
+      supabaseUrl: AppEnvironment.supabaseUrl,
+      serviceRoleKey: _serviceRoleKey,
+    );
+  }
+
+  static QaSocialHelper buildSocialHelper() {
+    _assertServiceRoleKeyProvided();
+    return QaSocialHelper(
       supabaseUrl: AppEnvironment.supabaseUrl,
       serviceRoleKey: _serviceRoleKey,
     );

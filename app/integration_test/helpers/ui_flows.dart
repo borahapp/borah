@@ -76,3 +76,23 @@ Future<void> openRestaurantByName(
     timeoutMessage: 'A tela de Detalhes do restaurante não abriu a tempo.',
   );
 }
+
+/// A partir da Home, abre a tela de Favoritos (QA-03, Rodada D).
+Future<void> openFavorites(WidgetTester tester) async {
+  await tester.tap(find.text('Ver favoritos'));
+  await pumpUntil(
+    tester,
+    () => find.text('Favoritos').evaluate().isNotEmpty,
+    timeoutMessage: 'A tela de Favoritos não abriu a tempo.',
+  );
+}
+
+/// A partir da Home, abre a tela de Feed (QA-03, Rodada D).
+Future<void> openFeed(WidgetTester tester) async {
+  await tester.tap(find.text('Ver feed'));
+  await pumpUntil(
+    tester,
+    () => find.text('Feed').evaluate().isNotEmpty,
+    timeoutMessage: 'A tela de Feed não abriu a tempo.',
+  );
+}
