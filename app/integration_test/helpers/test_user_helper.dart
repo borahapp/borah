@@ -114,6 +114,41 @@ class QaTestUserHelper {
     }
   }
 
+  /// Atualiza campos de `public.profiles` diretamente via PostgREST
+  /// (`service_role`, ignora RLS) - QA-03, Rodada E. Usado para preparar
+  /// precondições de perfil (ex.: nome/bio/cidade/estado já preenchidos)
+  /// sem depender do próprio fluxo de edição, que é o que está sendo
+  /// validado em `profile/update_test.dart` (mesmo critério de
+  /// independência já usado com `QaRestaurantHelper.createReview` na
+  /// Rodada C).
+  Future<void> updateProfileFields(
+    String userId,
+    Map<String, dynamic> patch,
+  ) async {
+    final client = HttpClient();
+    try {
+      final request = await client.patchUrl(
+        Uri.parse(
+          '$supabaseUrl/rest/v1/profiles',
+        ).replace(queryParameters: {'id': 'eq.$userId'}),
+      );
+      request.headers.set('apikey', serviceRoleKey);
+      request.headers.set('Authorization', 'Bearer $serviceRoleKey');
+      request.headers.set('Content-Type', 'application/json');
+      // Mesmo cuidado de encoding UTF-8 já corrigido nesta classe e em
+      // `qa_restaurant_helper.dart` (Rodada C).
+      request.add(utf8.encode(jsonEncode(patch)));
+
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 204 && response.statusCode != 200) {
+        throw StateError('Falha ao atualizar profile: $body');
+      }
+    } finally {
+      client.close();
+    }
+  }
+
   /// Consulta `public.profiles` via PostgREST usando a `service_role`
   /// (ignora RLS) - usado para validar que `handle_new_user()` criou o
   /// profile automaticamente após o cadastro.
