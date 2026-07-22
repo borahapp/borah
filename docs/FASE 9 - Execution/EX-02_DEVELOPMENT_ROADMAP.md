@@ -122,11 +122,17 @@ Nunca iniciar DV seguinte sem concluir o atual.
 
 **Status: Em andamento** (Tier 2 de Widget Tests **concluído** em
 2026-07-21 — 5/5 itens: Detalhe do Restaurante, Detalhe da Avaliação,
-Favoritar, Feed e Editar Perfil). Ver `EX-10_FASE_6_QA_STATUS.md` para
-o progresso detalhado (diagnóstico, rodadas concluídas, evolução da
-suíte de testes e itens explicitamente fora do escopo atual) e o
-relatório de encerramento da fase para a recomendação formal de
-promoção de status.
+Favoritar, Feed e Editar Perfil). Auditoria de Encerramento da FASE 6
+realizada em 2026-07-21/22 (recomendação: executar rodadas adicionais
+antes do encerramento formal — ver `EX-10_FASE_6_QA_STATUS.md` §6).
+**QA-03 (Integration Testing) iniciado em 2026-07-22** para eliminar o
+maior bloqueador identificado: Rodada 0 concluída — ambiente Supabase
+dedicado `borah-qa` provisionado e validado estruturalmente contra o
+Development (commit `60f60c8`, merge `45fda6c`). Rodadas A--E
+liberadas; Rodada F (CI) pendente da configuração manual de 4 GitHub
+Secrets. Ver `EX-10_FASE_6_QA_STATUS.md` §7 para o progresso detalhado
+e pendências (rotação de `SERVICE_ROLE_KEY`, criação de buckets de
+Storage, GitHub Secrets).
 
 Executar QA-\* em sequência.
 

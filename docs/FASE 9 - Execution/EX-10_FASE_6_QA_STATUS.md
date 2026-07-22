@@ -363,3 +363,90 @@ FASE 6A). Ordem atual do Tier 2:
 5.  ~~Editar Perfil~~ --- **concluído** (§3, commit `809206a`)
 
 **Tier 2 encerrado (5/5 itens concluídos, 2026-07-21).**
+
+------------------------------------------------------------------------
+
+# 6. Auditoria de Encerramento da FASE 6 (concluída, 2026-07-22)
+
+Revisão cruzada de QA-01 a QA-08 contra este documento, o EX-02, o
+código-fonte, `coverage/lcov.info`, o CI e a infraestrutura Supabase.
+Recomendação: **(B) executar rodadas adicionais** antes do
+encerramento formal da FASE 6 — o Widget Testing (Tier 1 + Tier 2)
+está genuinamente concluído, mas a FASE 6 como um todo (QA-01 a
+QA-08) tem 3 bloqueadores estruturais: ausência de ambiente
+Staging/Produção, zero testes de Integração/Performance, e zero
+UAT/plano de rollback. Metas de cobertura do QA-02 (Domain 90%/
+Application 85%/Data 80%) não atingidas (atual: 63,0%/77,0%/1,6%) —
+registrado como dívida técnica conhecida, não bloqueante.
+
+**Decisão tomada:** iniciar o QA-03 (Integration Testing) para
+eliminar o maior bloqueador identificado (ausência de ambiente
+isolado), antes de decidir sobre o encerramento formal da FASE 6.
+
+------------------------------------------------------------------------
+
+# 7. QA-03 --- Integration Testing (em andamento)
+
+## Rodada 0 --- Provisionamento do ambiente QA/Test (concluída, 2026-07-22)
+
+Commit `60f60c8` (branch `feature/qa-13-provision-qa-environment`,
+mesclada em `develop` por merge commit `45fda6c`).
+
+-   **Ambiente `borah-qa` provisionado**: projeto Supabase dedicado
+    (ref `fgzokfkvccgkclkmfqui`, região `sa-east-1`, mesma organização
+    do Development), criado e vinculado via Supabase CLI.
+-   **24/24 migrations aplicadas** (`supabase db push`), idênticas em
+    nome e ordem às do Development.
+-   **Validação estrutural cruzada** (sem Docker --- `db diff`/
+    `db dump` dependem de Docker, indisponível nesta máquina; validado
+    por métodos alternativos via `supabase inspect db` e
+    `supabase db query --linked`): 15/15 tabelas, 41/41 policies RLS e
+    17/17 funções idênticas entre Development e QA; RLS habilitado nas
+    15 tabelas de `public` no projeto QA. Nenhuma divergência
+    estrutural encontrada.
+-   **Bootstrap validado**: usuário de teste criado via Admin API (o
+    endpoint público de signup rejeita domínios `.test`/`example.com`
+    por validação de e-mail do GoTrue --- achado registrado, não
+    corrigido, é comportamento do provedor); trigger
+    `handle_new_user()` confirmado populando `profiles`; funções RBAC
+    (`is_admin`, `has_admin_role`, `can_moderate`) confirmadas
+    `SECURITY DEFINER` e funcionando sem recursão (mesma correção do
+    Development, migration `20260720130030`). Usuário de teste
+    removido ao final, cascata de `profiles` confirmada.
+-   **`.env.qa` criado** (não versionado) com `SUPABASE_URL`/
+    `SUPABASE_ANON_KEY` do projeto QA; `.gitignore` atualizado.
+-   **QA-03 §6 "Base de dados exclusiva para testes": bloqueador
+    estrutural eliminado.** Rodadas A--E do plano de Integration
+    Testing (Autenticação, Restaurantes+Avaliações, Favoritos+Feed,
+    Perfil, e o próprio scaffolding) estão **liberadas** para início.
+    **Rodada F (CI)** permanece pendente apenas da configuração manual
+    dos 4 GitHub Secrets (ver pendências abaixo).
+
+### Achados e pendências registradas nesta rodada
+
+-   **Achado pré-existente (não introduzido agora):** nem Development
+    nem QA têm nenhum bucket de Storage criado --- os fluxos de upload
+    de foto (avatar, capa de restaurante, fotos de avaliação) nunca
+    foram validados contra Storage real em nenhum ambiente. Pendência
+    registrada para quando a Rodada E (Perfil/avatar) for
+    implementada; **criação dos buckets de Storage** também fica como
+    pendência de infraestrutura, fora do escopo desta rodada.
+-   **Achado de segurança:** ao consultar `supabase projects
+    api-keys` sem `--reveal`, a CLI expôs por completo a
+    `service_role key` no formato legacy (JWT) do projeto `borah-qa`.
+    A chave foi usada e descartada nesta sessão, não persistida em
+    nenhum arquivo do repositório. **Pendência: rotacionar a
+    SERVICE_ROLE_KEY** do projeto `borah-qa` (Dashboard → Project
+    Settings → API → Reset service_role key) antes de qualquer uso em
+    produção/CI, preferindo o formato novo (`sb_secret_...`).
+-   **Pendência: configuração dos 4 GitHub Secrets** (`SUPABASE_QA_URL`,
+    `SUPABASE_QA_ANON_KEY`, `SUPABASE_QA_PROJECT_REF`,
+    `SUPABASE_QA_SERVICE_ROLE_KEY`) --- sem acesso à ferramenta `gh`
+    nesta sessão; checklist manual entregue no relatório da Rodada 0,
+    aguardando execução por quem tem acesso administrativo ao
+    repositório GitHub.
+-   Nenhum código Flutter, `pubspec.yaml` ou CI foi alterado nesta
+    rodada.
+
+**Próximo passo:** aguardando autorização explícita para iniciar a
+Rodada A (scaffolding do `integration_test`) do QA-03.
