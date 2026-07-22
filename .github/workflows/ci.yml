@@ -6,8 +6,13 @@ on:
   push:
     branches: [main, develop]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  flutter:
+  analyze:
+    name: Flutter Analyze
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,6 +23,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
 
       - uses: actions/cache@v4
         with:
@@ -29,11 +35,187 @@ jobs:
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze
-      - run: flutter test --coverage
+
+  unit_test:
+    name: Flutter Test (Unit + Widget)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - run: flutter pub get
+      - run: flutter test --coverage --reporter github
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-report
           path: app/coverage/lcov.info
 
+  build_android:
+    name: Build Android (debug)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/**/*.gradle*', 'app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - run: flutter pub get
       - run: flutter build apk --debug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+
+  # Roda contra o projeto Supabase QA real (borah-qa) - QA-03, Rodada F.
+  # Requer os 4 secrets documentados em docs/operations/CI_CD_SECRETS.md,
+  # idealmente cadastrados no Environment "qa" (ver mesmo documento) para
+  # permitir exigir aprovação manual em PRs de fora do time.
+  #
+  # SERIALIZAÇÃO TOTAL, INTENCIONAL (confirmado na Rodada F): a matriz
+  # abaixo tem 23 entradas, mas por padrão o GitHub Actions expandiria
+  # isso em até 23 jobs em paralelo - o que faria várias execuções
+  # concorrentes do emulador Android baterem ao mesmo tempo no MESMO
+  # projeto Supabase (borah-qa), um ambiente real e compartilhado. Dois
+  # mecanismos, redundantes de propósito, impedem isso:
+  #
+  # 1. `strategy.max-parallel: 1` - explícito, ao lado da própria matriz,
+  #    garante que nenhum dos 23 jobs desta execução do workflow rode
+  #    simultaneamente a outro job da mesma matriz.
+  # 2. `concurrency.group: integration-tests` (grupo ESTÁTICO, sem
+  #    `${{ matrix.test_file }}` nem `${{ github.ref }}`) - o mesmo nome
+  #    de grupo para as 23 entradas da matriz E para qualquer outra
+  #    execução deste workflow (outro push, outro PR) que chegue a este
+  #    job. O GitHub Actions garante que só uma execução por grupo de
+  #    concorrência roda por vez no repositório inteiro; as demais ficam
+  #    em fila (`cancel-in-progress: false` - esperam, não são
+  #    canceladas). Isso é o que de fato impede colisão entre PRs
+  #    diferentes rodando ao mesmo tempo, algo que `max-parallel` sozinho
+  #    (escopo limitado a uma única execução do workflow) não cobriria.
+  #
+  # Resultado: os 23 arquivos rodam um de cada vez, nunca em paralelo -
+  # nem entre si, nem contra outra execução concorrente deste workflow.
+  # Trade-off aceito (correção sobre velocidade, ver
+  # docs/operations/CI_CD_SECRETS.md §4).
+  integration_test:
+    name: Integration Test (${{ matrix.test_file }})
+    needs: [analyze, unit_test, build_android]
+    runs-on: ubuntu-latest
+    environment: qa
+    concurrency:
+      group: integration-tests
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: app
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_file:
+          - integration_test/app_smoke_test.dart
+          - integration_test/authentication/signup_test.dart
+          - integration_test/authentication/login_test.dart
+          - integration_test/authentication/logout_test.dart
+          - integration_test/authentication/persistence_test.dart
+          - integration_test/restaurants/listing_test.dart
+          - integration_test/restaurants/listing_empty_test.dart
+          - integration_test/restaurants/detail_test.dart
+          - integration_test/reviews/create_test.dart
+          - integration_test/reviews/edit_test.dart
+          - integration_test/reviews/delete_test.dart
+          - integration_test/favorites/favorite_test.dart
+          - integration_test/favorites/unfavorite_test.dart
+          - integration_test/favorites/listing_test.dart
+          - integration_test/favorites/listing_empty_test.dart
+          - integration_test/social/feed_test.dart
+          - integration_test/social/feed_update_test.dart
+          - integration_test/profile/view_test.dart
+          - integration_test/profile/update_test.dart
+          - integration_test/profile/persistence_test.dart
+          - integration_test/profile/validation_test.dart
+          - integration_test/profile/state_empty_test.dart
+          - integration_test/profile/state_partial_test.dart
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/**/*.gradle*', 'app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - run: flutter pub get
+
+      - name: Run Integration Test on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          working-directory: app
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: >
+            flutter test ${{ matrix.test_file }}
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_QA_URL }}
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_QA_ANON_KEY }}
+            --dart-define=SUPABASE_QA_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_QA_SERVICE_ROLE_KEY }}
+            2>&1 | tee integration-test-output.log
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-test-log-${{ strategy.job-index }}
+          path: app/integration-test-output.log

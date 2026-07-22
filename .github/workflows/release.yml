@@ -1,0 +1,79 @@
+name: Release
+
+# QA-03, Rodada F. Gatilhos: push de tag SemVer (AR-04 §11/DV-12 §3,
+# formato vMAJOR.MINOR.PATCH) ou disparo manual para testar o pipeline
+# sem publicar uma tag ainda.
+#
+# ATENCAO (achado real, DV-12 §8/AR-05 nao implementados nesta rodada):
+# `android/app/build.gradle.kts` assina o buildType `release` com a
+# chave de DEBUG (TODO padrao do template Flutter, nunca resolvido).
+# Os artefatos gerados aqui NAO estao aptos para publicacao real na
+# Google Play ate que uma keystore de release seja configurada (ver
+# docs/operations/CI_CD_SECRETS.md, secrets ANDROID_KEYSTORE_*
+# documentados como pendencia futura). Alterar `build.gradle.kts` esta
+# fora do escopo autorizado desta rodada (codigo do aplicativo).
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build_release:
+    name: Build Release Artifacts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/**/*.gradle*', 'app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - run: flutter pub get
+      # Portão de qualidade antes de publicar (DV-12 §5) - mesmas
+      # validações da CI, repetidas aqui porque uma tag pode, em tese,
+      # ser criada a partir de qualquer commit, não só de um já validado
+      # em `main`.
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: app/build/app/outputs/bundle/release/app-release.aab
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/bundle/release/app-release.aab
