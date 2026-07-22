@@ -30,4 +30,16 @@ Future<void> pumpUntil(
               '${maxAttempts * step.inMilliseconds}ms.',
     );
   }
+
+  // Em execução real (emulador), o conteúdo esperado pode aparecer
+  // pintado antes de a animação de transição de rota do GoRouter
+  // terminar - enquanto ela está em andamento, um `AbsorbPointer`
+  // intercepta toques no destino, mesmo que o texto já esteja visível
+  // (achado real durante a Rodada C). Alguns pumps extras (animação de
+  // transição tem duração finita, então isso nunca trava, diferente de
+  // `pumpAndSettle` com um spinner indeterminado) dão tempo dela
+  // terminar antes do próximo `tap()`.
+  for (var i = 0; i < 3; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }

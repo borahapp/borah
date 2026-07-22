@@ -31,12 +31,21 @@ class QaTestUserHelper {
       request.headers.set('apikey', serviceRoleKey);
       request.headers.set('Authorization', 'Bearer $serviceRoleKey');
       request.headers.set('Content-Type', 'application/json');
-      request.write(
-        jsonEncode({
-          'email': email,
-          'password': password,
-          'email_confirm': true,
-        }),
+      // `request.write(String)` não garante codificação UTF-8 (usa o
+      // `encoding` do IOSink, que pode divergir) - codificar os bytes
+      // explicitamente evita corromper caracteres acentuados no corpo da
+      // requisição (achado real na Rodada C ao enviar "São Paulo" via
+      // QaRestaurantHelper, que usa este mesmo padrão - o bug estava
+      // latente aqui também, nunca disparado porque os e-mails de teste
+      // usados até agora eram só ASCII).
+      request.add(
+        utf8.encode(
+          jsonEncode({
+            'email': email,
+            'password': password,
+            'email_confirm': true,
+          }),
+        ),
       );
 
       final response = await request.close();
