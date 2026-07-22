@@ -614,5 +614,67 @@ Rodadas C--E (Restaurantes+Avaliações, Favoritos+Feed, Perfil)
 liberadas para implementação, reaproveitando a mesma arquitetura
 (arquivos separados por cenário, `QaTestUserHelper`, `pumpUntil`).
 
-**Próximo passo:** aguardando autorização explícita para iniciar a
-Rodada C do QA-03.
+## Rodada C --- Restaurantes + Avaliações (concluída, 2026-07-22)
+
+Commit `f885306` (branch `feature/qa-16-restaurants-integration`, merge
+`4dcec6d` em `develop`). 6 cenários (listagem, listagem vazia, detalhes,
+criar/editar/excluir avaliação). Novo helper `QaRestaurantHelper`
+(restaurantes/avaliações via `service_role`). **Achado de divergência
+documentado (não corrigido):** `ReviewsListPage` não recarrega ao
+retornar de uma exclusão feita em `ReviewDetailPage` - item excluído
+permanece visível de forma obsoleta até reabrir a tela. Suíte:
+11/11 arquivos de Integration Test aprovados, 243/243 unitários.
+
+## Rodada D --- Favoritos + Feed Social (concluída, 2026-07-22)
+
+Commit `d8ba637` (branch `feature/qa-17-favorites-feed-integration`,
+merge `b39f9b7`). 6 arquivos (favoritar, remover favorito, listagem +
+vazio, feed, atualização do feed). Novo helper `QaSocialHelper`
+(favoritos/seguidores). Suíte: 17/17 Integration Tests, 243/243
+unitários, `borah-qa` limpo.
+
+## Rodada E --- Perfil (concluída, 2026-07-22)
+
+Commit `57d5085` (branch `feature/qa-18-profile-integration`, merge
+`cad1f61`). 6 arquivos (visualização, atualização, persistência,
+validação, estado vazio/parcial). **Divergências reais documentadas
+(não corrigidas):** `ProfilePage` não exibe e-mail nem estatísticas
+(decisão arquitetural já registrada no próprio código); nenhum limite
+de tamanho existe para os campos do perfil, em nenhuma camada. Suíte:
+23/23 Integration Tests, 243/243 unitários.
+
+## Rodada F --- CI/CD (concluída, 2026-07-22)
+
+Branch `feature/qa-19-ci-cd`. Melhorou o `ci.yml` já existente (sem
+duplicar) - 3 jobs paralelos (`analyze`, `unit_test`, `build_android`)
++ 1 job em matriz (`integration_test`, 23 arquivos contra `borah-qa`
+real, emulador Android via `reactivecircus/android-emulator-runner`,
+Environment `qa`, `concurrency` para serializar contra o backend
+compartilhado). Cache de Flutter SDK, pub e Gradle adicionado. Novo
+workflow `release.yml` (tag `v*.*.*` ou manual) gerando APK/AAB e
+GitHub Release. Nova documentação: `docs/operations/CI_CD_SECRETS.md`
+(secrets, formato, onde cadastrar, configuração manual de Environment/
+Branch Protection) e `AR-05_CI_CD.md` §19 (implementação real).
+
+**Achados/limitações documentados (não corrigidos, fora do escopo):**
+`android/app/build.gradle.kts` assina o `buildType.release` com a
+chave de debug (TODO nunca resolvido do template Flutter) - artefatos
+de `release.yml` não são publicáveis na Play Store até uma keystore
+real ser configurada (exige alterar código de build, fora desta
+rodada). Nenhuma execução real dos workflows foi confirmada nesta
+sessão - sem acesso a `gh`/nuvem de Actions; validado apenas
+sintaticamente (parser YAML) e via cada comando individual já
+exercido nas Rodadas B--E. Branch Protection e o Environment `qa`
+exigem configuração manual no GitHub (documentado, não executável por
+código).
+
+**QA-03 (Integration Testing) concluído: Rodadas 0, A, B, C, D, E, F.**
+23 arquivos de Integration Test cobrindo Autenticação,
+Restaurantes+Avaliações, Favoritos+Feed e Perfil, mais a
+infraestrutura de CI/CD completa. 243/243 testes unitários mantidos
+sem regressão em todas as rodadas.
+
+**Próximo passo:** aguardando decisão sobre o encerramento formal da
+FASE 6 (QA) ou início de uma nova iniciativa (ex.: QA-05/06/07/08,
+gestão de bugs, staging real, ou resolução das divergências de
+produto documentadas ao longo do QA-03).
