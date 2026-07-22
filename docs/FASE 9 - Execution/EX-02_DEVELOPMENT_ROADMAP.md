@@ -128,10 +128,16 @@ antes do encerramento formal — ver `EX-10_FASE_6_QA_STATUS.md` §6).
 **QA-03 (Integration Testing) iniciado em 2026-07-22** para eliminar o
 maior bloqueador identificado: Rodada 0 concluída — ambiente Supabase
 dedicado `borah-qa` provisionado e validado estruturalmente contra o
-Development (commit `60f60c8`, merge `45fda6c`). Rodadas A--E
-liberadas; Rodada F (CI) pendente da configuração manual de 4 GitHub
-Secrets. Ver `EX-10_FASE_6_QA_STATUS.md` §7 para o progresso detalhado
-e pendências (rotação de `SERVICE_ROLE_KEY`, criação de buckets de
+Development (commit `60f60c8`, merge `45fda6c`). **Rodada A concluída
+— infraestrutura local de Integration Tests oficialmente homologada**:
+scaffolding do pacote `integration_test` implementado e smoke test
+aprovado (1/1) em emulador Android real (`emulator-5554`, Android 16),
+com conexão validada ponta a ponta contra o `borah-qa` (commit
+`b44fb33`). Suíte de unit/widget tests sem regressão (242/242).
+Rodadas B--E liberadas para implementação; Rodada F (CI) pendente da
+configuração manual de 4 GitHub Secrets. Ver
+`EX-10_FASE_6_QA_STATUS.md` §7 para o progresso detalhado e
+pendências (rotação de `SERVICE_ROLE_KEY`, criação de buckets de
 Storage, GitHub Secrets).
 
 Executar QA-\* em sequência.
