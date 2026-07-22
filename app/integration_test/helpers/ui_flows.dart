@@ -96,3 +96,39 @@ Future<void> openFeed(WidgetTester tester) async {
     timeoutMessage: 'A tela de Feed não abriu a tempo.',
   );
 }
+
+/// A partir da Home, abre a tela de Perfil (QA-03, Rodada E). Espera
+/// pelo botão "Editar perfil" (só aparece em `ProfileLoaded`/
+/// `ProfileUpdating`/`ProfileUpdateSuccess`) em vez do ícone de
+/// configurações, que fica no `AppBar` de `ProfilePage` fora do
+/// `switch` de estado - ele já aparece durante `ProfileLoading`, antes
+/// dos dados do perfil chegarem (achado real durante a Rodada E).
+Future<void> openProfile(WidgetTester tester) async {
+  await tester.tap(find.text('Ver perfil'));
+  await pumpUntil(
+    tester,
+    () => find.text('Editar perfil').evaluate().isNotEmpty,
+    timeoutMessage: 'A tela de Perfil não carregou os dados a tempo.',
+  );
+}
+
+/// Efetua logout a partir de `ProfilePage` (único lugar do app com a
+/// ação "Sair", via `SettingsPage`) - mesma técnica já validada em
+/// `authentication/logout_test.dart` (Rodada B). Assume que o app já
+/// está em `ProfilePage`.
+Future<void> logoutViaUi(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.settings));
+  await pumpUntil(
+    tester,
+    () => find.text('Sair').evaluate().isNotEmpty,
+    timeoutMessage: 'A tela de Configurações não abriu a tempo.',
+  );
+
+  await tester.tap(find.text('Sair'));
+  await pumpUntil(
+    tester,
+    () => find.text('Entrar').evaluate().isNotEmpty,
+    maxAttempts: 100,
+    timeoutMessage: 'O logout não retornou ao Login a tempo.',
+  );
+}
