@@ -1,11 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// Scaffolding para criação/remoção de usuários de teste via Supabase
-/// Admin API - preparado nesta rodada (QA-03, Etapa 3), mas **não
-/// utilizado pelo smoke test** desta entrega (Etapa 4 exige nenhum
-/// cadastro/login/dado persistido). Será exercido a partir da Rodada B
-/// (fluxo de Autenticação).
+/// Criação/remoção/consulta de usuários de teste via Supabase Admin API
+/// e PostgREST - criado como scaffolding na Rodada A (QA-03) e exercido
+/// a partir da Rodada B (fluxo de Autenticação).
 ///
 /// O endpoint público `/auth/v1/signup` rejeita domínios reservados de
 /// teste (`.test`, `example.com`) por validação de e-mail do GoTrue -
@@ -71,6 +69,61 @@ class QaTestUserHelper {
           '(status ${response.statusCode}).',
         );
       }
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Localiza um usuário criado pelo fluxo real de cadastro (UI), que não
+  /// retorna o id ao chamador - necessário para validar "criação do
+  /// usuário" e para a limpeza ao final do teste de Cadastro.
+  Future<Map<String, dynamic>?> findUserByEmail(String email) async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(
+        Uri.parse(
+          '$supabaseUrl/auth/v1/admin/users',
+        ).replace(queryParameters: {'page': '1', 'per_page': '200'}),
+      );
+      request.headers.set('apikey', serviceRoleKey);
+      request.headers.set('Authorization', 'Bearer $serviceRoleKey');
+
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) {
+        throw StateError('Falha ao listar usuários: $body');
+      }
+      final users =
+          ((jsonDecode(body) as Map<String, dynamic>)['users'] as List)
+              .cast<Map<String, dynamic>>();
+      for (final user in users) {
+        if (user['email'] == email) return user;
+      }
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Consulta `public.profiles` via PostgREST usando a `service_role`
+  /// (ignora RLS) - usado para validar que `handle_new_user()` criou o
+  /// profile automaticamente após o cadastro.
+  Future<Map<String, dynamic>?> fetchProfile(String userId) async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(
+        Uri.parse('$supabaseUrl/rest/v1/profiles?id=eq.$userId&select=*'),
+      );
+      request.headers.set('apikey', serviceRoleKey);
+      request.headers.set('Authorization', 'Bearer $serviceRoleKey');
+
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) {
+        throw StateError('Falha ao consultar profile: $body');
+      }
+      final rows = jsonDecode(body) as List;
+      return rows.isEmpty ? null : rows.first as Map<String, dynamic>;
     } finally {
       client.close();
     }

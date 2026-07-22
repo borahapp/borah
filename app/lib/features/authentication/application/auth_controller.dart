@@ -42,7 +42,20 @@ class AuthController extends Notifier<AuthStatus> {
     state = const AuthLoading();
     try {
       await _repository.signUp(name: name, email: email, password: password);
-      state = EmailVerificationPending(email);
+      // Quando a confirmação de e-mail está desabilitada no projeto
+      // Supabase, signUp() já retorna com uma sessão ativa - definir
+      // EmailVerificationPending incondicionalmente aqui entraria em
+      // condição de corrida com o listener de onAuthStateChange (que
+      // também reage à sessão recém-criada definindo Authenticated),
+      // já que ambos escrevem em `state` de forma assíncrona e
+      // independente. Consultar `currentUser` logo após o await (mesma
+      // técnica já usada em signIn()/restoreSession()) resolve o estado
+      // real de forma determinística, sem depender de qual dos dois
+      // caminhos assíncronos "vence".
+      final current = _repository.currentUser;
+      state = current == null
+          ? EmailVerificationPending(email)
+          : Authenticated(userId: current.userId, email: current.email);
     } on AuthRepositoryException catch (e) {
       state = AuthError(e.message);
     } catch (_) {
