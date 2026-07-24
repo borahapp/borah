@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../reviews/presentation/widgets/review_summary_tile.dart';
 import '../../application/feed_controller.dart';
@@ -37,13 +40,12 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     final status = ref.watch(feedControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Feed')),
+      appBar: const AppTopBar(title: 'Feed'),
       body: switch (status) {
-        FeedInitial() ||
-        FeedLoading() => const Center(child: CircularProgressIndicator()),
+        FeedInitial() || FeedLoading() => const LoadingScreen(),
         FeedError(:final message) => Center(child: Text(message)),
-        FeedEmpty() => const Center(
-          child: Text('Nenhuma avaliação de quem você segue ainda.'),
+        FeedEmpty() => const EmptyState(
+          message: 'Nenhuma avaliação de quem você segue ainda.',
         ),
         FeedRefreshing(:final result) ||
         FeedLoaded(:final result) => RefreshIndicator(

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/inputs/app_search_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/admin_users_controller.dart';
 import '../states/admin_users_status.dart';
 import '../widgets/admin_guard.dart';
@@ -46,12 +49,12 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
 
     return AdminGuard(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Usuários')),
+        appBar: const AppTopBar(title: 'Usuários'),
         body: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: AppTextField(
+              child: AppSearchField(
                 controller: _queryController,
                 label: 'Buscar por nome',
                 onSubmit: (_) => _search(),
@@ -59,12 +62,11 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
             ),
             Expanded(
               child: switch (status) {
-                AdminUsersInitial() || AdminUsersLoading() => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                AdminUsersInitial() ||
+                AdminUsersLoading() => const LoadingScreen(),
                 AdminUsersError(:final message) => Center(child: Text(message)),
-                AdminUsersEmpty() => const Center(
-                  child: Text('Nenhum usuário encontrado.'),
+                AdminUsersEmpty() => const EmptyState(
+                  message: 'Nenhum usuário encontrado.',
                 ),
                 AdminUsersLoaded(:final result) => ListView.builder(
                   itemCount: result.items.length,

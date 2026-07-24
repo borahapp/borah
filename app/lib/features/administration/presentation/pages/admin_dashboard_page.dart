@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/admin_dashboard_controller.dart';
 import '../states/dashboard_status.dart';
 import '../widgets/admin_guard.dart';
@@ -30,11 +34,9 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
 
     return AdminGuard(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Administração')),
+        appBar: const AppTopBar(title: 'Administração'),
         body: switch (status) {
-          DashboardInitial() || DashboardLoading() => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          DashboardInitial() || DashboardLoading() => const LoadingScreen(),
           DashboardError(:final message) => Center(child: Text(message)),
           DashboardLoaded(:final kpis) => Padding(
             padding: const EdgeInsets.all(24),
@@ -77,29 +79,29 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                OutlinedButton(
+                AppOutlinedButton(
+                  label: 'Usuários',
                   onPressed: () => context.push('/admin/users'),
-                  child: const Text('Usuários'),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton(
+                AppOutlinedButton(
+                  label: 'Restaurantes',
                   onPressed: () => context.push('/admin/restaurants'),
-                  child: const Text('Restaurantes'),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton(
+                AppOutlinedButton(
+                  label: 'Moderação',
                   onPressed: () => context.push('/admin/moderation'),
-                  child: const Text('Moderação'),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton(
+                AppOutlinedButton(
+                  label: 'Papéis administrativos',
                   onPressed: () => context.push('/admin/roles'),
-                  child: const Text('Papéis administrativos'),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton(
+                AppOutlinedButton(
+                  label: 'Auditoria',
                   onPressed: () => context.push('/admin/audit-logs'),
-                  child: const Text('Auditoria'),
                 ),
               ],
             ),
@@ -118,16 +120,13 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text('$value', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 4),
-            Text(label),
-          ],
-        ),
+    return AppCard(
+      child: Column(
+        children: [
+          Text('$value', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 4),
+          Text(label),
+        ],
       ),
     );
   }

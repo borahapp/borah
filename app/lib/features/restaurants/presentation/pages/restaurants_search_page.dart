@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/feedback/score_bubble.dart';
+import '../../../../design_system/components/inputs/app_search_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/restaurants_controller.dart';
 import '../states/restaurants_status.dart';
 
@@ -40,11 +47,11 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
     final status = ref.watch(restaurantsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Restaurantes'),
+      appBar: AppTopBar(
+        title: 'Restaurantes',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
+          AppIconButton(
+            icon: Icons.add,
             tooltip: 'Adicionar restaurante',
             onPressed: () => context.push('/restaurants/new'),
           ),
@@ -53,38 +60,38 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                AppTextField(
-                  controller: _queryController,
-                  label: 'Buscar por nome',
-                  onSubmit: (value) => ref
-                      .read(restaurantsControllerProvider.notifier)
-                      .search(value ?? ''),
-                ),
-                const SizedBox(height: 12),
-                AppTextField(
-                  controller: _cityController,
-                  label: 'Filtrar por cidade',
-                  onSubmit: (value) => ref
-                      .read(restaurantsControllerProvider.notifier)
-                      .applyFilters(city: value),
-                ),
-              ],
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppCard(
+              child: Column(
+                children: [
+                  AppSearchField(
+                    controller: _queryController,
+                    label: 'Buscar por nome',
+                    onSubmit: (value) => ref
+                        .read(restaurantsControllerProvider.notifier)
+                        .search(value ?? ''),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppSearchField(
+                    controller: _cityController,
+                    label: 'Filtrar por cidade',
+                    onSubmit: (value) => ref
+                        .read(restaurantsControllerProvider.notifier)
+                        .applyFilters(city: value),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: switch (status) {
-              RestaurantsInitial() || RestaurantsLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              RestaurantsSearching() || RestaurantsFiltering() => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              RestaurantsInitial() ||
+              RestaurantsLoading() => const LoadingScreen(),
+              RestaurantsSearching() ||
+              RestaurantsFiltering() => const LoadingScreen(),
               RestaurantsError(:final message) => Center(child: Text(message)),
-              RestaurantsEmpty() => const Center(
-                child: Text('Nenhum restaurante encontrado.'),
+              RestaurantsEmpty() => const EmptyState(
+                message: 'Nenhum restaurante encontrado.',
               ),
               RestaurantsLoaded(:final result) => ListView.builder(
                 itemCount: result.items.length,
@@ -92,14 +99,27 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
                   final restaurant = result.items[index];
                   return ListTile(
                     title: Text(restaurant.name),
-                    subtitle: Text(
-                      [
-                        restaurant.category,
-                        if (restaurant.city != null) restaurant.city,
-                      ].join(' · '),
+                    subtitle: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/icons/borah_location.png',
+                          width: 14,
+                          height: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            [
+                              restaurant.category,
+                              if (restaurant.city != null) restaurant.city,
+                            ].join(' · '),
+                          ),
+                        ),
+                      ],
                     ),
                     trailing: restaurant.averageRating != null
-                        ? Text(restaurant.averageRating!.toStringAsFixed(1))
+                        ? ScoreBubble(rating: restaurant.averageRating)
                         : null,
                     onTap: () => context.push('/restaurants/${restaurant.id}'),
                   );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../design_system/components/buttons/app_text_button.dart';
 import '../../features/authentication/application/auth_controller.dart';
 import '../../features/authentication/presentation/pages/email_verification_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
@@ -264,37 +265,37 @@ class _BootstrapPlaceholderPage extends StatelessWidget {
           children: [
             const Text('BORAH'),
             const SizedBox(height: 16),
-            TextButton(
+            AppTextButton(
+              label: 'Ver perfil',
               onPressed: () => GoRouter.of(context).push('/profile'),
-              child: const Text('Ver perfil'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Ver restaurantes',
               onPressed: () => GoRouter.of(context).push('/restaurants'),
-              child: const Text('Ver restaurantes'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Ver ranking',
               onPressed: () => GoRouter.of(context).push('/rankings'),
-              child: const Text('Ver ranking'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Ver favoritos',
               onPressed: () => GoRouter.of(context).push('/favorites'),
-              child: const Text('Ver favoritos'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Ver feed',
               onPressed: () => GoRouter.of(context).push('/feed'),
-              child: const Text('Ver feed'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Painel administrativo',
               onPressed: () => GoRouter.of(context).push('/admin'),
-              child: const Text('Painel administrativo'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Ver notificações',
               onPressed: () => GoRouter.of(context).push('/notifications'),
-              child: const Text('Ver notificações'),
             ),
-            TextButton(
+            AppTextButton(
+              label: 'Gamificação',
               onPressed: () => GoRouter.of(context).push('/gamification'),
-              child: const Text('Gamificação'),
             ),
           ],
         ),

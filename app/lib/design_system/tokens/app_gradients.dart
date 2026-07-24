@@ -23,6 +23,15 @@ class AppGradients extends ThemeExtension<AppGradients> {
   final LinearGradient purple;
   final LinearGradient green;
 
+  /// Lê a extensão registrada em `Theme.of(context)` — cai em [brand]
+  /// quando ausente (ex.: um teste de widget que monta um
+  /// `MaterialApp` "nu", sem `AppTheme.light`/`.dark`). O valor de
+  /// fallback é idêntico ao que a app real registra, então nunca há
+  /// divergência visual, só resiliência de ambiente de teste.
+  static AppGradients of(BuildContext context) {
+    return Theme.of(context).extension<AppGradients>() ?? brand;
+  }
+
   @override
   AppGradients copyWith({LinearGradient? purple, LinearGradient? green}) {
     return AppGradients(

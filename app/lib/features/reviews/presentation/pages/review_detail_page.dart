@@ -4,6 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/services/image_picker_service.dart';
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/feedback/score_bubble.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_radius.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/review_detail_controller.dart';
 import '../states/review_detail_status.dart';
@@ -99,14 +107,12 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Avaliação')),
+      appBar: const AppTopBar(title: 'Avaliação'),
       body: switch (status) {
         ReviewDetailInitial() ||
         ReviewDetailLoading() ||
         ReviewDetailSaving() ||
-        ReviewDetailDeleted() => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        ReviewDetailDeleted() => const LoadingScreen(),
         ReviewDetailError(:final message) => Center(child: Text(message)),
         ReviewDetailLoaded(
           :final review,
@@ -172,25 +178,22 @@ class _DetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            rating.toStringAsFixed(1),
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          ScoreBubble(rating: rating),
           if (comment != null && comment!.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(comment!),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
-              IconButton(
-                icon: Icon(
-                  likedByCurrentUser ? Icons.favorite : Icons.favorite_border,
-                ),
+              AppIconButton(
+                icon: likedByCurrentUser
+                    ? Icons.favorite
+                    : Icons.favorite_border,
                 tooltip: likedByCurrentUser
                     ? 'Remover curtida'
                     : 'Curtir avaliação',
@@ -198,28 +201,29 @@ class _DetailView extends StatelessWidget {
               ),
               Text('$likesCount'),
               const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.share),
+              AppIconButton(
+                icon: Icons.share,
                 tooltip: 'Compartilhar avaliação',
                 onPressed: onShare,
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          OutlinedButton(
+          const SizedBox(height: AppSpacing.sm),
+          AppOutlinedButton(
+            label: 'Ver comentários',
             onPressed: onViewComments,
-            child: const Text('Ver comentários'),
           ),
           if (photoUrls.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 96,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: photoUrls.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) => ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.radiusSm,
                   child: Image.network(
                     photoUrls[index],
                     width: 96,
@@ -231,17 +235,18 @@ class _DetailView extends StatelessWidget {
             ),
           ],
           if (canAddMorePhotos) ...[
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onAddPhoto,
-              child: const Text('Adicionar foto'),
-            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppOutlinedButton(label: 'Adicionar foto', onPressed: onAddPhoto),
           ],
           if (canManage) ...[
-            const SizedBox(height: 24),
-            OutlinedButton(onPressed: onEdit, child: const Text('Editar')),
-            const SizedBox(height: 8),
-            TextButton(onPressed: onDelete, child: const Text('Excluir')),
+            const SizedBox(height: AppSpacing.xl),
+            AppOutlinedButton(label: 'Editar', onPressed: onEdit),
+            const SizedBox(height: AppSpacing.sm),
+            AppTextButton(
+              label: 'Excluir',
+              isDestructive: true,
+              onPressed: onDelete,
+            ),
           ],
         ],
       ),

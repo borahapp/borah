@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/notifications_controller.dart';
 import '../../domain/app_notification.dart';
 
@@ -52,9 +55,9 @@ class _NotificationDetailPageState
     final notification = widget.notification;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notificação')),
+      appBar: const AppTopBar(title: 'Notificação'),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -62,13 +65,10 @@ class _NotificationDetailPageState
               notification.title,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(notification.message),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: _navigateToTarget,
-              child: const Text('Ver'),
-            ),
+            const SizedBox(height: AppSpacing.xl),
+            AppOutlinedButton(label: 'Ver', onPressed: _navigateToTarget),
           ],
         ),
       ),

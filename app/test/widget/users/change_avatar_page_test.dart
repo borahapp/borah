@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:app/core/widgets/app_primary_button.dart';
+import 'package:app/design_system/components/buttons/app_primary_button.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/users/application/user_profile_controller.dart';
 import 'package:app/features/users/data/user_profile_repository_impl.dart';

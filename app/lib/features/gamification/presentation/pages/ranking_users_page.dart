@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/cards/ranking_card.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/ranking_users_controller.dart';
 import '../states/ranking_users_status.dart';
@@ -33,7 +37,7 @@ class _RankingUsersPageState extends ConsumerState<RankingUsersPage> {
     final status = ref.watch(rankingUsersControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ranking de Usuários')),
+      appBar: const AppTopBar(title: 'Ranking de Usuários'),
       body: Column(
         children: [
           Padding(
@@ -58,23 +62,22 @@ class _RankingUsersPageState extends ConsumerState<RankingUsersPage> {
           ),
           Expanded(
             child: switch (status) {
-              RankingUsersInitial() || RankingUsersLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              RankingUsersInitial() ||
+              RankingUsersLoading() => const LoadingScreen(),
               RankingUsersError(:final message) => Center(child: Text(message)),
-              RankingUsersEmpty() => const Center(
-                child: Text('Nenhum resultado ainda.'),
+              RankingUsersEmpty() => const EmptyState(
+                message: 'Nenhum resultado ainda.',
               ),
               RankingUsersLoaded(:final result) => ListView.builder(
                 itemCount: result.items.length,
                 itemBuilder: (context, index) {
                   final entry = result.items[index];
                   final position = (result.page - 1) * result.limit + index + 1;
-                  return ListTile(
-                    leading: CircleAvatar(child: Text('$position')),
-                    title: Text(entry.fullName ?? ''),
-                    subtitle: Text('Nível ${entry.progress.level}'),
-                    trailing: Text('${entry.progress.points} pts'),
+                  return RankingCard(
+                    position: position,
+                    name: entry.fullName ?? '',
+                    subtitle: 'Nível ${entry.progress.level}',
+                    trailingLabel: '${entry.progress.points} pts',
                   );
                 },
               ),

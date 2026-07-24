@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/user_profile_controller.dart';
 import '../states/user_profile_status.dart';
@@ -35,18 +40,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final status = ref.watch(userProfileControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Perfil'),
+      appBar: AppTopBar(
+        title: 'Perfil',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
+          AppIconButton(
+            icon: Icons.settings,
+            tooltip: 'Configurações',
             onPressed: () => context.push('/settings'),
           ),
         ],
       ),
       body: switch (status) {
-        ProfileInitial() ||
-        ProfileLoading() => const Center(child: CircularProgressIndicator()),
+        ProfileInitial() || ProfileLoading() => const LoadingScreen(),
         ProfileError(:final message) => Center(child: Text(message)),
         ProfileLoaded(:final profile) ||
         ProfileUpdating(:final profile) ||
@@ -88,27 +93,27 @@ class _ProfileView extends StatelessWidget {
     ].join(', ');
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         children: [
           ProfileAvatar(avatarPath: avatarPath, radius: 48),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             fullName?.isNotEmpty == true ? fullName! : 'Sem nome',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           if (location.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(location, style: Theme.of(context).textTheme.bodyMedium),
           ],
           if (bio != null && bio!.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Text(bio!, textAlign: TextAlign.center),
           ],
-          const SizedBox(height: 24),
-          OutlinedButton(
+          const SizedBox(height: AppSpacing.xl),
+          AppOutlinedButton(
+            label: 'Editar perfil',
             onPressed: () => context.push('/profile/edit'),
-            child: const Text('Editar perfil'),
           ),
         ],
       ),

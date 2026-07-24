@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/app_primary_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/inputs/app_text_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/admin_roles_controller.dart';
 import '../states/admin_roles_status.dart';
@@ -63,7 +67,7 @@ class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
 
     return AdminGuard(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Papéis administrativos')),
+        appBar: const AppTopBar(title: 'Papéis administrativos'),
         body: Column(
           children: [
             Padding(
@@ -96,12 +100,11 @@ class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
             ),
             Expanded(
               child: switch (status) {
-                AdminRolesInitial() || AdminRolesLoading() => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                AdminRolesInitial() ||
+                AdminRolesLoading() => const LoadingScreen(),
                 AdminRolesError(:final message) => Center(child: Text(message)),
-                AdminRolesEmpty() => const Center(
-                  child: Text('Nenhum administrador cadastrado.'),
+                AdminRolesEmpty() => const EmptyState(
+                  message: 'Nenhum administrador cadastrado.',
                 ),
                 AdminRolesSaving(:final result) ||
                 AdminRolesLoaded(:final result) => ListView.builder(
@@ -111,9 +114,9 @@ class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
                     return ListTile(
                       title: Text(entry.fullName ?? entry.userId),
                       subtitle: Text(entry.role),
-                      trailing: TextButton(
+                      trailing: AppTextButton(
+                        label: 'Revogar',
                         onPressed: () => _revoke(entry.userId),
-                        child: const Text('Revogar'),
                       ),
                     );
                   },

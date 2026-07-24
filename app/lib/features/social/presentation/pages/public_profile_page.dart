@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/components/navigation/section_header.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../reviews/presentation/states/reviews_status.dart';
 import '../../../reviews/presentation/widgets/review_summary_tile.dart';
@@ -57,66 +64,65 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
     final isOwnProfile = currentUserId == widget.userId;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: const AppTopBar(title: 'Perfil'),
       body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingScreen(),
         error: (error, _) =>
             const Center(child: Text('Não foi possível carregar o perfil.')),
         data: (profile) => SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: ProfileAvatar(avatarPath: profile.avatarUrl)),
-              const SizedBox(height: 16),
-              Text(
-                profile.fullName ?? '',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              if (profile.bio != null && profile.bio!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(profile.bio!),
-              ],
-              if (!isOwnProfile) ...[
-                const SizedBox(height: 16),
-                switch (followStatus) {
-                  FollowLoaded(:final isFollowing) => OutlinedButton(
-                    onPressed: _toggleFollow,
-                    child: Text(isFollowing ? 'Deixar de seguir' : 'Seguir'),
-                  ),
-                  FollowError(:final message) => Text(message),
-                  _ => const SizedBox(
-                    height: 36,
-                    width: 36,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                },
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () =>
-                        context.push('/users/${widget.userId}/followers'),
-                    child: const Text('Seguidores'),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        context.push('/users/${widget.userId}/following'),
-                    child: const Text('Seguindo'),
-                  ),
-                ],
-              ),
-              const Divider(height: 32),
-              Text(
-                'Avaliações',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              switch (reviewsStatus) {
-                ReviewsInitial() || ReviewsLoading() => const Center(
-                  child: CircularProgressIndicator(),
+              AppCard(
+                child: Column(
+                  children: [
+                    Center(child: ProfileAvatar(avatarPath: profile.avatarUrl)),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      profile.fullName ?? '',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    if (profile.bio != null && profile.bio!.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(profile.bio!),
+                    ],
+                    if (!isOwnProfile) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      switch (followStatus) {
+                        FollowLoaded(:final isFollowing) => AppOutlinedButton(
+                          label: isFollowing ? 'Deixar de seguir' : 'Seguir',
+                          onPressed: _toggleFollow,
+                        ),
+                        FollowError(:final message) => Text(message),
+                        _ => const LoadingIndicator(size: 36),
+                      },
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AppTextButton(
+                          label: 'Seguidores',
+                          onPressed: () =>
+                              context.push('/users/${widget.userId}/followers'),
+                        ),
+                        AppTextButton(
+                          label: 'Seguindo',
+                          onPressed: () =>
+                              context.push('/users/${widget.userId}/following'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Avaliações'),
+              const SizedBox(height: AppSpacing.sm),
+              switch (reviewsStatus) {
+                ReviewsInitial() ||
+                ReviewsLoading() => const LoadingIndicator(size: 36),
                 ReviewsError(:final message) => Text(message),
                 ReviewsEmpty() => const Text('Nenhuma avaliação ainda.'),
                 ReviewsLoaded(:final result) => Column(

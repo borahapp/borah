@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/reviews_controller.dart';
 import '../states/reviews_status.dart';
 import '../widgets/review_summary_tile.dart';
@@ -32,21 +36,21 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
     final status = ref.watch(reviewsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Avaliações'),
+      appBar: AppTopBar(
+        title: 'Avaliações',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
+          AppIconButton(
+            icon: Icons.add,
+            tooltip: 'Avaliar restaurante',
             onPressed: () =>
                 context.push('/restaurants/${widget.restaurantId}/reviews/new'),
           ),
         ],
       ),
       body: switch (status) {
-        ReviewsInitial() ||
-        ReviewsLoading() => const Center(child: CircularProgressIndicator()),
+        ReviewsInitial() || ReviewsLoading() => const LoadingScreen(),
         ReviewsError(:final message) => Center(child: Text(message)),
-        ReviewsEmpty() => const Center(child: Text('Nenhuma avaliação ainda.')),
+        ReviewsEmpty() => const EmptyState(message: 'Nenhuma avaliação ainda.'),
         ReviewsLoaded(:final result) => ListView.builder(
           itemCount: result.items.length,
           itemBuilder: (context, index) {

@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/badges/app_badge.dart';
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_gradients.dart';
+import '../../../../design_system/tokens/app_radius.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/gamification_profile_controller.dart';
 import '../../domain/gamification_badge.dart';
@@ -38,18 +45,19 @@ class _GamificationProfilePageState
     final status = ref.watch(gamificationProfileControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gamificação'),
+      appBar: AppTopBar(
+        title: 'Gamificação',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.leaderboard),
+          AppIconButton(
+            icon: Icons.leaderboard,
+            tooltip: 'Ranking de usuários',
             onPressed: () => context.push('/gamification/ranking'),
           ),
         ],
       ),
       body: switch (status) {
-        GamificationProfileInitial() || GamificationProfileLoading() =>
-          const Center(child: CircularProgressIndicator()),
+        GamificationProfileInitial() ||
+        GamificationProfileLoading() => const LoadingScreen(),
         GamificationProfileError(:final message) => Center(
           child: Text(message),
         ),
@@ -81,35 +89,93 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final gradients = AppGradients.of(context);
+
     final currentThreshold = UserProgress.levelThresholds[progress.level] ?? 0;
     final nextThreshold = UserProgress.levelThresholds[progress.level + 1];
     final progressToNextLevel = nextThreshold == null
         ? 1.0
         : (progress.xp - currentThreshold) / (nextThreshold - currentThreshold);
+    final xpToNext = nextThreshold == null ? null : nextThreshold - progress.xp;
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        Text(
-          'Nível ${progress.level}',
-          style: Theme.of(context).textTheme.headlineSmall,
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: scheme.inverseSurface,
+            borderRadius: AppRadius.radiusLg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nível ${progress.level}',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: scheme.onInverseSurface,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '${progress.xp} XP · ${progress.points} pontos',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onInverseSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ClipRRect(
+                borderRadius: AppRadius.radiusPill,
+                child: SizedBox(
+                  height: 10,
+                  child: Stack(
+                    children: [
+                      Container(
+                        color: scheme.onInverseSurface.withValues(alpha: 0.25),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: progressToNextLevel.clamp(0.0, 1.0),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(gradient: gradients.green),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (xpToNext != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$xpToNext XP para o próximo nível',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.tertiary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Text('${progress.xp} XP · ${progress.points} pontos'),
-        const SizedBox(height: 8),
-        LinearProgressIndicator(value: progressToNextLevel.clamp(0.0, 1.0)),
-        const SizedBox(height: 24),
-        Text('Badges', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xl),
+        Text('Badges', style: theme.textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
         ...allBadges.map((badge) {
           final earned = earnedBadgeIds.contains(badge.id);
           return ListTile(
+            contentPadding: EdgeInsets.zero,
             leading: Icon(
               earned ? Icons.emoji_events : Icons.emoji_events_outlined,
-              color: earned ? Colors.amber : null,
             ),
             title: Text(badge.name),
             subtitle: Text(badge.description ?? ''),
+            trailing: AppBadge(
+              label: earned ? 'Conquistado' : 'Bloqueado',
+              earned: earned,
+            ),
           );
         }),
       ],

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+/// Botão primário do BORAH — ação principal de cada tela.
+///
+/// Migrado de `core/widgets/app_primary_button.dart` para cá no
+/// UI-03A (Component Migration, prevista desde o UI-02): era o último
+/// componente-base fora de `design_system/components/`. `core/widgets/`
+/// foi removido depois desta migração.
 class AppPrimaryButton extends StatelessWidget {
   const AppPrimaryButton({
     super.key,

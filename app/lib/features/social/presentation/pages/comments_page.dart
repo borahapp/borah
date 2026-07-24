@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/app_primary_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/dialogs/app_dialog.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/inputs/app_text_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/comments_controller.dart';
 import '../states/comments_status.dart';
@@ -82,17 +89,15 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Comentários')),
+      appBar: const AppTopBar(title: 'Comentários'),
       body: Column(
         children: [
           Expanded(
             child: switch (status) {
-              CommentsInitial() || CommentsLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              CommentsInitial() || CommentsLoading() => const LoadingScreen(),
               CommentsError(:final message) => Center(child: Text(message)),
-              CommentsEmpty() => const Center(
-                child: Text('Nenhum comentário ainda.'),
+              CommentsEmpty() => const EmptyState(
+                message: 'Nenhum comentário ainda.',
               ),
               CommentsPublishing(:final result) ||
               CommentsLoaded(:final result) => ListView.builder(
@@ -127,7 +132,7 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 children: [
                   Expanded(
@@ -136,8 +141,12 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                       label: 'Escreva um comentário',
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(icon: const Icon(Icons.send), onPressed: _submit),
+                  const SizedBox(width: AppSpacing.sm),
+                  AppIconButton(
+                    icon: Icons.send,
+                    tooltip: 'Enviar comentário',
+                    onPressed: _submit,
+                  ),
                 ],
               ),
             ),
@@ -164,13 +173,13 @@ class _ReportDialogState extends State<_ReportDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Denunciar comentário'),
+    return AppDialog(
+      title: 'Denunciar comentário',
       content: AppTextField(controller: _reasonController, label: 'Motivo'),
       actions: [
-        TextButton(
+        AppTextButton(
+          label: 'Cancelar',
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
         ),
         AppPrimaryButton(
           label: 'Denunciar',

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/notifications_controller.dart';
 import '../states/notifications_status.dart';
@@ -35,32 +39,43 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final status = ref.watch(notificationsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notificações'),
+      appBar: AppTopBar(
+        title: 'Notificações',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.done_all),
+          AppIconButton(
+            icon: Icons.done_all,
+            tooltip: 'Marcar todas como lidas',
             onPressed: _markAllAsRead,
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
+          AppIconButton(
+            icon: Icons.settings,
+            tooltip: 'Preferências de notificação',
             onPressed: () => context.push('/notifications/preferences'),
           ),
         ],
       ),
       body: switch (status) {
-        NotificationsInitial() || NotificationsLoading() => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        NotificationsInitial() ||
+        NotificationsLoading() => const LoadingScreen(),
         NotificationsError(:final message) => Center(child: Text(message)),
-        NotificationsEmpty() => const Center(
-          child: Text('Nenhuma notificação ainda.'),
+        NotificationsEmpty() => const EmptyState(
+          message: 'Nenhuma notificação ainda.',
         ),
         NotificationsLoaded(:final result) => ListView.builder(
           itemCount: result.items.length,
           itemBuilder: (context, index) {
             final notification = result.items[index];
             return ListTile(
+              leading: notification.isRead
+                  ? const SizedBox(width: 10, height: 10)
+                  : Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.tertiary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
               title: Text(
                 notification.title,
                 style: TextStyle(

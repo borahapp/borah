@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/validators/app_validators.dart';
-import '../../../../core/widgets/app_primary_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/inputs/app_password_field.dart';
+import '../../../../design_system/components/inputs/app_text_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
 import '../widgets/auth_error_listener.dart';
@@ -54,10 +57,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar conta')),
+      appBar: const AppTopBar(title: 'Criar conta'),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
@@ -67,21 +70,20 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   label: 'Nome',
                   validator: (value) => validateRequired(value, 'seu nome'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   controller: _emailController,
                   label: 'E-mail',
                   keyboardType: TextInputType.emailAddress,
                   validator: validateEmail,
                 ),
-                const SizedBox(height: 16),
-                AppTextField(
+                const SizedBox(height: AppSpacing.lg),
+                AppPasswordField(
                   controller: _passwordController,
                   label: 'Senha',
-                  obscureText: true,
                   validator: validatePassword,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 AppPrimaryButton(
                   label: 'Criar conta',
                   isLoading: isLoading,
