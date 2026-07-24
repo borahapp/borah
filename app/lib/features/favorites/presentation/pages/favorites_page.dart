@@ -3,7 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/paged_result.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/feedback/score_bubble.dart';
+import '../../../../design_system/components/inputs/app_search_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../restaurants/domain/restaurant.dart';
 import '../../application/favorites_controller.dart';
@@ -60,59 +66,59 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     final status = ref.watch(favoritesControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Favoritos')),
+      appBar: const AppTopBar(title: 'Favoritos'),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                AppTextField(
-                  controller: _queryController,
-                  label: 'Buscar por nome',
-                  onSubmit: (_) => _applyFilters(),
-                ),
-                const SizedBox(height: 12),
-                AppTextField(
-                  controller: _cityController,
-                  label: 'Filtrar por cidade',
-                  onSubmit: (_) => _applyFilters(),
-                ),
-                const SizedBox(height: 12),
-                DropdownButton<FavoriteSortBy>(
-                  value: _sortBy,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(
-                      value: FavoriteSortBy.date,
-                      child: Text('Mais recentes'),
-                    ),
-                    DropdownMenuItem(
-                      value: FavoriteSortBy.name,
-                      child: Text('Nome'),
-                    ),
-                    DropdownMenuItem(
-                      value: FavoriteSortBy.rating,
-                      child: Text('Avaliação'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _sortBy = value);
-                    _applyFilters();
-                  },
-                ),
-              ],
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppCard(
+              child: Column(
+                children: [
+                  AppSearchField(
+                    controller: _queryController,
+                    label: 'Buscar por nome',
+                    onSubmit: (_) => _applyFilters(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppSearchField(
+                    controller: _cityController,
+                    label: 'Filtrar por cidade',
+                    onSubmit: (_) => _applyFilters(),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButton<FavoriteSortBy>(
+                    value: _sortBy,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: FavoriteSortBy.date,
+                        child: Text('Mais recentes'),
+                      ),
+                      DropdownMenuItem(
+                        value: FavoriteSortBy.name,
+                        child: Text('Nome'),
+                      ),
+                      DropdownMenuItem(
+                        value: FavoriteSortBy.rating,
+                        child: Text('Avaliação'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _sortBy = value);
+                      _applyFilters();
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: switch (status) {
-              FavoritesInitial() || FavoritesLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              FavoritesInitial() || FavoritesLoading() => const LoadingScreen(),
               FavoritesError(:final message) => Center(child: Text(message)),
-              FavoritesEmpty() => const Center(
-                child: Text('Você ainda não tem favoritos.'),
+              FavoritesEmpty() => const EmptyState(
+                message: 'Você ainda não tem favoritos.',
               ),
               FavoritesSyncing(:final result) ||
               FavoritesLoaded(:final result) => _FavoritesList(result: result),
@@ -137,14 +143,27 @@ class _FavoritesList extends StatelessWidget {
         final restaurant = result.items[index];
         return ListTile(
           title: Text(restaurant.name),
-          subtitle: Text(
-            [
-              restaurant.category,
-              if (restaurant.city != null) restaurant.city,
-            ].join(' · '),
+          subtitle: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/icons/borah_location.png',
+                width: 14,
+                height: 14,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  [
+                    restaurant.category,
+                    if (restaurant.city != null) restaurant.city,
+                  ].join(' · '),
+                ),
+              ),
+            ],
           ),
           trailing: restaurant.averageRating != null
-              ? Text(restaurant.averageRating!.toStringAsFixed(1))
+              ? ScoreBubble(rating: restaurant.averageRating)
               : null,
           onTap: () => context.push('/restaurants/${restaurant.id}'),
         );

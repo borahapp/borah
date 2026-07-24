@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_primary_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/inputs/app_text_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/review_detail_controller.dart';
 import '../states/review_detail_status.dart';
@@ -64,10 +66,10 @@ class _CreateReviewPageState extends ConsumerState<CreateReviewPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Avaliar restaurante')),
+      appBar: const AppTopBar(title: 'Avaliar restaurante'),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
@@ -80,12 +82,12 @@ class _CreateReviewPageState extends ConsumerState<CreateReviewPage> {
                   ),
                   validator: validateRating,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   controller: _commentController,
                   label: 'Comentário (opcional)',
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 AppPrimaryButton(
                   label: 'Publicar avaliação',
                   isLoading: isSaving,

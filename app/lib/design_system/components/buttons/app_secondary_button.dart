@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Botão secundário do BORAH — preenchido com a cor tonal
 /// (`colorScheme.secondaryContainer`), um degrau abaixo do
-/// `AppPrimaryButton` (`core/widgets/app_primary_button.dart`) na
+/// `AppPrimaryButton` (`buttons/app_primary_button.dart`) na
 /// hierarquia de ações. Consome exclusivamente `Theme.of(context)`
 /// (via `FilledButton.tonal`) — nenhuma cor/raio é declarado aqui.
 ///

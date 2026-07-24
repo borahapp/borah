@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../application/current_user_role_provider.dart';
 
 /// Protege as telas do painel administrativo (DV-08). O GoRouter continua
@@ -16,8 +17,7 @@ class AdminGuard extends ConsumerWidget {
     final roleAsync = ref.watch(currentUserRoleProvider);
 
     return roleAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const Scaffold(body: LoadingScreen()),
       error: (_, _) => const Scaffold(
         body: Center(child: Text('Não foi possível verificar permissões.')),
       ),

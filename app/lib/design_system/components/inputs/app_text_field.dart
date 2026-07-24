@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+/// Campo de texto do BORAH.
+///
+/// Migrado de `core/widgets/app_text_field.dart` para cá no UI-03A
+/// (Component Migration, prevista desde o UI-02): era o último
+/// componente-base fora de `design_system/components/`. `core/widgets/`
+/// foi removido depois desta migração.
 class AppTextField extends StatelessWidget {
   const AppTextField({
     super.key,
@@ -12,6 +18,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.prefixIcon,
     this.suffixIcon,
+    this.suffixIconTooltip,
     this.onSuffixIconTap,
   });
 
@@ -37,6 +44,11 @@ class AppTextField extends StatelessWidget {
   /// (UI-02: `AppSearchField` "limpar", `AppPasswordField`
   /// mostrar/ocultar senha).
   final IconData? suffixIcon;
+
+  /// Rótulo semântico do botão do [suffixIcon] — obrigatório sempre que
+  /// [suffixIcon] é informado (mesma exigência de acessibilidade do
+  /// `AppIconButton`).
+  final String? suffixIconTooltip;
   final VoidCallback? onSuffixIconTap;
 
   @override
@@ -54,7 +66,11 @@ class AppTextField extends StatelessWidget {
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
         suffixIcon: suffixIcon == null
             ? null
-            : IconButton(icon: Icon(suffixIcon), onPressed: onSuffixIconTap),
+            : IconButton(
+                icon: Icon(suffixIcon),
+                tooltip: suffixIconTooltip,
+                onPressed: onSuffixIconTap,
+              ),
       ),
     );
   }

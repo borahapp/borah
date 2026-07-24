@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/notification_preferences_controller.dart';
 import '../states/notification_preferences_status.dart';
@@ -38,10 +40,10 @@ class _NotificationPreferencesPageState
     final status = ref.watch(notificationPreferencesControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Preferências')),
+      appBar: const AppTopBar(title: 'Preferências'),
       body: switch (status) {
-        NotificationPreferencesInitial() || NotificationPreferencesLoading() =>
-          const Center(child: CircularProgressIndicator()),
+        NotificationPreferencesInitial() ||
+        NotificationPreferencesLoading() => const LoadingScreen(),
         NotificationPreferencesError(:final message) => Center(
           child: Text(message),
         ),

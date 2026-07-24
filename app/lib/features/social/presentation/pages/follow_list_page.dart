@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../users/presentation/widgets/profile_avatar.dart';
 import '../../application/follow_list_controller.dart';
 import '../states/follow_list_status.dart';
 
@@ -36,23 +40,21 @@ class _FollowListPageState extends ConsumerState<FollowListPage> {
         : 'Seguindo';
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppTopBar(title: title),
       body: switch (status) {
-        FollowListInitial() ||
-        FollowListLoading() => const Center(child: CircularProgressIndicator()),
+        FollowListInitial() || FollowListLoading() => const LoadingScreen(),
         FollowListError(:final message) => Center(child: Text(message)),
-        FollowListEmpty() => Center(
-          child: Text(
-            widget.type == FollowListType.followers
-                ? 'Nenhum seguidor ainda.'
-                : 'Ainda não segue ninguém.',
-          ),
+        FollowListEmpty() => EmptyState(
+          message: widget.type == FollowListType.followers
+              ? 'Nenhum seguidor ainda.'
+              : 'Ainda não segue ninguém.',
         ),
         FollowListLoaded(:final result) => ListView.builder(
           itemCount: result.items.length,
           itemBuilder: (context, index) {
             final profile = result.items[index];
             return ListTile(
+              leading: ProfileAvatar(avatarPath: profile.avatarUrl, radius: 20),
               title: Text(profile.fullName ?? ''),
               subtitle: profile.bio != null && profile.bio!.isNotEmpty
                   ? Text(profile.bio!)

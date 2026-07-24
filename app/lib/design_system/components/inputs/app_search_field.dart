@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/app_text_field.dart';
+import 'app_text_field.dart';
 
 /// Campo de busca do BORAH — composição sobre `AppTextField`
-/// (`core/widgets/app_text_field.dart`), não uma reimplementação.
+/// (`inputs/app_text_field.dart`), não uma reimplementação.
 ///
 /// Achado real do levantamento do UI-02: `favorites_page.dart` e
 /// `restaurants_search_page.dart` já usam `AppTextField` como busca,
@@ -35,6 +35,7 @@ class AppSearchField extends StatelessWidget {
           onSubmit: onSubmit,
           prefixIcon: Icons.search,
           suffixIcon: controller.text.isEmpty ? null : Icons.clear,
+          suffixIconTooltip: controller.text.isEmpty ? null : 'Limpar busca',
           onSuffixIconTap: controller.text.isEmpty
               ? null
               : () {

@@ -123,6 +123,51 @@ abstract final class AppTheme {
     margin: EdgeInsets.zero,
   );
 
+  /// UI-03B (tema global). Propriedades customizadas e por quê:
+  /// - `centerTitle: false` — decisão explícita (era o default implícito
+  ///   do Material no Android, agora documentado), consistente com os
+  ///   wireframes (título sempre alinhado à esquerda).
+  /// - `scrolledUnderElevation: AppElevation.level1` — troca o valor
+  ///   não-documentado do Material 3 (3.0) pela escala de elevação do
+  ///   BORAH, mantendo o mesmo efeito (leve separação ao rolar).
+  /// Cor de fundo/primeiro plano não são sobrescritas — já vêm
+  /// corretamente de `ColorScheme.surface`/`onSurface` (M3 padrão).
+  static AppBarThemeData get _appBarTheme => AppBarThemeData(
+    centerTitle: false,
+    elevation: 0,
+    scrolledUnderElevation: AppElevation.level1,
+  );
+
+  /// UI-03B (tema global). Propriedades customizadas e por quê:
+  /// - `shape`/`AppRadius.radiusXl` (24) — o default do Material 3 é
+  ///   28, fora da escala de raios do BORAH (máximo `xl` = 24).
+  /// Cor de fundo não é sobrescrita — já vem de `ColorScheme.surface`.
+  static DialogThemeData get _dialogTheme => DialogThemeData(
+    shape: const RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
+  );
+
+  /// UI-03B (tema global). Propriedades customizadas e por quê:
+  /// - `shape`/pill (`AppRadius.radiusPill`) — Manual da Marca usa
+  ///   formato pílula para selos/etiquetas (mesmo padrão já adotado em
+  ///   `ScoreBubble`/`AppBadge`); o default do Material 3 é um
+  ///   `StadiumBorder` só quando `selected`, retangular arredondado
+  ///   caso contrário — a pílula fixa garante consistência nos dois
+  ///   estados.
+  /// - `labelStyle`/Manrope — herdado de `AppTypography.textTheme`, meio
+  ///   `bodyMedium`/`labelLarge` para não conflitar com o texto normal
+  ///   de campo.
+  /// `AppChip`/`AppBadge` (Component Library) ainda não têm nenhum uso
+  /// em tela nesta rodada — tema preparado antes de conectá-los.
+  static ChipThemeData _chipTheme(ColorScheme scheme) {
+    return ChipThemeData(
+      shape: const StadiumBorder(),
+      labelStyle: AppTypography.textTheme.labelLarge,
+      backgroundColor: scheme.surfaceContainerHighest,
+      selectedColor: scheme.tertiary,
+      side: BorderSide.none,
+    );
+  }
+
   static ThemeData get light => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -134,6 +179,9 @@ abstract final class AppTheme {
     textButtonTheme: _textButtonTheme,
     inputDecorationTheme: _inputDecorationTheme(_lightColorScheme),
     cardTheme: _cardTheme,
+    appBarTheme: _appBarTheme,
+    dialogTheme: _dialogTheme,
+    chipTheme: _chipTheme(_lightColorScheme),
     extensions: const [AppGradients.brand],
   );
 
@@ -148,6 +196,9 @@ abstract final class AppTheme {
     textButtonTheme: _textButtonTheme,
     inputDecorationTheme: _inputDecorationTheme(_darkColorScheme),
     cardTheme: _cardTheme,
+    appBarTheme: _appBarTheme,
+    dialogTheme: _dialogTheme,
+    chipTheme: _chipTheme(_darkColorScheme),
     extensions: const [AppGradients.brand],
   );
 }

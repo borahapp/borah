@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/validators/app_validators.dart';
-import '../../../../core/widgets/app_primary_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/inputs/app_text_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/components/navigation/section_header.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/restaurant_detail_controller.dart';
 import '../states/restaurant_detail_status.dart';
@@ -81,46 +84,51 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cadastrar restaurante')),
+      appBar: const AppTopBar(title: 'Cadastrar restaurante'),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SectionHeader(title: 'Informações do restaurante'),
+                const SizedBox(height: AppSpacing.sm),
                 AppTextField(
                   controller: _nameController,
                   label: 'Nome',
                   validator: (value) => validateRequired(value, 'o nome'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   controller: _categoryController,
                   label: 'Categoria',
                   validator: (value) => validateRequired(value, 'a categoria'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   controller: _descriptionController,
                   label: 'Descrição (opcional)',
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.xl),
+                const SectionHeader(title: 'Localização'),
+                const SizedBox(height: AppSpacing.sm),
                 AppTextField(
                   controller: _addressController,
                   label: 'Endereço (opcional)',
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   controller: _cityController,
                   label: 'Cidade (opcional)',
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   controller: _stateController,
                   label: 'Estado (opcional)',
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 AppPrimaryButton(
                   label: 'Cadastrar',
                   isLoading: isSaving,

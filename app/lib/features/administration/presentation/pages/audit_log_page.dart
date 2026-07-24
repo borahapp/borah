@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/audit_log_controller.dart';
 import '../states/audit_log_status.dart';
 import '../widgets/admin_guard.dart';
@@ -29,13 +32,12 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
 
     return AdminGuard(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Auditoria')),
+        appBar: const AppTopBar(title: 'Auditoria'),
         body: switch (status) {
-          AuditLogInitial() ||
-          AuditLogLoading() => const Center(child: CircularProgressIndicator()),
+          AuditLogInitial() || AuditLogLoading() => const LoadingScreen(),
           AuditLogError(:final message) => Center(child: Text(message)),
-          AuditLogEmpty() => const Center(
-            child: Text('Nenhum registro de auditoria ainda.'),
+          AuditLogEmpty() => const EmptyState(
+            message: 'Nenhum registro de auditoria ainda.',
           ),
           AuditLogLoaded(:final result) => ListView.builder(
             itemCount: result.items.length,

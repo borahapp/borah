@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/image_picker_service.dart';
-import '../../../../core/widgets/app_primary_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/user_profile_controller.dart';
 import '../states/user_profile_status.dart';
@@ -86,10 +89,10 @@ class _ChangeAvatarPageState extends ConsumerState<ChangeAvatarPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Alterar foto')),
+      appBar: const AppTopBar(title: 'Alterar foto'),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -99,12 +102,12 @@ class _ChangeAvatarPageState extends ConsumerState<ChangeAvatarPage> {
                       backgroundImage: MemoryImage(_pickedBytes!),
                     )
                   : ProfileAvatar(avatarPath: currentAvatarPath, radius: 64),
-              const SizedBox(height: 24),
-              OutlinedButton(
+              const SizedBox(height: AppSpacing.xl),
+              AppOutlinedButton(
+                label: 'Escolher da galeria',
                 onPressed: _pickImage,
-                child: const Text('Escolher da galeria'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               AppPrimaryButton(
                 label: 'Salvar foto',
                 isLoading: isUploading,

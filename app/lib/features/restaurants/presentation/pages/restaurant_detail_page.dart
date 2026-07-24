@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/image_picker_service.dart';
+import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../favorites/application/favorite_toggle_controller.dart';
 import '../../../favorites/presentation/states/favorite_toggle_status.dart';
@@ -79,17 +85,17 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
     final favoriteStatus = ref.watch(favoriteToggleControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Restaurante'),
+      appBar: AppTopBar(
+        title: 'Restaurante',
         actions: [
-          IconButton(
-            icon: Icon(switch (favoriteStatus) {
+          AppIconButton(
+            icon: switch (favoriteStatus) {
               FavoriteToggleLoaded(:final isFavorited) ||
               FavoriteToggleError(
                 :final isFavorited,
               ) => isFavorited ? Icons.favorite : Icons.favorite_border,
               _ => Icons.favorite_border,
-            }),
+            },
             tooltip: 'Favoritar restaurante',
             onPressed: _toggleFavorite,
           ),
@@ -98,9 +104,7 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
       body: switch (status) {
         RestaurantDetailInitial() ||
         RestaurantDetailLoading() ||
-        RestaurantDetailSaving() => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        RestaurantDetailSaving() => const LoadingScreen(),
         RestaurantDetailError(:final message) => Center(child: Text(message)),
         RestaurantDetailLoaded(:final restaurant) ||
         RestaurantDetailSaveSuccess(:final restaurant) => _DetailView(
@@ -155,37 +159,45 @@ class _DetailView extends StatelessWidget {
     ].join(', ');
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(name, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(category, style: Theme.of(context).textTheme.bodyMedium),
           if (location.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(location),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/icons/borah_location.png',
+                  width: 18,
+                  height: 18,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Flexible(child: Text(location)),
+              ],
+            ),
           ],
           if (averageRating != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               '${averageRating!.toStringAsFixed(1)} ($totalReviews avaliações)',
             ),
           ],
           if (description != null && description!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(description!),
+            const SizedBox(height: AppSpacing.lg),
+            AppCard(child: Text(description!)),
           ],
-          const SizedBox(height: 24),
-          OutlinedButton(
+          const SizedBox(height: AppSpacing.xl),
+          AppOutlinedButton(
+            label: 'Alterar foto de capa',
             onPressed: onChangeCoverImage,
-            child: const Text('Alterar foto de capa'),
           ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: onViewReviews,
-            child: const Text('Ver avaliações'),
-          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppOutlinedButton(label: 'Ver avaliações', onPressed: onViewReviews),
         ],
       ),
     );

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/moderation_controller.dart';
 import '../states/moderation_status.dart';
@@ -40,14 +44,12 @@ class _ModerationPageState extends ConsumerState<ModerationPage> {
 
     return AdminGuard(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Denúncias')),
+        appBar: const AppTopBar(title: 'Denúncias'),
         body: switch (status) {
-          ModerationInitial() || ModerationLoading() => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          ModerationInitial() || ModerationLoading() => const LoadingScreen(),
           ModerationError(:final message) => Center(child: Text(message)),
-          ModerationEmpty() => const Center(
-            child: Text('Nenhuma denúncia pendente.'),
+          ModerationEmpty() => const EmptyState(
+            message: 'Nenhuma denúncia pendente.',
           ),
           ModerationProcessing(:final result) ||
           ModerationLoaded(:final result) => ListView.builder(
@@ -57,9 +59,9 @@ class _ModerationPageState extends ConsumerState<ModerationPage> {
               return ListTile(
                 title: Text(report.reason),
                 subtitle: Text('Comentário: ${report.commentId}'),
-                trailing: TextButton(
+                trailing: AppTextButton(
+                  label: 'Ocultar comentário',
                   onPressed: () => _hideComment(report.commentId),
-                  child: const Text('Ocultar comentário'),
                 ),
               );
             },

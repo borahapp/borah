@@ -87,6 +87,16 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
+  # UI-03B (assets oficiais da marca BORAH). Estrutura documentada em
+  # assets/ASSETS.md. Somente os arquivos realmente consumidos por um
+  # widget sao declarados aqui - o GIF de loading (fallback) e o SVG do
+  # icone de localizacao (fonte vetorial, sem flutter_svg no projeto)
+  # ficam organizados em assets/ mas fora do bundle ate serem
+  # necessarios.
+  assets:
+    - assets/loading/borah_loading.webp
+    - assets/icons/borah_location.png
+
   # UI-01 (Design System oficial, Manual da Marca BORAH v1.0/jul-2026):
   # Fredoka (titulos/chamadas) e Manrope (texto/interface/dados). Ambas sao
   # fontes variaveis (eixo wght) - o mesmo arquivo e declarado varias vezes,

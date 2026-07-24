@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/widgets/app_text_field.dart';
+import 'app_text_field.dart';
 
 /// Campo de senha do BORAH — composição sobre `AppTextField`
-/// (`core/widgets/app_text_field.dart`), adicionando o alternador de
+/// (`inputs/app_text_field.dart`), adicionando o alternador de
 /// visibilidade que faltava.
 ///
 /// Achado real do levantamento do UI-02: `login_page.dart` e a tela de
@@ -39,6 +39,7 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
       validator: widget.validator,
       onSubmit: widget.onSubmit,
       suffixIcon: _obscured ? Icons.visibility : Icons.visibility_off,
+      suffixIconTooltip: _obscured ? 'Mostrar senha' : 'Ocultar senha',
       onSuffixIconTap: () => setState(() => _obscured = !_obscured),
     );
   }

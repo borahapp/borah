@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/badges/app_badge.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/inputs/app_search_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/admin_restaurants_controller.dart';
 import '../states/admin_restaurants_status.dart';
@@ -57,12 +62,12 @@ class _AdminRestaurantsPageState extends ConsumerState<AdminRestaurantsPage> {
 
     return AdminGuard(
       child: Scaffold(
-        appBar: AppBar(title: const Text('Restaurantes')),
+        appBar: const AppTopBar(title: 'Restaurantes'),
         body: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: AppTextField(
+              child: AppSearchField(
                 controller: _queryController,
                 label: 'Buscar por nome',
                 onSubmit: (_) => _search(),
@@ -70,30 +75,33 @@ class _AdminRestaurantsPageState extends ConsumerState<AdminRestaurantsPage> {
             ),
             Expanded(
               child: switch (status) {
-                AdminRestaurantsInitial() || AdminRestaurantsLoading() =>
-                  const Center(child: CircularProgressIndicator()),
+                AdminRestaurantsInitial() ||
+                AdminRestaurantsLoading() => const LoadingScreen(),
                 AdminRestaurantsError(:final message) => Center(
                   child: Text(message),
                 ),
-                AdminRestaurantsEmpty() => const Center(
-                  child: Text('Nenhum restaurante encontrado.'),
+                AdminRestaurantsEmpty() => const EmptyState(
+                  message: 'Nenhum restaurante encontrado.',
                 ),
                 AdminRestaurantsSaving(:final result) ||
                 AdminRestaurantsLoaded(:final result) => ListView.builder(
                   itemCount: result.items.length,
                   itemBuilder: (context, index) {
                     final restaurant = result.items[index];
+                    final isActive = restaurant.status == 'active';
                     return ListTile(
                       title: Text(restaurant.name),
-                      subtitle: Text(restaurant.status),
-                      trailing: TextButton(
+                      subtitle: Align(
+                        alignment: Alignment.centerLeft,
+                        child: AppBadge(
+                          label: isActive ? 'Ativo' : 'Arquivado',
+                          earned: isActive,
+                        ),
+                      ),
+                      trailing: AppTextButton(
+                        label: isActive ? 'Arquivar' : 'Reativar',
                         onPressed: () =>
                             _toggleStatus(restaurant.id, restaurant.status),
-                        child: Text(
-                          restaurant.status == 'active'
-                              ? 'Arquivar'
-                              : 'Reativar',
-                        ),
                       ),
                       onTap: () =>
                           context.push('/restaurants/${restaurant.id}'),

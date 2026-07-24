@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/validators/app_validators.dart';
-import '../../../../core/widgets/app_primary_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/inputs/app_text_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/user_profile_controller.dart';
 import '../states/user_profile_status.dart';
@@ -80,31 +83,31 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Editar perfil')),
+      appBar: const AppTopBar(title: 'Editar perfil'),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
               children: [
-                TextButton(
+                AppTextButton(
+                  label: 'Alterar foto',
                   onPressed: () => context.push('/profile/avatar'),
-                  child: const Text('Alterar foto'),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 AppTextField(
                   controller: _nameController,
                   label: 'Nome',
                   validator: (value) => validateRequired(value, 'seu nome'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(controller: _bioController, label: 'Biografia'),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(controller: _cityController, label: 'Cidade'),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 AppTextField(controller: _stateController, label: 'Estado'),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 AppPrimaryButton(
                   label: 'Salvar',
                   isLoading: isSaving,
