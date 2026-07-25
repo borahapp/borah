@@ -212,6 +212,7 @@ jobs:
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_QA_URL }}
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_QA_ANON_KEY }}
             --dart-define=SUPABASE_QA_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_QA_SERVICE_ROLE_KEY }}
+            --dart-define=APP_ENVIRONMENT=qa
             2>&1 | tee integration-test-output.log
 
       - uses: actions/upload-artifact@v4

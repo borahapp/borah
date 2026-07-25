@@ -46,6 +46,9 @@ dependencies:
   # DV-07 - compartilhamento nativo de texto (sem Deep Links nesta versao)
   share_plus: ^10.1.4
 
+  # RC-03A - Crash Reporting (captura global de erros, ver core/observability/)
+  sentry_flutter: ^8.14.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
