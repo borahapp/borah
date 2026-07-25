@@ -244,6 +244,35 @@ da RC-03A/RC-03B). Ver `RC-03C_PRODUCT_ANALYTICS.md` para arquitetura
 completa, lista de eventos e o que falta conectar. Suíte de unit/widget
 tests sem regressão (352/352 — 45 testes novos).
 
+**RC-03D (Feature Flags) concluída em 2026-07-25** — infraestrutura de
+Feature Flags do BORAH (`lib/core/feature_flags/`) implementada com
+Supabase + Riverpod (sem PostHog Feature Flags nesta primeira versão,
+por decisão explícita), seguindo o mesmo padrão arquitetural de
+`CrashReporting`/`AppLogger`/`AppAnalytics`: `FeatureFlag` (modelo),
+`FeatureFlagRepository`/`SupabaseFeatureFlagRepository` (única fronteira
+com a tabela `feature_flags`), `FeatureFlagCache` (cache local em
+memória, escopo de sessão), `FeatureFlagService` (orquestra
+repositório+cache, nunca lança) e duas portas de entrada — a fachada
+estática `AppFeatureFlags` (checagem imperativa em qualquer lugar) e
+`featureFlagsControllerProvider` (Riverpod, para telas que precisam
+reconstruir reativamente). Nova migration
+(`20260725100000_create_feature_flags.sql`) cria a tabela com RLS
+(leitura para qualquer autenticado; escrita só `super_admin`, mesmo
+critério de `user_roles`), trigger de `updated_at` e GRANT concedido já
+na mesma migration (lição da correção de GRANT da FASE 5/6). Populadas
+as 8 flags mínimas exigidas (`maintenance_mode`, `new_feed`,
+`new_ranking`, `new_profile`, `enable_notifications`, `enable_social`,
+`enable_reviews`, `enable_admin`) como infraestrutura apenas — nenhuma
+tela consulta nenhuma delas nesta rodada, nenhum comportamento
+existente foi alterado. Estratégia offline: se o Supabase estiver
+indisponível, o serviço nunca lança — `isEnabled()` cai num
+`defaultValue` seguro (`false`) na primeira falha, ou preserva o último
+cache válido numa falha de `refresh()` posterior; carregamento no
+bootstrap (`main.dart`) é fire-and-forget, nunca bloqueia a subida do
+app. Ver `RC-03D_FEATURE_FLAGS.md` para arquitetura completa, estratégia
+offline e como adicionar novas flags. Suíte de unit/widget tests sem
+regressão (376/376 — 24 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
