@@ -6,6 +6,8 @@ import '../../../../core/services/image_picker_service.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_pulse_icon.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
@@ -83,50 +85,61 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
   Widget build(BuildContext context) {
     final status = ref.watch(restaurantDetailControllerProvider);
     final favoriteStatus = ref.watch(favoriteToggleControllerProvider);
+    final isFavorited = switch (favoriteStatus) {
+      FavoriteToggleLoaded(:final isFavorited) ||
+      FavoriteToggleError(:final isFavorited) => isFavorited,
+      _ => false,
+    };
 
     return Scaffold(
       appBar: AppTopBar(
         title: 'Restaurante',
         actions: [
-          AppIconButton(
-            icon: switch (favoriteStatus) {
-              FavoriteToggleLoaded(:final isFavorited) ||
-              FavoriteToggleError(
-                :final isFavorited,
-              ) => isFavorited ? Icons.favorite : Icons.favorite_border,
-              _ => Icons.favorite_border,
-            },
-            tooltip: 'Favoritar restaurante',
-            onPressed: _toggleFavorite,
+          AppPulseIcon(
+            trigger: isFavorited,
+            child: AppIconButton(
+              icon: isFavorited ? Icons.favorite : Icons.favorite_border,
+              tooltip: 'Favoritar restaurante',
+              onPressed: _toggleFavorite,
+            ),
           ),
         ],
       ),
-      body: switch (status) {
-        RestaurantDetailInitial() ||
-        RestaurantDetailLoading() ||
-        RestaurantDetailSaving() => const LoadingScreen(),
-        RestaurantDetailError(:final message) => Center(child: Text(message)),
-        RestaurantDetailLoaded(:final restaurant) ||
-        RestaurantDetailSaveSuccess(:final restaurant) => _DetailView(
-          name: restaurant.name,
-          category: restaurant.category,
-          description: restaurant.description,
-          address: restaurant.address,
-          city: restaurant.city,
-          state: restaurant.state,
-          averageRating: restaurant.averageRating,
-          totalReviews: restaurant.totalReviews,
-          onChangeCoverImage: _changeCoverImage,
-          onViewReviews: () =>
-              context.push('/restaurants/${widget.restaurantId}/reviews'),
-        ),
-      },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          RestaurantDetailInitial() ||
+          RestaurantDetailLoading() ||
+          RestaurantDetailSaving() => const LoadingScreen(
+            key: ValueKey('loading'),
+          ),
+          RestaurantDetailError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          RestaurantDetailLoaded(:final restaurant) ||
+          RestaurantDetailSaveSuccess(:final restaurant) => _DetailView(
+            key: const ValueKey('loaded'),
+            name: restaurant.name,
+            category: restaurant.category,
+            description: restaurant.description,
+            address: restaurant.address,
+            city: restaurant.city,
+            state: restaurant.state,
+            averageRating: restaurant.averageRating,
+            totalReviews: restaurant.totalReviews,
+            onChangeCoverImage: _changeCoverImage,
+            onViewReviews: () =>
+                context.push('/restaurants/${widget.restaurantId}/reviews'),
+          ),
+        },
+      ),
     );
   }
 }
 
 class _DetailView extends StatelessWidget {
   const _DetailView({
+    super.key,
     required this.name,
     required this.category,
     required this.description,

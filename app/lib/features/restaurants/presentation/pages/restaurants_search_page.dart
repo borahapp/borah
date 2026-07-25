@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
@@ -84,48 +86,61 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
             ),
           ),
           Expanded(
-            child: switch (status) {
-              RestaurantsInitial() ||
-              RestaurantsLoading() => const LoadingScreen(),
-              RestaurantsSearching() ||
-              RestaurantsFiltering() => const LoadingScreen(),
-              RestaurantsError(:final message) => Center(child: Text(message)),
-              RestaurantsEmpty() => const EmptyState(
-                message: 'Nenhum restaurante encontrado.',
-              ),
-              RestaurantsLoaded(:final result) => ListView.builder(
-                itemCount: result.items.length,
-                itemBuilder: (context, index) {
-                  final restaurant = result.items[index];
-                  return ListTile(
-                    title: Text(restaurant.name),
-                    subtitle: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/icons/borah_location.png',
-                          width: 14,
-                          height: 14,
+            child: AppAnimatedSwitcher(
+              child: switch (status) {
+                RestaurantsInitial() ||
+                RestaurantsLoading() ||
+                RestaurantsSearching() ||
+                RestaurantsFiltering() => const LoadingScreen(
+                  key: ValueKey('loading'),
+                ),
+                RestaurantsError(:final message) => Center(
+                  key: const ValueKey('error'),
+                  child: Text(message),
+                ),
+                RestaurantsEmpty() => const EmptyState(
+                  key: ValueKey('empty'),
+                  message: 'Nenhum restaurante encontrado.',
+                ),
+                RestaurantsLoaded(:final result) => ListView.builder(
+                  key: const ValueKey('loaded'),
+                  itemCount: result.items.length,
+                  itemBuilder: (context, index) {
+                    final restaurant = result.items[index];
+                    return AppStaggeredListItem(
+                      index: index,
+                      child: ListTile(
+                        title: Text(restaurant.name),
+                        subtitle: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/icons/borah_location.png',
+                              width: 14,
+                              height: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                [
+                                  restaurant.category,
+                                  if (restaurant.city != null) restaurant.city,
+                                ].join(' · '),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            [
-                              restaurant.category,
-                              if (restaurant.city != null) restaurant.city,
-                            ].join(' · '),
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: restaurant.averageRating != null
-                        ? ScoreBubble(rating: restaurant.averageRating)
-                        : null,
-                    onTap: () => context.push('/restaurants/${restaurant.id}'),
-                  );
-                },
-              ),
-            },
+                        trailing: restaurant.averageRating != null
+                            ? ScoreBubble(rating: restaurant.averageRating)
+                            : null,
+                        onTap: () =>
+                            context.push('/restaurants/${restaurant.id}'),
+                      ),
+                    );
+                  },
+                ),
+              },
+            ),
           ),
         ],
       ),

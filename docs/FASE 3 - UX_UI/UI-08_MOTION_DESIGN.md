@@ -1,7 +1,7 @@
 # UI-08 — Motion Design do BORAH
 
-**Versão:** 1.1
-**Status:** UI-08A (Fundação) implementada — aguardando aprovação para UI-08B (aplicação nas telas)
+**Versão:** 1.2
+**Status:** UI-08B1 implementada — aguardando aprovação para UI-08B2
 **Documento:** UI-08_MOTION_DESIGN.md
 **Branch:** feature/ui-08-motion-design (base: develop @ ab24c1f)
 
@@ -170,3 +170,35 @@ Arquivos modificados:
 - `app/lib/design_system/animations/.gitkeep` removido (pasta deixou de estar vazia)
 
 Validação: `flutter analyze` limpo, `dart format --set-exit-if-changed .` sem alterações, `flutter test` **243/243** (inalterado — nenhuma tela tocada, como esperado).
+
+---
+
+# 14. UI-08B1 — Aplicação nas 5 telas prioritárias (implementada)
+
+Escopo: Splash, Recuperação de senha, Busca de Restaurantes, Detalhes do Restaurante, Gamificação. Só os 5 componentes autorizados (`AppAnimatedSwitcher`, `AppAnimatedFraction`, `AppStaggeredListItem`, `AppPulseIcon`, `AppMotion`), nenhum componente novo, nenhuma dependência nova.
+
+| Tela | O que mudou |
+|---|---|
+| Splash | Transição de página (fade, `AppMotion.slow`/`standard`) só na rota `/` — entrada/saída da própria Splash, sem tocar a transição de `/login`/`/home` |
+| Recuperação de senha | `AppAnimatedSwitcher` no corpo — formulário↔confirmação deixou de ser corte seco |
+| Busca de Restaurantes | `AppAnimatedSwitcher` no corpo (Loading/Erro/Vazio/Carregado) + `AppStaggeredListItem` em cada linha da lista |
+| Detalhes do Restaurante | `AppAnimatedSwitcher` no corpo + `AppPulseIcon` no ícone de favoritar |
+| Gamificação | `AppAnimatedSwitcher` no corpo + `AppAnimatedFraction` na barra de XP (preenche animado em vez de saltar) + `AppPulseIcon` no badge ao mudar conquistado/bloqueado |
+
+## Ajuste arquitetural: chave por "grupo visual", não por subtipo exato de estado
+
+Ao aplicar `AppAnimatedSwitcher`, um primeiro rascunho dava a cada *branch* do `switch` uma `Key` baseada no subtipo exato do status (`ValueKey(status.runtimeType)`). Isso quebraria de duas formas:
+
+1. **Teste** (`restaurants_search_page_test.dart`/`restaurant_detail_page_test.dart`, "estado de carregamento mostra indicador"): o controller passa por `Initial` → `Loading` (ambos renderizam `LoadingScreen`) entre o primeiro frame e o `pump()` do teste. Com chaves distintas por subtipo, o `AnimatedSwitcher` trataria isso como troca de conteúdo e animaria uma transição — deixando **dois** `CircularProgressIndicator` na árvore simultaneamente durante o cross-fade, quebrando `findsOneWidget`.
+2. **Comportamento**: a barra de XP/o pop do badge (Gamificação) só fazem sentido se o `_ProfileView` for atualizado **no lugar** quando os dados mudam (ex.: XP subiu), não recriado do zero a cada `GamificationProfileLoaded`. Se a chave mudasse a cada carregamento, o `AppAnimatedFraction`/`AppPulseIcon` reiniciariam do zero a cada rebuild em vez de animar a partir do estado anterior.
+
+Correção: a `Key` de cada *branch* reflete o **grupo visual** já definido pelo próprio `switch` (`'loading'`, `'error'`, `'empty'`, `'loaded'`), não o subtipo exato — `Initial`/`Loading`/`Searching`/`Filtering` compartilham `ValueKey('loading')`, por exemplo. `AnimatedSwitcher` só cross-fadeia quando o *grupo* muda de fato, e dados atualizados dentro do mesmo grupo (`'loaded'`) só re-renderizam o conteúdo, permitindo os componentes internos animarem corretamente a partir do valor anterior.
+
+## Validação
+
+- `flutter analyze`: limpo.
+- `dart format --set-exit-if-changed .`: sem alterações.
+- `flutter test`: **243/243** (nenhuma regressão).
+- Validação visual (golden test temporário, removido ao final): confirmado layout íntegro nas 5 telas — Splash (gradiente inalterado), Recuperação de senha (formulário e confirmação), Busca de Restaurantes (spinner + card de filtro + lista com item), Detalhes do Restaurante (ícone de favorito no estado final, cartão de descrição), Gamificação (barra de XP preenchida corretamente após o assentamento, badges com pílulas coloridas corretas). A transição em si é temporal e não aparece num PNG estático — o que se confirma é ausência de regressão de layout.
+
+Arquivos modificados: `core/router/app_router.dart`, `features/authentication/presentation/pages/password_reset_page.dart`, `features/restaurants/presentation/pages/restaurants_search_page.dart`, `features/restaurants/presentation/pages/restaurant_detail_page.dart`, `features/gamification/presentation/pages/gamification_profile_page.dart`.

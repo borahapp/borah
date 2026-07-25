@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../design_system/animations/app_motion.dart';
 import '../../design_system/components/buttons/app_text_button.dart';
 import '../../features/authentication/application/auth_controller.dart';
 import '../../features/authentication/presentation/pages/email_verification_page.dart';
@@ -105,7 +106,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const SplashPage()),
+      GoRoute(
+        path: '/',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SplashPage(),
+          transitionDuration: AppMotion.scaled(context, AppMotion.slow),
+          reverseTransitionDuration: AppMotion.scaled(context, AppMotion.slow),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: AppMotion.standard,
+              ),
+              child: child,
+            );
+          },
+        ),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
       GoRoute(
