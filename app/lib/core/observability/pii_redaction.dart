@@ -23,13 +23,24 @@ final jwtPattern = RegExp(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+');
 final emailPattern = RegExp(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+');
 
 /// Redige JWT e e-mail de um texto livre. Não inclui telefone — isso é
-/// específico do sanitizador de Analytics (RC-03C), que estende esta
-/// função com uma regra adicional (nem todo consumidor desta primitiva
-/// precisa da mesma política de privacidade).
+/// opt-in via [redactPhoneNumbers] (nem todo consumidor desta primitiva
+/// precisa da mesma política de privacidade — o Sentry, RC-03A, não
+/// aplica essa regra).
 String redactSensitiveText(String input) {
   return input
       .replaceAll(jwtPattern, piiRedactedPlaceholder)
       .replaceAll(emailPattern, piiRedactedPlaceholder);
+}
+
+/// Telefones — sequência de 8+ dígitos, com separadores opcionais
+/// (`+`, `-`, espaço, parênteses). Extraída aqui (RC-03E) para ser
+/// reaproveitada tanto pelo Analytics (RC-03C) quanto pelo Feedback
+/// (RC-03E) sem duplicar o regex — continua opt-in, nunca aplicada pelo
+/// sanitizador do Sentry.
+final phonePattern = RegExp(r'(\+?\d[\d\s().-]{6,}\d)');
+
+String redactPhoneNumbers(String input) {
+  return input.replaceAll(phonePattern, piiRedactedPlaceholder);
 }
 
 Map<String, dynamic>? redactDynamicMap(Map<String, dynamic>? source) {

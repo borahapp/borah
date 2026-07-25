@@ -20,6 +20,8 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.suffixIconTooltip,
     this.onSuffixIconTap,
+    this.maxLines = 1,
+    this.maxLength,
   });
 
   final TextEditingController controller;
@@ -27,6 +29,16 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+
+  /// Número de linhas do campo — `1` (padrão) preserva o comportamento
+  /// anterior ao RC-03E. Um valor maior que `1` habilita texto
+  /// multilinha (ex.: campo de mensagem do `FeedbackDialog`).
+  final int maxLines;
+
+  /// Limite de caracteres exibido como contador nativo do
+  /// `TextFormField` (RC-03E) — `null` (padrão) mantém o comportamento
+  /// anterior, sem contador.
+  final int? maxLength;
 
   /// Chamado quando o usuário confirma o campo (Enter/"concluído" no
   /// teclado) — usado por campos de busca/filtro (DV-03).
@@ -60,6 +72,8 @@ class AppTextField extends StatelessWidget {
       validator: validator,
       onFieldSubmitted: onSubmit,
       onChanged: onChanged,
+      maxLines: maxLines,
+      maxLength: maxLength,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),

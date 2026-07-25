@@ -273,6 +273,42 @@ app. Ver `RC-03D_FEATURE_FLAGS.md` para arquitetura completa, estratégia
 offline e como adicionar novas flags. Suíte de unit/widget tests sem
 regressão (376/376 — 24 testes novos).
 
+**RC-03E (Feedback In-App) concluída em 2026-07-25** — infraestrutura
+completa de envio de feedback do BORAH (`lib/core/feedback/`), seguindo
+o mesmo padrão arquitetural de `CrashReporting`/`AppLogger`/
+`AppAnalytics`/`AppFeatureFlags`: `FeedbackModel` (modelo),
+`FeedbackRepository`/`SupabaseFeedbackRepository` (única fronteira com a
+tabela `feedback`), `FeedbackService` (sanitiza a mensagem e propaga
+falhas — ao contrário de Feature Flags, existe uma UI real aguardando o
+resultado), `FeedbackController`/`feedbackControllerProvider` (Riverpod,
+estados Initial/Submitting/SubmitSuccess/SubmitError) e a fachada
+estática `AppFeedback`. Nova migration
+(`20260725110000_create_feedback.sql`) cria a tabela com RLS (usuário lê
+e insere apenas o próprio feedback; administrador lê todos, mesmo padrão
+de `comment_reports`) e GRANT concedido já na mesma migration.
+Diferente da RC-03A–D (infraestrutura pura), esta rodada entrega também
+um diálogo de envio real (`FeedbackDialog`, Design System) com contador
+de caracteres, estados de carregando/sucesso/erro e nova tentativa —
+conectado a `SettingsPage` ("Enviar feedback"), única integração de UI
+desta rodada. Privacidade reaproveita `pii_redaction.dart` (RC-03A/C):
+a redação de telefone, até então privada em
+`analytics_property_sanitizer.dart`, foi promovida a função
+compartilhada (`redactPhoneNumbers`, opt-in, sem alterar o Sentry) e
+`feedback_sanitizer.dart` a reaproveita junto com `redactSensitiveText`.
+Decisão arquitetural registrada nesta rodada: a versão do app não é mais
+lida via `PackageInfo.fromPlatform()` a cada envio — descobriu-se que
+essa chamada nunca resolve dentro de um teste de widget (`testWidgets`),
+travando `pumpAndSettle()`; a leitura foi movida para
+`AppFeedback.initialize()` (chamado uma única vez em `main.dart`, mesmo
+padrão de `AppAnalytics.initialize()`), cacheada em memória e reutilizada
+por toda instância de `FeedbackService` — ver `RC-03E_IN_APP_FEEDBACK.md`
+§7 para a análise completa. Ver `RC-03E_IN_APP_FEEDBACK.md` para
+arquitetura completa, banco, RLS e como reutilizar. Suíte de unit/widget
+tests sem regressão (400/400 — 24 testes novos).
+
+Com a RC-03E, a RC-03 (Observability trio + flags + feedback) está
+completa: RC-03A → RC-03B → RC-03C → RC-03D → RC-03E.
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

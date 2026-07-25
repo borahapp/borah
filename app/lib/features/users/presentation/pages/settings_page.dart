@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/feedback/feedback_dialog.dart';
 import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../authentication/domain/auth_repository.dart';
 
 /// Tela de Configurações (UX-02 §15). Mostra apenas os itens com ação real
-/// nesta etapa: "Editar perfil" e "Sair". Os demais itens do wireframe
-/// (Notificações, Privacidade, Segurança, Idioma) não têm modelo de dados
-/// correspondente no DV-02 — mesma lacuna documental já registrada para a
-/// tela "Preferências" — e não serão exibidos como placeholders sem
-/// persistência.
+/// nesta etapa: "Editar perfil", "Enviar feedback" (RC-03E) e "Sair". Os
+/// demais itens do wireframe (Notificações, Privacidade, Segurança,
+/// Idioma) não têm modelo de dados correspondente no DV-02 — mesma
+/// lacuna documental já registrada para a tela "Preferências" — e não
+/// serão exibidos como placeholders sem persistência.
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -67,6 +68,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             leading: const Icon(Icons.person_outline),
             title: const Text('Editar perfil'),
             onTap: () => context.push('/profile/edit'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.feedback_outlined),
+            title: const Text('Enviar feedback'),
+            onTap: () {
+              final userId = ref.read(currentUserIdProvider);
+              if (userId == null) return;
+              FeedbackDialog.show(
+                context,
+                userId: userId,
+                screenContext: 'settings',
+              );
+            },
           ),
           ListTile(
             leading: _isSigningOut
