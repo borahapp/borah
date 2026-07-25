@@ -49,6 +49,11 @@ dependencies:
   # RC-03A - Crash Reporting (captura global de erros, ver core/observability/)
   sentry_flutter: ^8.14.2
 
+  # RC-03B - anotacoes @visibleForTesting nos hooks de teste do AppLogger
+  # (ja era dependencia transitiva; declarada aqui para satisfazer o lint
+  # depend_on_referenced_packages)
+  meta: ^1.18.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

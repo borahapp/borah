@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../environment/app_environment.dart';
+import '../logger/app_log_level.dart';
 import 'sentry_event_sanitizer.dart';
 
 /// Ponto único de configuração e uso do Sentry (RC-03A). Nenhum outro
@@ -52,4 +53,48 @@ abstract final class CrashReporting {
       withScope: (scope) => scope.setTag('origin', origin),
     );
   }
+
+  /// Encaminha um log de nível WARNING+ ao Sentry (RC-03B) — chamado
+  /// exclusivamente por `AppLogger`, nunca diretamente por telas/
+  /// controllers/repositories (isso duplicaria eventos já reportados pela
+  /// captura global de [run] quando o mesmo erro também propaga para lá).
+  /// TRACE/DEBUG/INFO nunca chegam aqui — `AppLogger` já filtra antes de
+  /// chamar. Passa pelo mesmo `beforeSend` (sanitização) que qualquer
+  /// outro evento, sem exceção.
+  static Future<void> captureLog(
+    AppLogLevel level,
+    String message, {
+    String? tag,
+    String? userId,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    void withScope(Scope scope) {
+      scope.level = _toSentryLevel(level);
+      scope.setTag('origin', 'app_logger');
+      if (tag != null) scope.setTag('log_tag', tag);
+      if (userId != null) scope.setTag('user_id', userId);
+    }
+
+    if (error != null) {
+      return Sentry.captureException(
+        error,
+        stackTrace: stackTrace,
+        withScope: withScope,
+      );
+    }
+    return Sentry.captureMessage(
+      message,
+      level: _toSentryLevel(level),
+      withScope: withScope,
+    );
+  }
+
+  static SentryLevel _toSentryLevel(AppLogLevel level) => switch (level) {
+    AppLogLevel.trace || AppLogLevel.debug => SentryLevel.debug,
+    AppLogLevel.info => SentryLevel.info,
+    AppLogLevel.warning => SentryLevel.warning,
+    AppLogLevel.error => SentryLevel.error,
+    AppLogLevel.fatal => SentryLevel.fatal,
+  };
 }
