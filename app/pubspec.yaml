@@ -53,6 +53,8 @@ dependencies:
   # (ja era dependencia transitiva; declarada aqui para satisfazer o lint
   # depend_on_referenced_packages)
   meta: ^1.18.0
+  posthog_flutter: ^5.33.0
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

@@ -216,6 +216,34 @@ formato do log, integração com o Sentry e a convenção que evita eventos
 duplicados (erro tratado vs. erro que propaga para a captura global).
 Suíte de unit/widget tests sem regressão (307/307 — 29 testes novos).
 
+**RC-03C (Product Analytics) concluída em 2026-07-25** — camada de
+Analytics do BORAH (`lib/core/analytics/`) implementada com PostHog
+(`posthog_flutter`, recomendação da RC-02.5, resolvido sem conflito de
+dependências), seguindo o mesmo padrão arquitetural de
+`CrashReporting`/`AppLogger`: interface própria (`AnalyticsService`),
+fachada estática (`AppAnalytics`) e uma única classe
+(`PostHogAnalyticsService`) como fronteira com o SDK — nenhuma feature
+depende do PostHog diretamente. Implementados os 19 eventos mínimos
+exigidos (App Open, Login Success/Failed, Signup, Logout, Restaurant
+Viewed/Favorited/Unfavorited, Review Created/Updated/Deleted, Comment
+Created/Deleted, Feed/Ranking Opened, Profile Viewed/Updated, Search
+Performed, Notification Opened), todos com a convenção padrão de campos
+(timestamp/environment/version/screen/userId/properties) e testados.
+Sanitização de privacidade reaproveita a infraestrutura da RC-03A: as
+primitivas de redação foram extraídas para
+`core/observability/pii_redaction.dart` (refactor sem mudança de
+comportamento, confirmado pelos testes existentes do Sentry) e
+estendidas com redação de telefone, exigida pela política de Analytics.
+Development nunca envia eventos; QA/Beta/Production enviam (pendente de
+`POSTHOG_API_KEY` real, mesma situação do `SENTRY_DSN` na RC-03A).
+Wiring de eventos limitado ao ciclo de vida de autenticação
+(`AuthController`: identify/reset + login/signup/logout) — os outros 14
+métodos de evento estão prontos e testados, mas deliberadamente não
+conectados a telas de feature nesta rodada (mesma disciplina de escopo
+da RC-03A/RC-03B). Ver `RC-03C_PRODUCT_ANALYTICS.md` para arquitetura
+completa, lista de eventos e o que falta conectar. Suíte de unit/widget
+tests sem regressão (352/352 — 45 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

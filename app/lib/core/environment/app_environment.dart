@@ -23,4 +23,17 @@ abstract final class AppEnvironment {
     'APP_ENVIRONMENT',
     defaultValue: 'development',
   );
+
+  /// Project token do PostHog (RC-03C). Vazio por padrão - `Posthog()
+  /// .setup()` já no-opa graciosamente quando o token está vazio (mesmo
+  /// espírito do `SENTRY_DSN` vazio acima).
+  static const postHogApiKey = String.fromEnvironment('POSTHOG_API_KEY');
+
+  /// Host de ingestão do PostHog (RC-03C). Default aponta para a nuvem
+  /// pública US do PostHog — trocar via `--dart-define` para uma instância
+  /// self-hosted ou região EU, quando aplicável.
+  static const postHogHost = String.fromEnvironment(
+    'POSTHOG_HOST',
+    defaultValue: 'https://us.i.posthog.com',
+  );
 }

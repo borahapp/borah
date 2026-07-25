@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../data/auth_repository_impl.dart';
 import '../domain/auth_repository.dart';
 import '../presentation/states/auth_status.dart';
@@ -29,6 +32,12 @@ class AuthController extends Notifier<AuthStatus> {
   Future<void> restoreSession() async {
     state = const AuthLoading();
     final current = _repository.currentUser;
+    // RC-03C: identifica o usuário para o Analytics mesmo numa
+    // restauração de sessão (não só num login novo) - é o caminho mais
+    // comum de abertura do app, e sem isso a maioria dos eventos
+    // ficaria sem `userId`. Fire-and-forget: Analytics nunca deve
+    // atrasar/bloquear o fluxo de autenticação.
+    if (current != null) unawaited(AppAnalytics.identify(current.userId));
     state = current == null
         ? const Unauthenticated()
         : Authenticated(userId: current.userId, email: current.email);
@@ -53,6 +62,8 @@ class AuthController extends Notifier<AuthStatus> {
       // real de forma determinística, sem depender de qual dos dois
       // caminhos assíncronos "vence".
       final current = _repository.currentUser;
+      if (current != null) unawaited(AppAnalytics.identify(current.userId));
+      unawaited(AppAnalytics.trackSignup());
       state = current == null
           ? EmailVerificationPending(email)
           : Authenticated(userId: current.userId, email: current.email);
@@ -68,12 +79,16 @@ class AuthController extends Notifier<AuthStatus> {
     try {
       await _repository.signIn(email: email, password: password);
       final current = _repository.currentUser;
+      if (current != null) unawaited(AppAnalytics.identify(current.userId));
+      unawaited(AppAnalytics.trackLoginSuccess());
       state = current == null
           ? const Unauthenticated()
           : Authenticated(userId: current.userId, email: current.email);
     } on AuthRepositoryException catch (e) {
+      unawaited(AppAnalytics.trackLoginFailed(reason: e.message));
       state = AuthError(e.message);
     } catch (_) {
+      unawaited(AppAnalytics.trackLoginFailed());
       state = const AuthError(
         'Não foi possível entrar. Verifique suas credenciais.',
       );
@@ -89,6 +104,10 @@ class AuthController extends Notifier<AuthStatus> {
   Future<void> signOut() async {
     try {
       await _repository.signOut();
+      // Rastreia o logout antes de resetar - assim o próprio evento
+      // ainda carrega o `userId` de quem estava saindo.
+      unawaited(AppAnalytics.trackLogout());
+      unawaited(AppAnalytics.reset());
       state = const Unauthenticated();
     } on AuthRepositoryException {
       rethrow;
