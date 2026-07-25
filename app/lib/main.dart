@@ -3,10 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/network/supabase_client_provider.dart';
+import 'core/observability/crash_reporting.dart';
+import 'core/observability/sentry_provider_observer.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeSupabase();
 
-  runApp(const ProviderScope(child: BorahApp()));
+  // RC-03A: initializeSupabase() e runApp() rodam dentro da zona de
+  // captura do Sentry (ver CrashReporting.run) - qualquer erro durante o
+  // bootstrap do app também é reportado, não só erros pós-inicialização.
+  await CrashReporting.run(() async {
+    await initializeSupabase();
+
+    runApp(
+      ProviderScope(
+        observers: const [SentryProviderObserver()],
+        child: const BorahApp(),
+      ),
+    );
+  });
 }

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../design_system/animations/app_motion.dart';
 import '../../design_system/components/buttons/app_text_button.dart';
+import '../../design_system/components/feedback/error_state.dart';
+import '../observability/crash_reporting.dart';
 import '../../features/authentication/application/auth_controller.dart';
 import '../../features/authentication/presentation/pages/email_verification_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
@@ -91,6 +93,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     refreshListenable: refreshNotifier,
+    errorBuilder: (context, state) {
+      // RC-03A: erro de navegação (rota desconhecida ou falha ao
+      // construir uma página) - reporta ao Sentry com o mesmo tratamento
+      // de qualquer outro erro capturado manualmente, e mostra um estado
+      // de erro consistente com o resto do app em vez da tela de erro
+      // padrão do GoRouter.
+      CrashReporting.captureException(
+        state.error ?? Exception('Rota desconhecida: ${state.uri}'),
+        StackTrace.current,
+        origin: 'go_router',
+      );
+      return Scaffold(
+        body: ErrorState(
+          message: 'Não foi possível abrir esta tela.',
+          onRetry: () => context.go('/'),
+        ),
+      );
+    },
     redirect: (context, state) {
       final location = state.matchedLocation;
       if (location == '/') return null; // a Splash decide sozinha

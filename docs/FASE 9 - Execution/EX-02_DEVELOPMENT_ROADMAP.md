@@ -168,6 +168,37 @@ feature branch nesta rodada**; retomar o fluxo padrão de feature
 branches a partir da próxima rodada. Suíte de unit/widget tests sem
 regressão (266/266).
 
+**RC-02.5 (Production Readiness Planning) concluída em 2026-07-25** —
+auditoria técnica completa do estado atual do projeto (arquitetura,
+dependências, CI/CD, Supabase/RLS/Storage, segurança, documentação) e
+planejamento arquitetural para a Beta Fechada, sem nenhuma alteração de
+código. Produziu um backlog priorizado (RC-03A-E observabilidade,
+RC-04A-E segurança, RC-05A-E build/produção, RC-06A-E distribuição da
+Beta) e uma ordem de execução recomendada. Nenhum documento novo foi
+criado nesta rodada (só o relatório apresentado na conversa).
+
+**FASE 10 — Preparação para Beta iniciada em 2026-07-25.** **RC-03A
+(Crash Reporting) concluída** — infraestrutura completa de captura
+global de erros via Sentry (`sentry_flutter`), centralizada em
+`lib/core/observability/`: captura de erros síncronos/assíncronos via
+`SentryFlutter.init` (que instala `FlutterError.onError`,
+`PlatformDispatcher.instance.onError` e `runZonedGuarded` quando
+necessário), integração com Riverpod (`SentryProviderObserver` —
+reporta qualquer provider que falhar) e com GoRouter (`errorBuilder` —
+reporta erro de navegação e mostra `ErrorState` em vez da tela de erro
+padrão). Sanitização de privacidade (`sentry_event_sanitizer.dart`)
+redige senha/token/JWT/refresh token/e-mail completo antes de qualquer
+envio — nunca `sendDefaultPii`, nunca screenshot anexado. Suporta os 4
+ambientes (Development/QA/Beta/Production) via `SENTRY_DSN` +
+`APP_ENVIRONMENT` (`--dart-define`); sem DSN configurado, o SDK não
+envia nenhum evento (comportamento nativo do pacote, não uma flag
+customizada) — por isso Development/QA ficam silenciosos por padrão
+até um projeto Sentry real ser provisionado (pendência operacional
+registrada em `RC-03A_CRASH_REPORTING.md` §6). Ver
+`RC-03A_CRASH_REPORTING.md` para a arquitetura completa, decisões,
+limitações e como configurar um novo ambiente. Suíte de unit/widget
+tests sem regressão (278/278 — 12 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
