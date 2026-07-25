@@ -148,6 +148,26 @@ Rodada F (CI) pendente da configuração manual de 4 GitHub Secrets. Ver
 pendências (rotação de `SERVICE_ROLE_KEY`, criação de buckets de
 Storage, GitHub Secrets).
 
+**Release Candidate iniciado em 2026-07-25.** **RC-01 (Auditoria
+Completa da Aplicação) concluída** — revisão somente-leitura de todos
+os fluxos, Design System, Motion Design, Performance, Acessibilidade,
+Código/Arquitetura e Testes, sem nenhuma alteração de código; ver
+`RC-01_APPLICATION_AUDIT.md` para o levantamento completo e a
+priorização de melhorias. **RC-02 (Quick Wins) concluída** —
+implementados os 5 itens de alto impacto / baixo-médio esforço / baixo
+risco identificados na RC-01: componente `ErrorState` reutilizável com
+retry, conexão da sincronização em tempo real de Favoritos
+(`FavoritesController.refresh()`/`FavoritesSyncing`, já existentes e
+nunca usados), reenvio de e-mail de verificação, fluxo de logout com
+confirmação/tratamento de erro/feedback visual (incluindo correção de
+um redirect indevido de rotas protegidas durante falha de logout), e
+upload de fotos em Reviews sem substituir a tela inteira por um
+spinner. Commits `f3789e3` (implementação) e `6790179` (refinamento da
+suíte de testes) — **desenvolvidos diretamente em `develop`, sem
+feature branch nesta rodada**; retomar o fluxo padrão de feature
+branches a partir da próxima rodada. Suíte de unit/widget tests sem
+regressão (266/266).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
