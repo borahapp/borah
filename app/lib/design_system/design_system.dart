@@ -23,6 +23,7 @@
 /// a código que não deveria depender dela.
 library;
 
+export 'animations/app_motion.dart';
 export 'brand/brand_colors.dart';
 export 'brand/brand_gradients.dart';
 export 'brand/brand_typography.dart';
