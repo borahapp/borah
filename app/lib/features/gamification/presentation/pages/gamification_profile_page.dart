@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/app_animated_fraction.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_pulse_icon.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_gradients.dart';
@@ -55,29 +58,34 @@ class _GamificationProfilePageState
           ),
         ],
       ),
-      body: switch (status) {
-        GamificationProfileInitial() ||
-        GamificationProfileLoading() => const LoadingScreen(),
-        GamificationProfileError(:final message) => Center(
-          child: Text(message),
-        ),
-        GamificationProfileLoaded(
-          :final progress,
-          :final allBadges,
-          :final earnedBadgeIds,
-        ) =>
-          _ProfileView(
-            progress: progress,
-            allBadges: allBadges,
-            earnedBadgeIds: earnedBadgeIds,
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          GamificationProfileInitial() || GamificationProfileLoading() =>
+            const LoadingScreen(key: ValueKey('loading')),
+          GamificationProfileError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
           ),
-      },
+          GamificationProfileLoaded(
+            :final progress,
+            :final allBadges,
+            :final earnedBadgeIds,
+          ) =>
+            _ProfileView(
+              key: const ValueKey('loaded'),
+              progress: progress,
+              allBadges: allBadges,
+              earnedBadgeIds: earnedBadgeIds,
+            ),
+        },
+      ),
     );
   }
 }
 
 class _ProfileView extends StatelessWidget {
   const _ProfileView({
+    super.key,
     required this.progress,
     required this.allBadges,
     required this.earnedBadgeIds,
@@ -135,8 +143,8 @@ class _ProfileView extends StatelessWidget {
                       Container(
                         color: scheme.onInverseSurface.withValues(alpha: 0.25),
                       ),
-                      FractionallySizedBox(
-                        widthFactor: progressToNextLevel.clamp(0.0, 1.0),
+                      AppAnimatedFraction(
+                        value: progressToNextLevel,
                         child: DecoratedBox(
                           decoration: BoxDecoration(gradient: gradients.green),
                         ),
@@ -172,9 +180,12 @@ class _ProfileView extends StatelessWidget {
             ),
             title: Text(badge.name),
             subtitle: Text(badge.description ?? ''),
-            trailing: AppBadge(
-              label: earned ? 'Conquistado' : 'Bloqueado',
-              earned: earned,
+            trailing: AppPulseIcon(
+              trigger: earned,
+              child: AppBadge(
+                label: earned ? 'Conquistado' : 'Bloqueado',
+                earned: earned,
+              ),
             ),
           );
         }),

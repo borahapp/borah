@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
@@ -50,26 +51,34 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ],
       ),
-      body: switch (status) {
-        ProfileInitial() || ProfileLoading() => const LoadingScreen(),
-        ProfileError(:final message) => Center(child: Text(message)),
-        ProfileLoaded(:final profile) ||
-        ProfileUpdating(:final profile) ||
-        ProfileUpdateSuccess(:final profile) => _ProfileView(
-          avatarPath: profile.avatarUrl,
-          fullName: profile.fullName,
-          bio: profile.bio,
-          city: profile.city,
-          state: profile.state,
-          createdAt: profile.createdAt,
-        ),
-      },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          ProfileInitial() ||
+          ProfileLoading() => const LoadingScreen(key: ValueKey('loading')),
+          ProfileError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          ProfileLoaded(:final profile) ||
+          ProfileUpdating(:final profile) ||
+          ProfileUpdateSuccess(:final profile) => _ProfileView(
+            key: const ValueKey('loaded'),
+            avatarPath: profile.avatarUrl,
+            fullName: profile.fullName,
+            bio: profile.bio,
+            city: profile.city,
+            state: profile.state,
+            createdAt: profile.createdAt,
+          ),
+        },
+      ),
     );
   }
 }
 
 class _ProfileView extends StatelessWidget {
   const _ProfileView({
+    super.key,
     required this.avatarPath,
     required this.fullName,
     required this.bio,

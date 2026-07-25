@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -41,27 +43,38 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Feed'),
-      body: switch (status) {
-        FeedInitial() || FeedLoading() => const LoadingScreen(),
-        FeedError(:final message) => Center(child: Text(message)),
-        FeedEmpty() => const EmptyState(
-          message: 'Nenhuma avaliação de quem você segue ainda.',
-        ),
-        FeedRefreshing(:final result) ||
-        FeedLoaded(:final result) => RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView.builder(
-            itemCount: result.items.length,
-            itemBuilder: (context, index) {
-              final review = result.items[index];
-              return ReviewSummaryTile(
-                review: review,
-                onTap: () => context.push('/reviews/${review.id}'),
-              );
-            },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          FeedInitial() ||
+          FeedLoading() => const LoadingScreen(key: ValueKey('loading')),
+          FeedError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
           ),
-        ),
-      },
+          FeedEmpty() => const EmptyState(
+            key: ValueKey('empty'),
+            message: 'Nenhuma avaliação de quem você segue ainda.',
+          ),
+          FeedRefreshing(:final result) ||
+          FeedLoaded(:final result) => RefreshIndicator(
+            key: const ValueKey('loaded'),
+            onRefresh: _refresh,
+            child: ListView.builder(
+              itemCount: result.items.length,
+              itemBuilder: (context, index) {
+                final review = result.items[index];
+                return AppStaggeredListItem(
+                  index: index,
+                  child: ReviewSummaryTile(
+                    review: review,
+                    onTap: () => context.push('/reviews/${review.id}'),
+                  ),
+                );
+              },
+            ),
+          ),
+        },
+      ),
     );
   }
 }

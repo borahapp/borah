@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -54,45 +56,55 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           ),
         ],
       ),
-      body: switch (status) {
-        NotificationsInitial() ||
-        NotificationsLoading() => const LoadingScreen(),
-        NotificationsError(:final message) => Center(child: Text(message)),
-        NotificationsEmpty() => const EmptyState(
-          message: 'Nenhuma notificação ainda.',
-        ),
-        NotificationsLoaded(:final result) => ListView.builder(
-          itemCount: result.items.length,
-          itemBuilder: (context, index) {
-            final notification = result.items[index];
-            return ListTile(
-              leading: notification.isRead
-                  ? const SizedBox(width: 10, height: 10)
-                  : Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.tertiary,
-                        shape: BoxShape.circle,
-                      ),
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          NotificationsInitial() || NotificationsLoading() =>
+            const LoadingScreen(key: ValueKey('loading')),
+          NotificationsError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          NotificationsEmpty() => const EmptyState(
+            key: ValueKey('empty'),
+            message: 'Nenhuma notificação ainda.',
+          ),
+          NotificationsLoaded(:final result) => ListView.builder(
+            key: const ValueKey('loaded'),
+            itemCount: result.items.length,
+            itemBuilder: (context, index) {
+              final notification = result.items[index];
+              return AppStaggeredListItem(
+                index: index,
+                child: ListTile(
+                  leading: notification.isRead
+                      ? const SizedBox(width: 10, height: 10)
+                      : Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.tertiary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                  title: Text(
+                    notification.title,
+                    style: TextStyle(
+                      fontWeight: notification.isRead
+                          ? FontWeight.normal
+                          : FontWeight.bold,
                     ),
-              title: Text(
-                notification.title,
-                style: TextStyle(
-                  fontWeight: notification.isRead
-                      ? FontWeight.normal
-                      : FontWeight.bold,
+                  ),
+                  subtitle: Text(notification.message),
+                  onTap: () => context.push(
+                    '/notifications/${notification.id}',
+                    extra: notification,
+                  ),
                 ),
-              ),
-              subtitle: Text(notification.message),
-              onTap: () => context.push(
-                '/notifications/${notification.id}',
-                extra: notification,
-              ),
-            );
-          },
-        ),
-      },
+              );
+            },
+          ),
+        },
+      ),
     );
   }
 }

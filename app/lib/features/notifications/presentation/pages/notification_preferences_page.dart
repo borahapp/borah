@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -41,21 +42,27 @@ class _NotificationPreferencesPageState
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Preferências'),
-      body: switch (status) {
-        NotificationPreferencesInitial() ||
-        NotificationPreferencesLoading() => const LoadingScreen(),
-        NotificationPreferencesError(:final message) => Center(
-          child: Text(message),
-        ),
-        NotificationPreferencesLoaded(:final inAppEnabled) => SwitchListTile(
-          title: const Text('Notificações sociais'),
-          subtitle: const Text(
-            'Novo seguidor, comentário e curtida nas suas avaliações.',
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          NotificationPreferencesInitial() ||
+          NotificationPreferencesLoading() => const LoadingScreen(
+            key: ValueKey('loading'),
           ),
-          value: inAppEnabled,
-          onChanged: (_) => _toggle(),
-        ),
-      },
+          NotificationPreferencesError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          NotificationPreferencesLoaded(:final inAppEnabled) => SwitchListTile(
+            key: const ValueKey('loaded'),
+            title: const Text('Notificações sociais'),
+            subtitle: const Text(
+              'Novo seguidor, comentário e curtida nas suas avaliações.',
+            ),
+            value: inAppEnabled,
+            onChanged: (_) => _toggle(),
+          ),
+        },
+      ),
     );
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -47,29 +49,42 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
           ),
         ],
       ),
-      body: switch (status) {
-        ReviewsInitial() || ReviewsLoading() => const LoadingScreen(),
-        ReviewsError(:final message) => Center(child: Text(message)),
-        ReviewsEmpty() => const EmptyState(message: 'Nenhuma avaliação ainda.'),
-        ReviewsLoaded(:final result) => ListView.builder(
-          itemCount: result.items.length,
-          itemBuilder: (context, index) {
-            final review = result.items[index];
-            return ReviewSummaryTile(
-              review: review,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.favorite, size: 16),
-                  const SizedBox(width: 4),
-                  Text('${review.likesCount}'),
-                ],
-              ),
-              onTap: () => context.push('/reviews/${review.id}'),
-            );
-          },
-        ),
-      },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          ReviewsInitial() ||
+          ReviewsLoading() => const LoadingScreen(key: ValueKey('loading')),
+          ReviewsError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          ReviewsEmpty() => const EmptyState(
+            key: ValueKey('empty'),
+            message: 'Nenhuma avaliação ainda.',
+          ),
+          ReviewsLoaded(:final result) => ListView.builder(
+            key: const ValueKey('loaded'),
+            itemCount: result.items.length,
+            itemBuilder: (context, index) {
+              final review = result.items[index];
+              return AppStaggeredListItem(
+                index: index,
+                child: ReviewSummaryTile(
+                  review: review,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.favorite, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${review.likesCount}'),
+                    ],
+                  ),
+                  onTap: () => context.push('/reviews/${review.id}'),
+                ),
+              );
+            },
+          ),
+        },
+      ),
     );
   }
 }

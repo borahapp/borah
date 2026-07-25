@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/paged_result.dart';
 import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
@@ -114,15 +116,26 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
             ),
           ),
           Expanded(
-            child: switch (status) {
-              FavoritesInitial() || FavoritesLoading() => const LoadingScreen(),
-              FavoritesError(:final message) => Center(child: Text(message)),
-              FavoritesEmpty() => const EmptyState(
-                message: 'Você ainda não tem favoritos.',
-              ),
-              FavoritesSyncing(:final result) ||
-              FavoritesLoaded(:final result) => _FavoritesList(result: result),
-            },
+            child: AppAnimatedSwitcher(
+              child: switch (status) {
+                FavoritesInitial() || FavoritesLoading() => const LoadingScreen(
+                  key: ValueKey('loading'),
+                ),
+                FavoritesError(:final message) => Center(
+                  key: const ValueKey('error'),
+                  child: Text(message),
+                ),
+                FavoritesEmpty() => const EmptyState(
+                  key: ValueKey('empty'),
+                  message: 'Você ainda não tem favoritos.',
+                ),
+                FavoritesSyncing(:final result) ||
+                FavoritesLoaded(:final result) => _FavoritesList(
+                  key: const ValueKey('loaded'),
+                  result: result,
+                ),
+              },
+            ),
           ),
         ],
       ),
@@ -131,7 +144,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 }
 
 class _FavoritesList extends StatelessWidget {
-  const _FavoritesList({required this.result});
+  const _FavoritesList({super.key, required this.result});
 
   final PagedResult<Restaurant> result;
 
@@ -141,31 +154,34 @@ class _FavoritesList extends StatelessWidget {
       itemCount: result.items.length,
       itemBuilder: (context, index) {
         final restaurant = result.items[index];
-        return ListTile(
-          title: Text(restaurant.name),
-          subtitle: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/icons/borah_location.png',
-                width: 14,
-                height: 14,
-              ),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  [
-                    restaurant.category,
-                    if (restaurant.city != null) restaurant.city,
-                  ].join(' · '),
+        return AppStaggeredListItem(
+          index: index,
+          child: ListTile(
+            title: Text(restaurant.name),
+            subtitle: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/icons/borah_location.png',
+                  width: 14,
+                  height: 14,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    [
+                      restaurant.category,
+                      if (restaurant.city != null) restaurant.city,
+                    ].join(' · '),
+                  ),
+                ),
+              ],
+            ),
+            trailing: restaurant.averageRating != null
+                ? ScoreBubble(rating: restaurant.averageRating)
+                : null,
+            onTap: () => context.push('/restaurants/${restaurant.id}'),
           ),
-          trailing: restaurant.averageRating != null
-              ? ScoreBubble(rating: restaurant.averageRating)
-              : null,
-          onTap: () => context.push('/restaurants/${restaurant.id}'),
         );
       },
     );
