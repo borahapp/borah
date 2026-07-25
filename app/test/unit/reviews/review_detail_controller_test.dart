@@ -361,9 +361,11 @@ void main() {
       expect((status as ReviewDetailError).message, 'Falha no upload.');
     });
 
-    test('durante o upload, o estado preserva nota/comentário/fotos em '
-        'ReviewDetailPhotoUploading (RC-02: evita substituir a tela inteira '
-        'por um spinner)', () async {
+    // RC-02: enquanto a foto sobe, o estado preserva review/fotos/curtida
+    // em vez de cair para ReviewDetailSaving - evita que a tela vire um
+    // spinner de tela cheia a cada foto adicionada.
+    test('durante o upload -> ReviewDetailPhotoUploading preserva '
+        'review/fotos/curtida', () async {
       when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());
       when(
         () => repository.listPhotoUrls('rv-1'),

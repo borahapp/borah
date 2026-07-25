@@ -36,6 +36,11 @@ Finder _confirmButton() => find.descendant(
   matching: find.widgetWithText(TextButton, 'Sair'),
 );
 
+Future<void> _openLogoutDialog(WidgetTester tester) async {
+  await tester.tap(find.widgetWithText(ListTile, 'Sair'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   late MockAuthRepository repository;
 
@@ -50,8 +55,7 @@ void main() {
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ListTile, 'Sair'));
-    await tester.pumpAndSettle();
+    await _openLogoutDialog(tester);
 
     expect(find.byType(AlertDialog), findsOneWidget);
     verifyNever(() => repository.signOut());
@@ -61,9 +65,7 @@ void main() {
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ListTile, 'Sair'));
-    await tester.pumpAndSettle();
-
+    await _openLogoutDialog(tester);
     await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
     await tester.pumpAndSettle();
 
@@ -80,8 +82,7 @@ void main() {
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ListTile, 'Sair'));
-    await tester.pumpAndSettle();
+    await _openLogoutDialog(tester);
     await tester.tap(_confirmButton());
     await tester.pump();
 
@@ -102,8 +103,7 @@ void main() {
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ListTile, 'Sair'));
-    await tester.pumpAndSettle();
+    await _openLogoutDialog(tester);
     await tester.tap(_confirmButton());
     await tester.pumpAndSettle();
 

@@ -274,67 +274,70 @@ void main() {
         findsNothing,
       );
     });
+
+    // RC-02: o upload não deve substituir a tela inteira por um spinner -
+    // usa um ProviderContainer compartilhado para acionar addPhoto()
+    // diretamente, já que ImagePickerService não é mockável em widget test.
+    testWidgets(
+      'durante o upload, o botão mostra loading sem esconder o conteúdo',
+      (tester) async {
+        when(
+          () => repository.getById('rv-1'),
+        ).thenAnswer((_) async => _review());
+        when(
+          () => repository.listPhotoUrls('rv-1'),
+        ).thenAnswer((_) async => <String>[]);
+        when(
+          () => repository.isLikedByUser('rv-1', 'user-1'),
+        ).thenAnswer((_) async => false);
+
+        final container = ProviderContainer(
+          overrides: [
+            reviewRepositoryProvider.overrideWithValue(repository),
+            currentUserIdProvider.overrideWithValue('user-1'),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_wrap(repository, container: container));
+        await tester.pumpAndSettle();
+
+        expect(find.text('4.5'), findsOneWidget);
+        expect(find.text('Muito bom, recomendo!'), findsOneWidget);
+
+        final completer = Completer<Review>();
+        when(
+          () => repository.addPhoto(
+            'rv-1',
+            bytes: any(named: 'bytes'),
+            fileExtension: any(named: 'fileExtension'),
+          ),
+        ).thenAnswer((_) => completer.future);
+
+        unawaited(
+          container
+              .read(reviewDetailControllerProvider.notifier)
+              .addPhoto('rv-1', bytes: Uint8List(0), fileExtension: 'jpg'),
+        );
+        await tester.pump();
+
+        // A tela continua mostrando o conteúdo carregado - não vira um
+        // LoadingScreen de tela cheia. O botão "Adicionar foto" troca o
+        // rótulo por um spinner (mesmo comportamento de AppOutlinedButton
+        // já usado em outros formulários do app).
+        expect(find.text('4.5'), findsOneWidget);
+        expect(find.text('Muito bom, recomendo!'), findsOneWidget);
+        expect(find.text('Adicionar foto'), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        completer.complete(_review());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Adicionar foto'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
   });
-
-  testWidgets(
-    'durante o upload de foto, o botão "Adicionar foto" mostra loading e '
-    'a tela continua exibindo nota/comentário (RC-02: sem substituir a '
-    'tela inteira por um spinner)',
-    (tester) async {
-      when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());
-      when(
-        () => repository.listPhotoUrls('rv-1'),
-      ).thenAnswer((_) async => <String>[]);
-      when(
-        () => repository.isLikedByUser('rv-1', 'user-1'),
-      ).thenAnswer((_) async => false);
-
-      final container = ProviderContainer(
-        overrides: [
-          reviewRepositoryProvider.overrideWithValue(repository),
-          currentUserIdProvider.overrideWithValue('user-1'),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(_wrap(repository, container: container));
-      await tester.pumpAndSettle();
-
-      expect(find.text('4.5'), findsOneWidget);
-      expect(find.text('Muito bom, recomendo!'), findsOneWidget);
-
-      final completer = Completer<Review>();
-      when(
-        () => repository.addPhoto(
-          'rv-1',
-          bytes: any(named: 'bytes'),
-          fileExtension: any(named: 'fileExtension'),
-        ),
-      ).thenAnswer((_) => completer.future);
-
-      unawaited(
-        container
-            .read(reviewDetailControllerProvider.notifier)
-            .addPhoto('rv-1', bytes: Uint8List(0), fileExtension: 'jpg'),
-      );
-      await tester.pump();
-
-      // A tela continua mostrando o conteúdo carregado - não vira um
-      // LoadingScreen de tela cheia. O botão "Adicionar foto" troca o
-      // rótulo por um spinner (mesmo comportamento de AppOutlinedButton
-      // já usado em outros formulários do app).
-      expect(find.text('4.5'), findsOneWidget);
-      expect(find.text('Muito bom, recomendo!'), findsOneWidget);
-      expect(find.text('Adicionar foto'), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      completer.complete(_review());
-      await tester.pumpAndSettle();
-
-      expect(find.text('Adicionar foto'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    },
-  );
 
   testWidgets('tocar no ícone de curtir alterna o estado', (tester) async {
     when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());

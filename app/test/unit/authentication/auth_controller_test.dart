@@ -151,62 +151,31 @@ void main() {
       expect(container.read(authControllerProvider), isA<Unauthenticated>());
     });
 
-    test('falha -> relança AuthRepositoryException e mantém o estado anterior '
-        '(RC-02: evita redirect indevido de rotas protegidas)', () async {
-      when(
-        () => repository.signOut(),
-      ).thenThrow(const AuthRepositoryException('Falha de rede.'));
+    // RC-02: signOut() não expressa falha via `state` (evitaria redirect
+    // indevido de rotas protegidas) - relança para o chamador tratar.
+    test(
+      'falha -> mantém o estado e relança AuthRepositoryException',
+      () async {
+        when(
+          () => repository.signOut(),
+        ).thenThrow(const AuthRepositoryException('Falha de rede.'));
 
-      final notifier = container.read(authControllerProvider.notifier);
-      final stateBefore = container.read(authControllerProvider);
+        final notifier = container.read(authControllerProvider.notifier);
+        final stateBefore = container.read(authControllerProvider);
 
-      await expectLater(
-        notifier.signOut(),
-        throwsA(isA<AuthRepositoryException>()),
-      );
-      expect(container.read(authControllerProvider), stateBefore);
-    });
-  });
-
-  group('resendVerificationEmail', () {
-    test('sucesso não altera o estado', () async {
-      when(
-        () => repository.resendVerificationEmail(any()),
-      ).thenAnswer((_) async {});
-
-      final notifier = container.read(authControllerProvider.notifier);
-      final stateBefore = container.read(authControllerProvider);
-
-      await notifier.resendVerificationEmail('ana@borah.com');
-
-      expect(container.read(authControllerProvider), stateBefore);
-      verify(
-        () => repository.resendVerificationEmail('ana@borah.com'),
-      ).called(1);
-    });
-
-    test('falha relança AuthRepositoryException e mantém o estado', () async {
-      when(() => repository.resendVerificationEmail(any())).thenThrow(
-        const AuthRepositoryException(
-          'Aguarde antes de solicitar um novo envio.',
-        ),
-      );
-
-      final notifier = container.read(authControllerProvider.notifier);
-      final stateBefore = container.read(authControllerProvider);
-
-      await expectLater(
-        notifier.resendVerificationEmail('ana@borah.com'),
-        throwsA(
-          isA<AuthRepositoryException>().having(
-            (e) => e.message,
-            'message',
-            'Aguarde antes de solicitar um novo envio.',
+        await expectLater(
+          notifier.signOut(),
+          throwsA(
+            isA<AuthRepositoryException>().having(
+              (e) => e.message,
+              'message',
+              'Falha de rede.',
+            ),
           ),
-        ),
-      );
-      expect(container.read(authControllerProvider), stateBefore);
-    });
+        );
+        expect(container.read(authControllerProvider), stateBefore);
+      },
+    );
   });
 
   group('requestPasswordReset', () {
@@ -235,5 +204,51 @@ void main() {
 
       expect(container.read(authControllerProvider), isA<AuthError>());
     });
+  });
+
+  // Mesmo motivo de signOut(): reenviar não é uma transição de status de
+  // autenticação, então o estado global nunca muda aqui.
+  group('resendVerificationEmail', () {
+    test('sucesso -> mantém o estado', () async {
+      when(
+        () => repository.resendVerificationEmail(any()),
+      ).thenAnswer((_) async {});
+
+      final notifier = container.read(authControllerProvider.notifier);
+      final stateBefore = container.read(authControllerProvider);
+
+      await notifier.resendVerificationEmail('ana@borah.com');
+
+      expect(container.read(authControllerProvider), stateBefore);
+      verify(
+        () => repository.resendVerificationEmail('ana@borah.com'),
+      ).called(1);
+    });
+
+    test(
+      'falha -> mantém o estado e relança AuthRepositoryException',
+      () async {
+        when(() => repository.resendVerificationEmail(any())).thenThrow(
+          const AuthRepositoryException(
+            'Aguarde antes de solicitar um novo envio.',
+          ),
+        );
+
+        final notifier = container.read(authControllerProvider.notifier);
+        final stateBefore = container.read(authControllerProvider);
+
+        await expectLater(
+          notifier.resendVerificationEmail('ana@borah.com'),
+          throwsA(
+            isA<AuthRepositoryException>().having(
+              (e) => e.message,
+              'message',
+              'Aguarde antes de solicitar um novo envio.',
+            ),
+          ),
+        );
+        expect(container.read(authControllerProvider), stateBefore);
+      },
+    );
   });
 }
