@@ -1,7 +1,7 @@
 # UI-08 — Motion Design do BORAH
 
-**Versão:** 1.2
-**Status:** UI-08B1 implementada — aguardando aprovação para UI-08B2
+**Versão:** 1.3
+**Status:** UI-08B2 implementada — aguardando próxima autorização
 **Documento:** UI-08_MOTION_DESIGN.md
 **Branch:** feature/ui-08-motion-design (base: develop @ ab24c1f)
 
@@ -202,3 +202,42 @@ Correção: a `Key` de cada *branch* reflete o **grupo visual** já definido pel
 - Validação visual (golden test temporário, removido ao final): confirmado layout íntegro nas 5 telas — Splash (gradiente inalterado), Recuperação de senha (formulário e confirmação), Busca de Restaurantes (spinner + card de filtro + lista com item), Detalhes do Restaurante (ícone de favorito no estado final, cartão de descrição), Gamificação (barra de XP preenchida corretamente após o assentamento, badges com pílulas coloridas corretas). A transição em si é temporal e não aparece num PNG estático — o que se confirma é ausência de regressão de layout.
 
 Arquivos modificados: `core/router/app_router.dart`, `features/authentication/presentation/pages/password_reset_page.dart`, `features/restaurants/presentation/pages/restaurants_search_page.dart`, `features/restaurants/presentation/pages/restaurant_detail_page.dart`, `features/gamification/presentation/pages/gamification_profile_page.dart`.
+
+---
+
+# 15. UI-08B2 — Aplicação nas telas de prioridade média (implementada)
+
+Escopo: Perfil, Perfil Público, Reviews (lista e detalhe), Rankings, Favoritos, Notificações (central e preferências), Social (comentários, seguidores, feed) — 11 telas. Só os 5 componentes autorizados (`AppMotion`, `AppAnimatedSwitcher`, `AppAnimatedFraction`, `AppStaggeredListItem`, `AppPulseIcon`), nenhum componente novo, nenhuma dependência nova.
+
+| Tela | O que mudou |
+|---|---|
+| Perfil | `AppAnimatedSwitcher` no corpo (Loading/Erro/Carregado) |
+| Perfil Público | `AppAnimatedSwitcher` em 3 regiões independentes: corpo (carregando/erro/dados), botão Seguir (troca de rótulo) e seção Avaliações |
+| Reviews (lista) | `AppAnimatedSwitcher` no corpo + `AppStaggeredListItem` em cada `ReviewSummaryTile` |
+| Reviews (detalhe) | `AppAnimatedSwitcher` no corpo + `AppPulseIcon` no ícone de curtir + `AppStaggeredListItem` na tira de fotos |
+| Rankings | `AppAnimatedSwitcher` no corpo + `AppStaggeredListItem` em cada `RankingCard` |
+| Favoritos | `AppAnimatedSwitcher` no corpo (`FavoritesSyncing`/`FavoritesLoaded` share a mesma chave) + `AppStaggeredListItem` na lista |
+| Notificações (central) | `AppAnimatedSwitcher` no corpo + `AppStaggeredListItem` em cada notificação |
+| Notificações (preferências) | `AppAnimatedSwitcher` no corpo (tela mínima, só o toggle) |
+| Comentários | `AppAnimatedSwitcher` no corpo + `AppStaggeredListItem` em cada comentário |
+| Seguidores/Seguindo | `AppAnimatedSwitcher` no corpo + `AppStaggeredListItem` em cada linha |
+| Feed | `AppAnimatedSwitcher` no corpo (`FeedRefreshing`/`FeedLoaded` compartilham chave, preservando o `RefreshIndicator` sem interrupção) + `AppStaggeredListItem` em cada `ReviewSummaryTile` |
+
+## Ajuste arquitetural: reafirmação do padrão "chave por grupo visual"
+
+O mesmo padrão estabelecido na UI-08B1 (chave por *grupo visual*, não por subtipo exato do status) se mostrou necessário de novo, com um caso adicional relevante: em `favorites_page.dart`, `FavoritesSyncing`/`FavoritesLoaded` **precisam** compartilhar a mesma chave (`'loaded'`) porque o teste `favorites_page_test.dart` verifica, com um único `pump()` (sem `pumpAndSettle`), que o restaurante favoritado **continua visível** durante uma sincronização em segundo plano (`FavoritesSyncing` preserva a lista anterior por design, DV-06 §10/§11) — chaves distintas disparariam um cross-fade nesse instante e arriscariam deixar dois `ListTile` iguais na árvore simultaneamente. O mesmo raciocínio se aplica a `FeedRefreshing`/`FeedLoaded` em `feed_page.dart`, garantindo que o gesto de pull-to-refresh (`RefreshIndicator`) nunca seja interrompido por uma transição.
+
+## Limitações encontradas (dentro do escopo desta rodada)
+
+- **Sem `AnimatedList` de verdade**: 3 listas identificadas no plano original como candidatas a inserção/remoção reativa real (tira de fotos em `review_detail_page.dart`, comentários em `comments_page.dart`, item removido de favoritos com a tela aberta) receberam apenas **entrada escalonada** (`AppStaggeredListItem`) em vez de uma transição real de inserção/remoção — `AnimatedList` não está na lista de 5 componentes autorizados nesta rodada. O efeito visual nesses 3 pontos é mais simples do que o previsto originalmente no plano.
+- **Sem transição por item lida/não-lida em Notificações**: o plano original prescrevia `AnimatedContainer`/`AnimatedDefaultTextStyle` para o ponto colorido e o peso da fonte mudarem suavemente quando uma notificação é marcada como lida — nenhum dos dois widgets está na lista de 5 componentes autorizados, então essa transição específica não foi implementada; a tela recebeu apenas o cross-fade de estado e a entrada escalonada da lista.
+- **`AppDialog` (diálogo de denúncia em `comments_page.dart`) continua com a transição padrão do Flutter** — mesma decisão já registrada no UI-08A (§13): mexer na transição do componente em si está fora dos 5 componentes autorizados desta rodada.
+
+## Validação
+
+- `flutter analyze`: limpo.
+- `dart format --set-exit-if-changed .`: sem alterações.
+- `flutter test`: **243/243** (nenhuma regressão).
+- Validação visual (golden test temporário, removido ao final): confirmado layout íntegro nas 11 telas — identidade/avaliações no Perfil Público, card de ranking com posição, filtro+lista de favoritos com pílula de nota, notificação não lida com o ponto colorido, preferências com o switch, comentário+campo de envio, seguidor com avatar, item de feed. Ausência de regressão de layout confirmada; a transição em si é temporal e não aparece num PNG estático.
+
+Arquivos modificados: `features/users/presentation/pages/profile_page.dart`, `features/social/presentation/pages/public_profile_page.dart`, `features/reviews/presentation/pages/reviews_list_page.dart`, `features/reviews/presentation/pages/review_detail_page.dart`, `features/rankings/presentation/pages/rankings_page.dart`, `features/favorites/presentation/pages/favorites_page.dart`, `features/notifications/presentation/pages/notifications_page.dart`, `features/notifications/presentation/pages/notification_preferences_page.dart`, `features/social/presentation/pages/comments_page.dart`, `features/social/presentation/pages/follow_list_page.dart`, `features/social/presentation/pages/feed_page.dart`.

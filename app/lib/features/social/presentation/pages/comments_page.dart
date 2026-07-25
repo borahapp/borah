@@ -5,6 +5,8 @@ import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/dialogs/app_dialog.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
@@ -93,42 +95,54 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
       body: Column(
         children: [
           Expanded(
-            child: switch (status) {
-              CommentsInitial() || CommentsLoading() => const LoadingScreen(),
-              CommentsError(:final message) => Center(child: Text(message)),
-              CommentsEmpty() => const EmptyState(
-                message: 'Nenhum comentário ainda.',
-              ),
-              CommentsPublishing(:final result) ||
-              CommentsLoaded(:final result) => ListView.builder(
-                itemCount: result.items.length,
-                itemBuilder: (context, index) {
-                  final comment = result.items[index];
-                  final isOwn = comment.userId == currentUserId;
-                  return ListTile(
-                    title: Text(comment.content),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'delete') _delete(comment.id);
-                        if (value == 'report') _report(comment.id);
-                      },
-                      itemBuilder: (context) => [
-                        if (isOwn)
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Excluir'),
-                          ),
-                        if (!isOwn)
-                          const PopupMenuItem(
-                            value: 'report',
-                            child: Text('Denunciar'),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            },
+            child: AppAnimatedSwitcher(
+              child: switch (status) {
+                CommentsInitial() || CommentsLoading() => const LoadingScreen(
+                  key: ValueKey('loading'),
+                ),
+                CommentsError(:final message) => Center(
+                  key: const ValueKey('error'),
+                  child: Text(message),
+                ),
+                CommentsEmpty() => const EmptyState(
+                  key: ValueKey('empty'),
+                  message: 'Nenhum comentário ainda.',
+                ),
+                CommentsPublishing(:final result) ||
+                CommentsLoaded(:final result) => ListView.builder(
+                  key: const ValueKey('loaded'),
+                  itemCount: result.items.length,
+                  itemBuilder: (context, index) {
+                    final comment = result.items[index];
+                    final isOwn = comment.userId == currentUserId;
+                    return AppStaggeredListItem(
+                      index: index,
+                      child: ListTile(
+                        title: Text(comment.content),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'delete') _delete(comment.id);
+                            if (value == 'report') _report(comment.id);
+                          },
+                          itemBuilder: (context) => [
+                            if (isOwn)
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Excluir'),
+                              ),
+                            if (!isOwn)
+                              const PopupMenuItem(
+                                value: 'report',
+                                child: Text('Denunciar'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              },
+            ),
           ),
           SafeArea(
             child: Padding(

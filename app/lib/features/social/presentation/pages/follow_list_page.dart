@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -41,29 +43,43 @@ class _FollowListPageState extends ConsumerState<FollowListPage> {
 
     return Scaffold(
       appBar: AppTopBar(title: title),
-      body: switch (status) {
-        FollowListInitial() || FollowListLoading() => const LoadingScreen(),
-        FollowListError(:final message) => Center(child: Text(message)),
-        FollowListEmpty() => EmptyState(
-          message: widget.type == FollowListType.followers
-              ? 'Nenhum seguidor ainda.'
-              : 'Ainda não segue ninguém.',
-        ),
-        FollowListLoaded(:final result) => ListView.builder(
-          itemCount: result.items.length,
-          itemBuilder: (context, index) {
-            final profile = result.items[index];
-            return ListTile(
-              leading: ProfileAvatar(avatarPath: profile.avatarUrl, radius: 20),
-              title: Text(profile.fullName ?? ''),
-              subtitle: profile.bio != null && profile.bio!.isNotEmpty
-                  ? Text(profile.bio!)
-                  : null,
-              onTap: () => context.push('/users/${profile.id}'),
-            );
-          },
-        ),
-      },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          FollowListInitial() ||
+          FollowListLoading() => const LoadingScreen(key: ValueKey('loading')),
+          FollowListError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          FollowListEmpty() => EmptyState(
+            key: const ValueKey('empty'),
+            message: widget.type == FollowListType.followers
+                ? 'Nenhum seguidor ainda.'
+                : 'Ainda não segue ninguém.',
+          ),
+          FollowListLoaded(:final result) => ListView.builder(
+            key: const ValueKey('loaded'),
+            itemCount: result.items.length,
+            itemBuilder: (context, index) {
+              final profile = result.items[index];
+              return AppStaggeredListItem(
+                index: index,
+                child: ListTile(
+                  leading: ProfileAvatar(
+                    avatarPath: profile.avatarUrl,
+                    radius: 20,
+                  ),
+                  title: Text(profile.fullName ?? ''),
+                  subtitle: profile.bio != null && profile.bio!.isNotEmpty
+                      ? Text(profile.bio!)
+                      : null,
+                  onTap: () => context.push('/users/${profile.id}'),
+                ),
+              );
+            },
+          ),
+        },
+      ),
     );
   }
 }

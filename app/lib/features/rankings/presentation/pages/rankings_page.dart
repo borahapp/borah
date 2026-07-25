@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/cards/ranking_card.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
@@ -77,32 +79,46 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
             ),
           ),
           Expanded(
-            child: switch (status) {
-              RankingsInitial() || RankingsLoading() => const LoadingScreen(),
-              RankingsError(:final message) => Center(child: Text(message)),
-              RankingsEmpty() => const EmptyState(
-                message: 'Nenhum restaurante avaliado ainda.',
-              ),
-              RankingsLoaded(:final result) => ListView.builder(
-                itemCount: result.items.length,
-                itemBuilder: (context, index) {
-                  final restaurant = result.items[index];
-                  final position = (result.page - 1) * result.limit + index + 1;
-                  return RankingCard(
-                    position: position,
-                    name: restaurant.name,
-                    subtitle: [
-                      restaurant.category,
-                      if (restaurant.city != null) restaurant.city,
-                    ].join(' · '),
-                    trailingLabel: restaurant.averageRating != null
-                        ? '${restaurant.averageRating!.toStringAsFixed(1)} (${restaurant.totalReviews})'
-                        : null,
-                    onTap: () => context.push('/restaurants/${restaurant.id}'),
-                  );
-                },
-              ),
-            },
+            child: AppAnimatedSwitcher(
+              child: switch (status) {
+                RankingsInitial() || RankingsLoading() => const LoadingScreen(
+                  key: ValueKey('loading'),
+                ),
+                RankingsError(:final message) => Center(
+                  key: const ValueKey('error'),
+                  child: Text(message),
+                ),
+                RankingsEmpty() => const EmptyState(
+                  key: ValueKey('empty'),
+                  message: 'Nenhum restaurante avaliado ainda.',
+                ),
+                RankingsLoaded(:final result) => ListView.builder(
+                  key: const ValueKey('loaded'),
+                  itemCount: result.items.length,
+                  itemBuilder: (context, index) {
+                    final restaurant = result.items[index];
+                    final position =
+                        (result.page - 1) * result.limit + index + 1;
+                    return AppStaggeredListItem(
+                      index: index,
+                      child: RankingCard(
+                        position: position,
+                        name: restaurant.name,
+                        subtitle: [
+                          restaurant.category,
+                          if (restaurant.city != null) restaurant.city,
+                        ].join(' · '),
+                        trailingLabel: restaurant.averageRating != null
+                            ? '${restaurant.averageRating!.toStringAsFixed(1)} (${restaurant.totalReviews})'
+                            : null,
+                        onTap: () =>
+                            context.push('/restaurants/${restaurant.id}'),
+                      ),
+                    );
+                  },
+                ),
+              },
+            ),
           ),
         ],
       ),

@@ -7,6 +7,9 @@ import '../../../../core/services/image_picker_service.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_pulse_icon.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -108,44 +111,53 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Avaliação'),
-      body: switch (status) {
-        ReviewDetailInitial() ||
-        ReviewDetailLoading() ||
-        ReviewDetailSaving() ||
-        ReviewDetailDeleted() => const LoadingScreen(),
-        ReviewDetailError(:final message) => Center(child: Text(message)),
-        ReviewDetailLoaded(
-          :final review,
-          :final photoUrls,
-          :final likedByCurrentUser,
-        ) ||
-        ReviewDetailSaveSuccess(
-          :final review,
-          :final photoUrls,
-          :final likedByCurrentUser,
-        ) => _DetailView(
-          rating: review.rating,
-          comment: review.comment,
-          likesCount: review.likesCount,
-          photoUrls: photoUrls,
-          likedByCurrentUser: likedByCurrentUser,
-          canManage: review.userId == currentUserId,
-          canAddMorePhotos: photoUrls.length < 5,
-          onToggleLike: _toggleLike,
-          onAddPhoto: _addPhoto,
-          onEdit: () => context.push('/reviews/${widget.reviewId}/edit'),
-          onDelete: _delete,
-          onShare: () => _share(review.rating),
-          onViewComments: () =>
-              context.push('/reviews/${widget.reviewId}/comments'),
-        ),
-      },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          ReviewDetailInitial() ||
+          ReviewDetailLoading() ||
+          ReviewDetailSaving() ||
+          ReviewDetailDeleted() => const LoadingScreen(
+            key: ValueKey('loading'),
+          ),
+          ReviewDetailError(:final message) => Center(
+            key: const ValueKey('error'),
+            child: Text(message),
+          ),
+          ReviewDetailLoaded(
+            :final review,
+            :final photoUrls,
+            :final likedByCurrentUser,
+          ) ||
+          ReviewDetailSaveSuccess(
+            :final review,
+            :final photoUrls,
+            :final likedByCurrentUser,
+          ) => _DetailView(
+            key: const ValueKey('loaded'),
+            rating: review.rating,
+            comment: review.comment,
+            likesCount: review.likesCount,
+            photoUrls: photoUrls,
+            likedByCurrentUser: likedByCurrentUser,
+            canManage: review.userId == currentUserId,
+            canAddMorePhotos: photoUrls.length < 5,
+            onToggleLike: _toggleLike,
+            onAddPhoto: _addPhoto,
+            onEdit: () => context.push('/reviews/${widget.reviewId}/edit'),
+            onDelete: _delete,
+            onShare: () => _share(review.rating),
+            onViewComments: () =>
+                context.push('/reviews/${widget.reviewId}/comments'),
+          ),
+        },
+      ),
     );
   }
 }
 
 class _DetailView extends StatelessWidget {
   const _DetailView({
+    super.key,
     required this.rating,
     required this.comment,
     required this.likesCount,
@@ -190,14 +202,17 @@ class _DetailView extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
-              AppIconButton(
-                icon: likedByCurrentUser
-                    ? Icons.favorite
-                    : Icons.favorite_border,
-                tooltip: likedByCurrentUser
-                    ? 'Remover curtida'
-                    : 'Curtir avaliação',
-                onPressed: onToggleLike,
+              AppPulseIcon(
+                trigger: likedByCurrentUser,
+                child: AppIconButton(
+                  icon: likedByCurrentUser
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  tooltip: likedByCurrentUser
+                      ? 'Remover curtida'
+                      : 'Curtir avaliação',
+                  onPressed: onToggleLike,
+                ),
               ),
               Text('$likesCount'),
               const Spacer(),
@@ -222,13 +237,16 @@ class _DetailView extends StatelessWidget {
                 itemCount: photoUrls.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) => ClipRRect(
-                  borderRadius: AppRadius.radiusSm,
-                  child: Image.network(
-                    photoUrls[index],
-                    width: 96,
-                    height: 96,
-                    fit: BoxFit.cover,
+                itemBuilder: (context, index) => AppStaggeredListItem(
+                  index: index,
+                  child: ClipRRect(
+                    borderRadius: AppRadius.radiusSm,
+                    child: Image.network(
+                      photoUrls[index],
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
