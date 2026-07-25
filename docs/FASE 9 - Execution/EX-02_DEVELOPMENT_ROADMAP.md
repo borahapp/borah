@@ -309,6 +309,42 @@ tests sem regressão (400/400 — 24 testes novos).
 Com a RC-03E, a RC-03 (Observability trio + flags + feedback) está
 completa: RC-03A → RC-03B → RC-03C → RC-03D → RC-03E.
 
+**FASE 11 iniciada em 2026-07-25.** **RC-04A (Security Hardening)
+concluída** — auditoria completa da superfície de segurança do BORAH,
+sem nenhuma funcionalidade nova (Storage/LGPD/Exclusão de Conta/
+Termos/Keystore/Certificados/Beta ficam para RC-04B-E). Todas as 17
+tabelas de `public` foram auditadas individualmente (RLS + GRANT
+correspondente) — nenhuma concede privilégio além do que a própria
+policy permite. Confirmado por leitura de código que nenhuma
+autorização administrativa depende do cliente: `AdminGuard` é só
+apresentação, toda concessão/revogação de papel e toda leitura
+administrativa é decidida pela RLS (`is_admin`/`has_admin_role`/
+`can_moderate`, todas `SECURITY DEFINER` desde a correção da FASE 5/6).
+Entregue uma suíte pgTAP de RLS cross-user (`supabase/tests/database/`,
+73 asserções em 3 arquivos: tabelas privadas, tabelas de leitura
+pública/escrita própria, permissões administrativas) — escrita e
+revisada estaticamente, **não executada nesta rodada** por decisão
+explícita do usuário (Docker indisponível na sessão de implementação;
+suíte pronta para rodar via `supabase start` + `supabase test db
+--local` quando o ambiente estiver disponível). Auditoria de segredos
+confirmou zero segredo versionado em toda a história do git e zero
+referência à `SERVICE_ROLE_KEY` em `lib/` (usada só por
+`integration_test/`, sempre via `--dart-define`). A rotação pendente da
+`SERVICE_ROLE_KEY` do `borah-qa` (exposta em texto durante o
+provisionamento, QA-03 Rodada 0) teve o procedimento completo
+documentado em `RC-04A_SECURITY_HARDENING.md` §7, a ser **executada
+pelo próprio operador** (fora do alcance de qualquer ferramenta
+disponível nesta sessão). `AdminGuard` ganhou sua primeira suíte de
+testes (8 casos, nunca coberto antes). Achados registrados como
+backlog, não corrigidos nesta rodada (nenhum é uma vulnerabilidade
+ativa): `AdminRolesPage` exibe controles de concessão/revogação a
+qualquer administrador (a RLS já bloqueia a operação real); política de
+senha do cliente é só cosmética (a real está no Supabase Dashboard);
+"usuário bloqueado" não tem nenhuma infraestrutura ainda. Ver
+`RC-04A_SECURITY_HARDENING.md` para a auditoria completa, tabela de RLS
+por tabela e as decisões arquiteturais registradas. Suíte de unit/widget
+tests sem regressão (408/408 — 8 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
