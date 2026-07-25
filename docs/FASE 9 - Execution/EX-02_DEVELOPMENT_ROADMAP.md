@@ -199,6 +199,23 @@ registrada em `RC-03A_CRASH_REPORTING.md` §6). Ver
 limitações e como configurar um novo ambiente. Suíte de unit/widget
 tests sem regressão (278/278 — 12 testes novos).
 
+**RC-03B (Logging Estruturado) concluída em 2026-07-25** — `AppLogger`
+(`lib/core/logger/`) deixou de ser código morto e virou o único canal
+de logging do app, com 6 níveis (TRACE/DEBUG/INFO/WARNING/ERROR/FATAL),
+API uniforme (`AppLogger.trace/debug/info/warning/error/fatal`) e
+comportamento por ambiente: Development vê tudo, QA/Beta a partir de
+INFO, Production só WARNING+. Apenas WARNING/ERROR/FATAL são
+encaminhados ao Sentry via `CrashReporting.captureLog` (novo método em
+`crash_reporting.dart`, RC-03A) — TRACE/DEBUG/INFO nunca saem do
+dispositivo. Nenhuma sanitização é duplicada: o mesmo `beforeSend` da
+RC-03A cobre também os eventos originados do `AppLogger`. Busca em todo
+o projeto por `print()`/`debugPrint()` confirmou zero ocorrências (nada
+para substituir) — achado já esperado desde a RC-01. Ver
+`RC-03B_STRUCTURED_LOGGING.md` para arquitetura, convenção de `tag`,
+formato do log, integração com o Sentry e a convenção que evita eventos
+duplicados (erro tratado vs. erro que propaga para a captura global).
+Suíte de unit/widget tests sem regressão (307/307 — 29 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
