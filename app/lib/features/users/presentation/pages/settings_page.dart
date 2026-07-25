@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
+import '../../../authentication/domain/auth_repository.dart';
 
 /// Tela de Configurações (UX-02 §15). Mostra apenas os itens com ação real
 /// nesta etapa: "Editar perfil" e "Sair". Os demais itens do wireframe
@@ -11,11 +13,52 @@ import '../../../authentication/application/auth_controller.dart';
 /// correspondente no DV-02 — mesma lacuna documental já registrada para a
 /// tela "Preferências" — e não serão exibidos como placeholders sem
 /// persistência.
-class SettingsPage extends ConsumerWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  bool _isSigningOut = false;
+
+  Future<void> _signOut() async {
+    if (_isSigningOut) return;
+
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Sair',
+      message: 'Deseja realmente encerrar a sessão?',
+      confirmLabel: 'Sair',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+
+    setState(() => _isSigningOut = true);
+    try {
+      await ref.read(authControllerProvider.notifier).signOut();
+      // Sucesso navega para fora desta tela via redirect do router (a
+      // sessão vira Unauthenticated) - resetar aqui é só defensivo, para
+      // o caso de a tela permanecer montada por qualquer motivo.
+      if (mounted) setState(() => _isSigningOut = false);
+    } on AuthRepositoryException catch (e) {
+      if (!mounted) return;
+      setState(() => _isSigningOut = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSigningOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível encerrar a sessão.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AppTopBar(title: 'Configurações'),
       body: ListView(
@@ -26,9 +69,15 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => context.push('/profile/edit'),
           ),
           ListTile(
-            leading: const Icon(Icons.logout),
+            leading: _isSigningOut
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.logout),
             title: const Text('Sair'),
-            onTap: () => ref.read(authControllerProvider.notifier).signOut(),
+            onTap: _isSigningOut ? null : _signOut,
           ),
         ],
       ),

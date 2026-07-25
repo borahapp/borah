@@ -28,6 +28,10 @@ class AuthRemoteDatasource {
     return _client.auth.resetPasswordForEmail(email);
   }
 
+  Future<void> resendVerificationEmail(String email) {
+    return _client.auth.resend(email: email, type: OtpType.signup);
+  }
+
   Session? get currentSession => _client.auth.currentSession;
 
   Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:app/features/reviews/application/review_detail_controller.dart';
@@ -358,6 +359,54 @@ void main() {
       final status = container.read(reviewDetailControllerProvider);
       expect(status, isA<ReviewDetailError>());
       expect((status as ReviewDetailError).message, 'Falha no upload.');
+    });
+
+    test('durante o upload, o estado preserva nota/comentário/fotos em '
+        'ReviewDetailPhotoUploading (RC-02: evita substituir a tela inteira '
+        'por um spinner)', () async {
+      when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>['https://x/0.jpg']);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => true);
+
+      final notifier = container.read(reviewDetailControllerProvider.notifier);
+      await notifier.load('rv-1', currentUserId: 'user-1');
+
+      final completer = Completer<Review>();
+      when(
+        () => repository.addPhoto(
+          'rv-1',
+          bytes: any(named: 'bytes'),
+          fileExtension: any(named: 'fileExtension'),
+        ),
+      ).thenAnswer((_) => completer.future);
+
+      final future = notifier.addPhoto(
+        'rv-1',
+        bytes: Uint8List(0),
+        fileExtension: 'jpg',
+      );
+
+      final duringUpload = container.read(reviewDetailControllerProvider);
+      expect(duringUpload, isA<ReviewDetailPhotoUploading>());
+      final uploading = duringUpload as ReviewDetailPhotoUploading;
+      expect(uploading.review.id, 'rv-1');
+      expect(uploading.photoUrls, ['https://x/0.jpg']);
+      expect(uploading.likedByCurrentUser, isTrue);
+
+      completer.complete(_review());
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>['https://x/0.jpg', 'https://x/1.jpg']);
+      await future;
+
+      expect(
+        container.read(reviewDetailControllerProvider),
+        isA<ReviewDetailSaveSuccess>(),
+      );
     });
   });
 

@@ -80,13 +80,22 @@ class AuthController extends Notifier<AuthStatus> {
     }
   }
 
+  /// Ao contrário dos demais métodos, não expressa "tentando"/"falhou"
+  /// através do `AuthStatus` global: o `redirect` do router (AR-02) trata
+  /// qualquer status que não seja `Authenticated` como motivo para sair de
+  /// uma rota protegida (ex. `/settings`), então um `AuthLoading`/`AuthError`
+  /// aqui navegaria embora da tela antes (ou apesar) do resultado real da
+  /// chamada. O chamador (`SettingsPage`) trata loading/erro localmente.
   Future<void> signOut() async {
-    state = const AuthLoading();
     try {
       await _repository.signOut();
       state = const Unauthenticated();
+    } on AuthRepositoryException {
+      rethrow;
     } catch (_) {
-      state = const AuthError('Não foi possível encerrar a sessão.');
+      throw const AuthRepositoryException(
+        'Não foi possível encerrar a sessão.',
+      );
     }
   }
 
@@ -99,6 +108,21 @@ class AuthController extends Notifier<AuthStatus> {
       state = AuthError(e.message);
     } catch (_) {
       state = const AuthError('Não foi possível enviar o link de recuperação.');
+    }
+  }
+
+  /// Reenvia o e-mail de confirmação (RC-02) sem alterar `state`: o
+  /// usuário continua em `EmailVerificationPending` durante a chamada -
+  /// reenviar não é uma transição de status de autenticação.
+  Future<void> resendVerificationEmail(String email) async {
+    try {
+      await _repository.resendVerificationEmail(email);
+    } on AuthRepositoryException {
+      rethrow;
+    } catch (_) {
+      throw const AuthRepositoryException(
+        'Não foi possível reenviar o e-mail de confirmação.',
+      );
     }
   }
 }

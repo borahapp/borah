@@ -10,6 +10,7 @@ import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -119,9 +120,14 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
           ReviewDetailDeleted() => const LoadingScreen(
             key: ValueKey('loading'),
           ),
-          ReviewDetailError(:final message) => Center(
+          ReviewDetailError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: currentUserId == null
+                ? null
+                : () => ref
+                      .read(reviewDetailControllerProvider.notifier)
+                      .load(widget.reviewId, currentUserId: currentUserId),
           ),
           ReviewDetailLoaded(
             :final review,
@@ -129,6 +135,11 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
             :final likedByCurrentUser,
           ) ||
           ReviewDetailSaveSuccess(
+            :final review,
+            :final photoUrls,
+            :final likedByCurrentUser,
+          ) ||
+          ReviewDetailPhotoUploading(
             :final review,
             :final photoUrls,
             :final likedByCurrentUser,
@@ -141,6 +152,7 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
             likedByCurrentUser: likedByCurrentUser,
             canManage: review.userId == currentUserId,
             canAddMorePhotos: photoUrls.length < 5,
+            isAddingPhoto: status is ReviewDetailPhotoUploading,
             onToggleLike: _toggleLike,
             onAddPhoto: _addPhoto,
             onEdit: () => context.push('/reviews/${widget.reviewId}/edit'),
@@ -165,6 +177,7 @@ class _DetailView extends StatelessWidget {
     required this.likedByCurrentUser,
     required this.canManage,
     required this.canAddMorePhotos,
+    required this.isAddingPhoto,
     required this.onToggleLike,
     required this.onAddPhoto,
     required this.onEdit,
@@ -180,6 +193,7 @@ class _DetailView extends StatelessWidget {
   final bool likedByCurrentUser;
   final bool canManage;
   final bool canAddMorePhotos;
+  final bool isAddingPhoto;
   final VoidCallback onToggleLike;
   final VoidCallback onAddPhoto;
   final VoidCallback onEdit;
@@ -254,7 +268,11 @@ class _DetailView extends StatelessWidget {
           ],
           if (canAddMorePhotos) ...[
             const SizedBox(height: AppSpacing.lg),
-            AppOutlinedButton(label: 'Adicionar foto', onPressed: onAddPhoto),
+            AppOutlinedButton(
+              label: 'Adicionar foto',
+              isLoading: isAddingPhoto,
+              onPressed: onAddPhoto,
+            ),
           ],
           if (canManage) ...[
             const SizedBox(height: AppSpacing.xl),

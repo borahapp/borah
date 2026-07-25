@@ -31,6 +31,22 @@ final class ReviewDetailSaving extends ReviewDetailStatus {
   const ReviewDetailSaving();
 }
 
+/// Upload de foto em andamento (RC-02, Quick Win): diferente de
+/// `ReviewDetailSaving`, preserva os dados já carregados para que a tela
+/// continue mostrando nota/comentário/fotos em vez de um spinner de tela
+/// cheia enquanto a foto sobe.
+final class ReviewDetailPhotoUploading extends ReviewDetailStatus {
+  const ReviewDetailPhotoUploading(
+    this.review, {
+    required this.photoUrls,
+    required this.likedByCurrentUser,
+  });
+
+  final Review review;
+  final List<String> photoUrls;
+  final bool likedByCurrentUser;
+}
+
 final class ReviewDetailSaveSuccess extends ReviewDetailStatus {
   const ReviewDetailSaveSuccess(
     this.review, {

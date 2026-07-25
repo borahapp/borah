@@ -34,6 +34,11 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guard(() => _datasource.requestPasswordReset(email));
   }
 
+  @override
+  Future<void> resendVerificationEmail(String email) {
+    return _guard(() => _datasource.resendVerificationEmail(email));
+  }
+
   /// Traduz `AuthException` (supabase_flutter) para `AuthRepositoryException`,
   /// para que nenhuma camada acima de `data/` precise conhecer o Supabase.
   Future<void> _guard(Future<void> Function() action) async {

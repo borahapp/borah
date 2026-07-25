@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/review_repository_impl.dart';
+import '../domain/review.dart';
 import '../domain/review_repository.dart';
 import '../presentation/states/review_detail_status.dart';
 
@@ -111,7 +112,13 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
       return;
     }
 
-    state = const ReviewDetailSaving();
+    state = previous == null
+        ? const ReviewDetailSaving()
+        : ReviewDetailPhotoUploading(
+            previous.review,
+            photoUrls: previous.photoUrls,
+            likedByCurrentUser: previous.likedByCurrentUser,
+          );
     try {
       final review = await _repository.addPhoto(
         id,
@@ -154,20 +161,33 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
     }
   }
 
-  /// Dados carregados atuais (foto/curtida), preservados entre ações que
-  /// não os alteram (ex.: editar nota não deve descartar as fotos já
-  /// carregadas). `null` se nada foi carregado ainda.
-  ({List<String> photoUrls, bool likedByCurrentUser})? _currentDetails() {
+  /// Dados carregados atuais (avaliação/fotos/curtida), preservados entre
+  /// ações que não os alteram (ex.: editar nota não deve descartar as
+  /// fotos já carregadas). `null` se nada foi carregado ainda.
+  ({Review review, List<String> photoUrls, bool likedByCurrentUser})?
+  _currentDetails() {
     final current = state;
     return switch (current) {
-      ReviewDetailLoaded(:final photoUrls, :final likedByCurrentUser) => (
-        photoUrls: photoUrls,
-        likedByCurrentUser: likedByCurrentUser,
-      ),
-      ReviewDetailSaveSuccess(:final photoUrls, :final likedByCurrentUser) => (
-        photoUrls: photoUrls,
-        likedByCurrentUser: likedByCurrentUser,
-      ),
+      ReviewDetailLoaded(
+        :final review,
+        :final photoUrls,
+        :final likedByCurrentUser,
+      ) =>
+        (
+          review: review,
+          photoUrls: photoUrls,
+          likedByCurrentUser: likedByCurrentUser,
+        ),
+      ReviewDetailSaveSuccess(
+        :final review,
+        :final photoUrls,
+        :final likedByCurrentUser,
+      ) =>
+        (
+          review: review,
+          photoUrls: photoUrls,
+          likedByCurrentUser: likedByCurrentUser,
+        ),
       _ => null,
     };
   }

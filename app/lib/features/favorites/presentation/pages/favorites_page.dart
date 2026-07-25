@@ -7,6 +7,7 @@ import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
 import '../../../../design_system/components/inputs/app_search_field.dart';
@@ -61,6 +62,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           city: _cityController.text.trim(),
           sortBy: _sortBy,
         );
+  }
+
+  Future<void> _refresh() {
+    return ref.read(favoritesControllerProvider.notifier).refresh();
   }
 
   @override
@@ -121,9 +126,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                 FavoritesInitial() || FavoritesLoading() => const LoadingScreen(
                   key: ValueKey('loading'),
                 ),
-                FavoritesError(:final message) => Center(
+                FavoritesError(:final message) => ErrorState(
                   key: const ValueKey('error'),
-                  child: Text(message),
+                  message: message,
+                  onRetry: _applyFilters,
                 ),
                 FavoritesEmpty() => const EmptyState(
                   key: ValueKey('empty'),
@@ -133,6 +139,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                 FavoritesLoaded(:final result) => _FavoritesList(
                   key: const ValueKey('loaded'),
                   result: result,
+                  onRefresh: _refresh,
                 ),
               },
             ),
@@ -144,46 +151,54 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 }
 
 class _FavoritesList extends StatelessWidget {
-  const _FavoritesList({super.key, required this.result});
+  const _FavoritesList({
+    super.key,
+    required this.result,
+    required this.onRefresh,
+  });
 
   final PagedResult<Restaurant> result;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: result.items.length,
-      itemBuilder: (context, index) {
-        final restaurant = result.items[index];
-        return AppStaggeredListItem(
-          index: index,
-          child: ListTile(
-            title: Text(restaurant.name),
-            subtitle: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/icons/borah_location.png',
-                  width: 14,
-                  height: 14,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    [
-                      restaurant.category,
-                      if (restaurant.city != null) restaurant.city,
-                    ].join(' · '),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.builder(
+        itemCount: result.items.length,
+        itemBuilder: (context, index) {
+          final restaurant = result.items[index];
+          return AppStaggeredListItem(
+            index: index,
+            child: ListTile(
+              title: Text(restaurant.name),
+              subtitle: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/icons/borah_location.png',
+                    width: 14,
+                    height: 14,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      [
+                        restaurant.category,
+                        if (restaurant.city != null) restaurant.city,
+                      ].join(' · '),
+                    ),
+                  ),
+                ],
+              ),
+              trailing: restaurant.averageRating != null
+                  ? ScoreBubble(rating: restaurant.averageRating)
+                  : null,
+              onTap: () => context.push('/restaurants/${restaurant.id}'),
             ),
-            trailing: restaurant.averageRating != null
-                ? ScoreBubble(rating: restaurant.averageRating)
-                : null,
-            onTap: () => context.push('/restaurants/${restaurant.id}'),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

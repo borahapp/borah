@@ -26,6 +26,7 @@ export 'feedback/app_chip.dart';
 export 'feedback/app_pulse_icon.dart';
 export 'feedback/app_staggered_list_item.dart';
 export 'feedback/empty_state.dart';
+export 'feedback/error_state.dart';
 export 'feedback/loading_indicator.dart';
 export 'feedback/score_bubble.dart';
 export 'feedback/skeleton_loader.dart';

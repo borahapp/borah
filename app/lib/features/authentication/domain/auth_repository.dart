@@ -24,6 +24,10 @@ abstract interface class AuthRepository {
 
   Future<void> requestPasswordReset(String email);
 
+  /// Reenvia o e-mail de confirmação de cadastro (RC-02, Quick Win —
+  /// fecha o dead-end de conta reportado na RC-01).
+  Future<void> resendVerificationEmail(String email);
+
   AuthUserData? get currentUser;
 
   Stream<AuthUserData?> get onAuthStateChange;

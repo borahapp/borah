@@ -142,12 +142,71 @@ void main() {
     });
   });
 
-  test('signOut -> Unauthenticated', () async {
-    when(() => repository.signOut()).thenAnswer((_) async {});
+  group('signOut', () {
+    test('sucesso -> Unauthenticated', () async {
+      when(() => repository.signOut()).thenAnswer((_) async {});
 
-    await container.read(authControllerProvider.notifier).signOut();
+      await container.read(authControllerProvider.notifier).signOut();
 
-    expect(container.read(authControllerProvider), isA<Unauthenticated>());
+      expect(container.read(authControllerProvider), isA<Unauthenticated>());
+    });
+
+    test('falha -> relança AuthRepositoryException e mantém o estado anterior '
+        '(RC-02: evita redirect indevido de rotas protegidas)', () async {
+      when(
+        () => repository.signOut(),
+      ).thenThrow(const AuthRepositoryException('Falha de rede.'));
+
+      final notifier = container.read(authControllerProvider.notifier);
+      final stateBefore = container.read(authControllerProvider);
+
+      await expectLater(
+        notifier.signOut(),
+        throwsA(isA<AuthRepositoryException>()),
+      );
+      expect(container.read(authControllerProvider), stateBefore);
+    });
+  });
+
+  group('resendVerificationEmail', () {
+    test('sucesso não altera o estado', () async {
+      when(
+        () => repository.resendVerificationEmail(any()),
+      ).thenAnswer((_) async {});
+
+      final notifier = container.read(authControllerProvider.notifier);
+      final stateBefore = container.read(authControllerProvider);
+
+      await notifier.resendVerificationEmail('ana@borah.com');
+
+      expect(container.read(authControllerProvider), stateBefore);
+      verify(
+        () => repository.resendVerificationEmail('ana@borah.com'),
+      ).called(1);
+    });
+
+    test('falha relança AuthRepositoryException e mantém o estado', () async {
+      when(() => repository.resendVerificationEmail(any())).thenThrow(
+        const AuthRepositoryException(
+          'Aguarde antes de solicitar um novo envio.',
+        ),
+      );
+
+      final notifier = container.read(authControllerProvider.notifier);
+      final stateBefore = container.read(authControllerProvider);
+
+      await expectLater(
+        notifier.resendVerificationEmail('ana@borah.com'),
+        throwsA(
+          isA<AuthRepositoryException>().having(
+            (e) => e.message,
+            'message',
+            'Aguarde antes de solicitar um novo envio.',
+          ),
+        ),
+      );
+      expect(container.read(authControllerProvider), stateBefore);
+    });
   });
 
   group('requestPasswordReset', () {
