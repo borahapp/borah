@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/analytics/app_analytics.dart';
+import 'core/feature_flags/app_feature_flags.dart';
 import 'core/network/supabase_client_provider.dart';
 import 'core/observability/crash_reporting.dart';
 import 'core/observability/sentry_provider_observer.dart';
@@ -22,6 +23,11 @@ Future<void> main() async {
     // do primeiro evento de Analytics.
     await AppAnalytics.initialize();
     unawaited(AppAnalytics.trackAppOpen());
+    // RC-03D: precisa rodar depois de initializeSupabase() (usa
+    // Supabase.instance.client). Nunca lança - se o Supabase estiver
+    // indisponível, o app sobe normalmente com o cache de flags vazio
+    // (ver FeatureFlagService).
+    unawaited(AppFeatureFlags.initialize());
 
     runApp(
       ProviderScope(
