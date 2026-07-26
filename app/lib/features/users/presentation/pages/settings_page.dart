@@ -7,13 +7,16 @@ import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../authentication/domain/auth_repository.dart';
+import '../../../authentication/presentation/states/auth_status.dart';
+import '../../data/user_profile_repository_impl.dart';
+import '../widgets/account_deletion_dialog.dart';
 
 /// Tela de Configurações (UX-02 §15). Mostra apenas os itens com ação real
-/// nesta etapa: "Editar perfil", "Enviar feedback" (RC-03E) e "Sair". Os
-/// demais itens do wireframe (Notificações, Privacidade, Segurança,
-/// Idioma) não têm modelo de dados correspondente no DV-02 — mesma
-/// lacuna documental já registrada para a tela "Preferências" — e não
-/// serão exibidos como placeholders sem persistência.
+/// nesta etapa: "Editar perfil", "Enviar feedback" (RC-03E), "Excluir
+/// conta" (RC-04C) e "Sair". Os demais itens do wireframe (Notificações,
+/// Privacidade, Segurança, Idioma) não têm modelo de dados correspondente
+/// no DV-02 — mesma lacuna documental já registrada para a tela
+/// "Preferências" — e não serão exibidos como placeholders sem persistência.
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -58,6 +61,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  /// Busca o `avatarUrl` atual (se houver) para a limpeza de Storage do
+  /// fluxo de exclusão (RC-04C) — uma consulta avulsa ao repositório, não
+  /// depende de `userProfileControllerProvider` já ter carregado o
+  /// perfil nesta tela. Falha aqui não impede a exclusão em si (ver
+  /// `AccountDeletionController` — limpeza de Storage é best-effort).
+  Future<void> _openAccountDeletion() async {
+    final authStatus = ref.read(authControllerProvider);
+    if (authStatus is! Authenticated || authStatus.email == null) return;
+
+    String? avatarPath;
+    try {
+      final profile = await ref
+          .read(userProfileRepositoryProvider)
+          .getProfile(authStatus.userId);
+      avatarPath = profile.avatarUrl;
+    } catch (_) {
+      // Segue sem avatarPath - ver documentação do método.
+    }
+
+    if (!mounted) return;
+    await AccountDeletionDialog.show(
+      context,
+      email: authStatus.email!,
+      avatarPath: avatarPath,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,6 +122,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 : const Icon(Icons.logout),
             title: const Text('Sair'),
             onTap: _isSigningOut ? null : _signOut,
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_forever_outlined),
+            title: const Text('Excluir conta'),
+            onTap: _openAccountDeletion,
           ),
         ],
       ),
