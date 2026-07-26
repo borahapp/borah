@@ -1,0 +1,14 @@
+# RC-04D: copiar para "key.properties" (mesma pasta) e preencher com os
+# valores reais da keystore de release. Este arquivo nunca deve ser
+# versionado - "key.properties" ja esta listado em android/.gitignore.
+#
+# Gerar a keystore (rodar uma unica vez, fora deste chat, guardando o
+# arquivo .jks e as senhas em um cofre seguro - nunca em texto puro):
+#   keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 \
+#     -validity 10000 -alias borah_release
+#
+# storeFile aceita caminho absoluto ou relativo a este diretorio (android/).
+storePassword=
+keyPassword=
+keyAlias=borah_release
+storeFile=release.jks

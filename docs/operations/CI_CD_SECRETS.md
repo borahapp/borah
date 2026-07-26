@@ -23,9 +23,17 @@ Cadastrar em **Settings → Secrets and variables → Actions**, idealmente dent
 
 ---
 
-## 2. Secrets pendentes (Release assinado - fora do escopo desta rodada)
+## 2. Secrets pendentes (Release assinado)
 
-`android/app/build.gradle.kts` assina o `buildType.release` com a chave de **debug** (TODO original do template Flutter, nunca resolvido — achado da Rodada F). O workflow `.github/workflows/release.yml` já existe e gera artefatos, mas **não estão aptos para a Play Store** até que uma keystore de release seja configurada. Quando essa decisão for autorizada (fora do escopo desta rodada — exige alterar `build.gradle.kts`, código do aplicativo):
+**Atualizado na RC-04D.** `android/app/build.gradle.kts` já está preparado para ler uma keystore de release a partir de `android/key.properties` (nunca versionado — coberto por `android/.gitignore`), com fallback automático para a assinatura de **debug** quando o arquivo não existir (preserva `flutter run --release` local). O template `android/key.properties.example` documenta o formato esperado. **Falta apenas gerar a keystore real e preencher os valores** — nenhuma chave/senha foi gerada nesta rodada, por exigir custódia exclusiva de quem vai publicar o app.
+
+Passo a passo para o responsável (fora deste chat, guardando o `.jks` e as senhas em um cofre seguro — nunca em texto puro):
+
+1. `keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias borah_release`
+2. Copiar `android/key.properties.example` para `android/key.properties` e preencher `storePassword`/`keyPassword`/`keyAlias`/`storeFile`.
+3. Para builds locais, colocar `release.jks` em `android/` (ou usar caminho absoluto em `storeFile`). Para CI, cadastrar os 4 secrets abaixo.
+
+O workflow `.github/workflows/release.yml` já existe e gera artefatos, mas **não estão aptos para a Play Store** até que os secrets abaixo sejam cadastrados e o workflow seja adaptado para decodificá-los em um `key.properties` temporário:
 
 | Secret (futuro) | Finalidade | Formato esperado |
 |---|---|---|
@@ -34,7 +42,9 @@ Cadastrar em **Settings → Secrets and variables → Actions**, idealmente dent
 | `ANDROID_KEY_ALIAS` | Alias da chave dentro da keystore | string |
 | `ANDROID_KEY_PASSWORD` | Senha da chave (pode ser igual à da keystore) | string |
 
-Uso típico: decodificar o Base64 em um arquivo temporário no início do job de release, apontar `signingConfigs.create("release")` para ele via `key.properties` gerado em tempo de execução (nunca versionado), e nunca imprimir nenhum desses valores em log.
+Uso típico: decodificar o Base64 em `android/key.properties`/`release.jks` no início do job de release, e nunca imprimir nenhum desses valores em log. A adaptação do `release.yml` para fazer essa decodificação permanece pendente — fora do escopo desta rodada, que preparou apenas o lado Gradle.
+
+Equivalente iOS: `ios/Runner.xcodeproj` está com `CODE_SIGN_STYLE = Automatic` e sem `DEVELOPMENT_TEAM` configurado — requer uma conta Apple Developer Program real, configurada diretamente no Xcode por quem for publicar (nada a preparar em código para isso).
 
 ---
 
