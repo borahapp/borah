@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/validators/app_validators.dart';
@@ -61,12 +62,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               bottom: AppSpacing.xxl,
             ),
             decoration: BoxDecoration(gradient: gradients.purple),
-            child: Text(
-              'BORAH',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineLarge?.copyWith(color: Colors.white),
+            // IV-04: logo oficial em vez do texto "BORAH" estilizado. A
+            // versão colorida (dark/light) usa o mesmo tom de roxo deste
+            // gradiente e perderia contraste aqui - a versão branca
+            // monocromática ("aplicação branca de uma cor", por
+            // instrução do material oficial) é a que preserva contraste
+            // sobre um fundo já roxo, diferente de um fundo escuro
+            // neutro. `BoxFit.contain` preserva a proporção original.
+            child: Center(
+              child: SizedBox(
+                height: 48,
+                child: SvgPicture.asset(
+                  'assets/borah/logos/borah_logo_white.svg',
+                  semanticsLabel: 'BORAH',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           Expanded(

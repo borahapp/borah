@@ -64,7 +64,9 @@ class BorahSplashLoader extends StatelessWidget {
       decoration: BoxDecoration(gradient: gradients.purple),
       child: const Center(
         child: Image(
-          image: AssetImage('assets/loading/borah_loading.webp'),
+          image: AssetImage(
+            'assets/borah/animations/borah_loading_transparent.webp',
+          ),
           width: 160,
           height: 160,
         ),

@@ -148,8 +148,8 @@ Nenhum teste automatizado novo foi necessário: esta rodada alterou apenas confi
 | Shrink/minify/obfuscation (Android) | ⚠️ Configurado, **não validado com build real** |
 | Assinatura de release Android | 🔴 Plumbing pronto — **falta gerar a keystore real** (ação do responsável, fora deste chat) |
 | Assinatura de release iOS | 🔴 **Falta configurar `DEVELOPMENT_TEAM`** com uma conta Apple Developer real |
-| Ícone de app | 🔴 Infra pronta — **falta o asset de logo em alta resolução** |
-| Splash screen | 🔴 Infra pronta — **falta o mesmo asset de logo** |
+| Ícone de app | ✅ Resolvido na IV-02 — ícone oficial aplicado em Android/iOS (ver `IV-01_A_05_BRAND_IDENTITY_INTEGRATION.md`) |
+| Splash screen | ✅ Resolvido na IV-03 — símbolo oficial aplicado em Android/iOS (ver `IV-01_A_05_BRAND_IDENTITY_INTEGRATION.md`) |
 | Descrição curta/completa da loja | 🔴 Não iniciado (conteúdo de marketing, fora do escopo desta rodada) |
 | Ambientes/segredos | ✅ Confirmado seguro |
 | Dependências de produção | ✅ Revisadas, sem itens indevidos |

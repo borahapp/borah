@@ -5,6 +5,7 @@ import 'package:app/features/authentication/domain/auth_repository.dart';
 import 'package:app/features/authentication/presentation/pages/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
@@ -49,7 +50,8 @@ void main() {
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
 
-    expect(find.text('BORAH'), findsOneWidget);
+    // IV-04: logo oficial (SVG) no lugar do texto "BORAH".
+    expect(find.byType(SvgPicture), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.widgetWithText(FilledButton, 'Entrar'), findsOneWidget);
     expect(find.text('Esqueci minha senha'), findsOneWidget);
@@ -150,7 +152,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
-        expect(find.text('BORAH'), findsOneWidget);
+        // IV-04: logo oficial (SVG) no lugar do texto "BORAH".
+        expect(find.byType(SvgPicture), findsOneWidget);
       });
     }
   });
