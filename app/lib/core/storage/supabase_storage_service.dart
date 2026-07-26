@@ -48,25 +48,6 @@ class SupabaseStorageService implements StorageRepository {
   }
 
   @override
-  Future<String> update({
-    required String bucket,
-    required String path,
-    required Uint8List bytes,
-    required String contentType,
-  }) {
-    return _guard(() async {
-      await _client.storage
-          .from(bucket)
-          .updateBinary(
-            path,
-            bytes,
-            fileOptions: FileOptions(contentType: contentType),
-          );
-      return path;
-    });
-  }
-
-  @override
   Future<Uint8List> download({required String bucket, required String path}) {
     return _guard(() => _client.storage.from(bucket).download(path));
   }

@@ -198,3 +198,65 @@ Suíte completa do projeto (`flutter test`): **444/444**, zero regressão (basel
 - Nenhuma tela usa `AppStorage` ainda — os três pontos de upload já existentes no app continuam com acesso direto ao Storage (ver §2/§11).
 - Suíte pgTAP de RLS de Storage não executada — mesma limitação de ambiente já registrada na RC-04A (sem Docker local disponível nesta sessão).
 - `SupabaseStorageService` não validada contra uma instância real do Supabase Storage (mesma limitação de todas as migrations do projeto, ver AR-06/EX-01B).
+
+---
+
+## 14. RC-04B1 — Storage Hardening
+
+**Data:** 2026-07-25
+**Branch:** `feature/rc-04b1-storage-hardening`
+**Objetivo:** eliminar as 5 ressalvas apontadas pela auditoria técnica independente da RC-04B (não uma nova RC — nenhuma tela foi conectada, nenhuma funcionalidade nova foi implementada).
+
+### 14.1 Item 1 — Código morto removido
+
+`StorageRepository.update()`/`SupabaseStorageService.update()` foram auditados: busca em todo `lib/` e `test/` confirmou **zero consumidores e zero testes** referenciando o método (as únicas ocorrências de `.update(` no projeto pertencem a `comments`/`reviews`, features completamente não relacionadas). Sem nenhuma justificativa arquitetural documentada para mantê-lo, o método foi **removido** da interface e da implementação — não havia teste a remover, já que nenhum jamais existiu para ele.
+
+### 14.2 Item 2 — Observabilidade adicionada a `replace()`
+
+O `catch` best-effort ao apagar o arquivo anterior agora registra telemetria via `AppLogger.warning(...)` (mesma infraestrutura da RC-03B — WARNING é sempre encaminhado ao Sentry via `CrashReporting.captureLog`) — inclui o bucket/caminho do arquivo órfão e o erro original, sem propagar a exceção (o upload continua sendo sucesso do ponto de vista de quem chamou). Esta é a **primeira chamada real a `AppLogger` em código de feature/`core`** do projeto — até aqui, `AppLogger` era infraestrutura pronta desde a RC-03B, mas nunca efetivamente invocada fora de seus próprios testes. Cobertura nova: 2 testes (telemetria disparada na falha; telemetria **ausente** no caminho de sucesso, para descartar falso-positivo de log em toda chamada).
+
+### 14.3 Item 3 — Migration dos buckets: reconciliação parcial, sem editar a migration original
+
+**Achado antes de implementar**: o plano inicial (trocar `ON CONFLICT DO NOTHING` por `DO UPDATE` diretamente na migration `20260725120000_create_storage_buckets.sql`) violaria a própria disciplina histórica do projeto — nenhuma migration já mesclada em `develop` é editada; toda correção retroativa vira uma migration nova (mesmo padrão de `20260718212615`, `20260720130000`, `20260720130015`, `20260720130030`). Corrigido: a migration original permanece intocada; uma nova migration (`20260725130000_reconcile_storage_bucket_limits.sql`) faz o `UPDATE` de reconciliação.
+
+**Decisão arquitetural aprovada pelo usuário**: a reconciliação cobre **apenas** `file_size_limit`/`allowed_mime_types` — nunca a coluna `public`. `file_size_limit`/`allowed_mime_types` só afetam uploads futuros (sem risco de expor nada já armazenado). `public`, ao contrário, tem efeito imediato de controle de acesso (o Supabase Storage decide se serve um objeto publicamente consultando essa flag em tempo de requisição) — uma mudança de público/privado deve sempre passar por sua própria migration nova e explícita, revisável em code review, nunca por um `UPDATE` genérico que possa se repetir por engano.
+
+### 14.4 Item 4 — Suíte pgTAP: bloqueio documentado, não simulado
+
+Confirmado nesta sessão: o Docker Desktop **não está em execução** (`com.docker.service` no estado `Stopped`; conexão a `npipe:////./pipe/dockerDesktopLinuxEngine` falha). Não foi feita nenhuma tentativa de iniciar o Docker Desktop automaticamente (ação pesada no sistema do usuário, mesma decisão já tomada na RC-04A). **As suítes pgTAP da RC-04A (`10`/`20`/`30_rls_*.test.sql`) e da RC-04B (`40_rls_storage.test.sql`) continuam não executadas.** Nenhuma delas deve ser considerada validada até rodarem com sucesso via:
+```bash
+cd supabase
+supabase start
+supabase test db --local supabase/tests/database
+```
+
+### 14.5 Item 5 — Validação de MIME: vulnerabilidade confirmada e corrigida
+
+**Investigação** (fontes oficiais do próprio repositório `supabase/storage`, o backend real do Storage):
+- [GitHub Issue #576](https://github.com/supabase/storage/issues/576) — confirma que a validação de `allowed_mime_types` não inspeciona bytes reais; a *issue* pedindo detecção por magic number foi **fechada como "not planned"** pelos mantenedores.
+- [GitHub Issue #639](https://github.com/supabase/storage/issues/639) — reprodução prática: um GIF renomeado para `.jpg` foi aceito por um bucket restrito a `image/jpeg`.
+- Análise da função `validateMimeType` (`src/storage/uploader.ts`, via [DeepWiki](https://deepwiki.com/supabase/storage/4.8-image-transformation)) — confirma que a validação usa o **Content-Type declarado pelo cliente** (header ou campo do multipart), nunca o conteúdo real.
+- A [documentação oficial de buckets](https://supabase.com/docs/guides/storage/buckets/fundamentals) não faz nenhuma promessa de validação de conteúdo — silêncio consistente com o comportamento real encontrado no código-fonte.
+
+**Conclusão**: a "dupla camada" de validação documentada originalmente no §4.1 (bucket + `StorageService`) era, na prática, **a mesma checagem (Content-Type/extensão declarados) feita duas vezes** — nem o Supabase Storage nem o `StorageService` original inspecionavam os bytes reais.
+
+**Correção implementada** (aprovada pelo usuário após apresentação das evidências): `lib/core/storage/storage_magic_bytes.dart` — `matchesImageSignature(bytes, extension)`, função pura sem dependência nova, checando a assinatura binária de JPEG (`FF D8 FF`), PNG (`89 50 4E 47 0D 0A 1A 0A`) e WebP (`RIFF....WEBP`). Chamada por `StorageService._validate()` como última etapa da validação, depois de tamanho/MIME/extensão. Cobertura nova: 10 testes dedicados (`storage_magic_bytes_test.dart`) + 4 testes de integração em `storage_service_test.dart` (rejeita arquivo com extensão trocada, rejeita bytes arbitrários, aceita JPEG/PNG reais).
+
+**Limite honesto, documentado deliberadamente**: esta checagem fecha a lacuna para o caminho legítimo do app (o `image_picker` declara um Content-Type que não corresponde aos bytes reais) — **não** substitui nenhuma garantia de servidor. Um cliente que chame a API do Supabase diretamente, contornando o app Flutter inteiro, não passa por `StorageService`. Fechar essa lacuna do lado do servidor exigiria sniffing real no backend do Supabase (fora do controle deste projeto, e explicitamente não planejado pelos mantenedores) ou uma Edge Function intermediária (infraestrutura que o projeto não tem — mesma decisão já registrada no DV-08).
+
+### 14.6 Testes
+
+| Arquivo | Cobertura nova |
+|---|---|
+| `test/unit/core/storage/storage_service_test.dart` | Telemetria de `replace()` (disparada na falha, ausente no sucesso); 4 testes de assinatura binária; ajuste de todas as fixtures de bytes para conter assinaturas reais válidas onde o upload deve suceder |
+| `test/unit/core/storage/storage_magic_bytes_test.dart` (novo) | `matchesImageSignature` — JPEG/PNG/WebP válidos, assinaturas incompletas/incorretas, extensão desconhecida |
+| `test/unit/core/storage/app_storage_test.dart` | Fixtures de bytes ajustadas para assinatura JPEG real nos testes que esperam sucesso |
+
+Suíte completa do projeto (`flutter test`): **459/459**, zero regressão (baseline RC-04B: 444/444 + 15 novos testes desta rodada de hardening).
+
+### 14.7 Decisões arquiteturais registradas nesta rodada
+
+1. **Migration original nunca editada** — a correção da RC-04B1 (item 3) virou uma migration nova, preservando o histórico, mesma disciplina de todo o projeto.
+2. **`public` excluído da reconciliação automática de buckets** — qualquer mudança de público/privado exige uma migration nova e explícita, nunca um efeito colateral de reaplicar uma UPDATE genérica.
+3. **Checagem de magic bytes implementada sem dependência nova** — assinaturas de JPEG/PNG/WebP são conhecimento público e estável da especificação de cada formato, dispensando um pacote como `mime`/`file_type` para uma allowlist de apenas 3 formatos.
+4. **Suítes pgTAP permanecem não executadas** — bloqueio de ambiente (Docker), não simulado, documentado explicitamente conforme instruído.

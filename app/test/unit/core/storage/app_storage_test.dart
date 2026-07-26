@@ -10,6 +10,12 @@ import 'package:mocktail/mocktail.dart';
 
 class MockStorageRepository extends Mock implements StorageRepository {}
 
+/// Bytes com assinatura JPEG real (RC-04B1 — `matchesImageSignature`
+/// agora confere o conteúdo real do arquivo, não só a extensão/
+/// content-type declarados).
+Uint8List _validJpegBytes() =>
+    Uint8List.fromList([0xFF, 0xD8, 0xFF, 0x00, 0x00]);
+
 void main() {
   late MockStorageRepository repository;
 
@@ -42,7 +48,7 @@ void main() {
     final path = await AppStorage.upload(
       bucket: 'avatars',
       folder: 'user-1',
-      bytes: Uint8List(5),
+      bytes: _validJpegBytes(),
       originalFileName: 'foto.jpg',
       contentType: 'image/jpeg',
       config: StorageUploadConfig.avatar,
@@ -103,7 +109,7 @@ void main() {
     await AppStorage.replace(
       bucket: 'avatars',
       folder: 'user-1',
-      bytes: Uint8List(5),
+      bytes: _validJpegBytes(),
       originalFileName: 'foto.jpg',
       contentType: 'image/jpeg',
       config: StorageUploadConfig.avatar,
