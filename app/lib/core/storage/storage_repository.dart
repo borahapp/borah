@@ -24,14 +24,6 @@ abstract interface class StorageRepository {
     bool upsert = false,
   });
 
-  /// Substitui o conteúdo de um arquivo já existente em `<bucket>/<path>`.
-  Future<String> update({
-    required String bucket,
-    required String path,
-    required Uint8List bytes,
-    required String contentType,
-  });
-
   Future<Uint8List> download({required String bucket, required String path});
 
   Future<void> delete({required String bucket, required String path});

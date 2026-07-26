@@ -378,6 +378,30 @@ disponível). Ver `RC-04B_STORAGE_SECURITY.md` para arquitetura
 completa, buckets, políticas e decisões arquiteturais. Suíte de
 unit/widget tests sem regressão (444/444 — 36 testes novos).
 
+**RC-04B1 (Storage Hardening) concluída em 2026-07-25** — rodada de
+hardening (não uma nova RC) para eliminar as 5 ressalvas de uma
+auditoria técnica independente sobre a RC-04B. Removido código morto
+(`StorageRepository.update()`/`SupabaseStorageService.update()`, zero
+consumidores confirmados). Adicionada observabilidade a
+`StorageService.replace()` via `AppLogger.warning` para o cleanup
+best-effort do arquivo antigo (primeira chamada real a `AppLogger` em
+código de feature/`core` do projeto). Nova migration
+(`20260725130000_reconcile_storage_bucket_limits.sql`) reconcilia
+`file_size_limit`/`allowed_mime_types` dos 3 buckets sem editar a
+migration original (disciplina do projeto) e sem nunca tocar a coluna
+`public` (mudança de público/privado exige sua própria migration,
+nunca um efeito colateral). Investigação confirmou, com fontes do
+próprio repositório `supabase/storage` (issues #576 e #639, fechadas
+como "not planned"), que o Supabase Storage valida `allowed_mime_types`
+só pelo Content-Type declarado pelo cliente, nunca pelo conteúdo real —
+corrigido com uma checagem de assinatura binária (magic bytes) para
+JPEG/PNG/WebP em `StorageService`, sem dependência nova, documentada
+com o limite honesto de que não substitui validação de servidor.
+Suítes pgTAP (RC-04A e RC-04B) permanecem não executadas — Docker
+indisponível nesta sessão, bloqueio documentado, não simulado. Ver
+`RC-04B_STORAGE_SECURITY.md` §14 para a análise completa dos 5 itens.
+Suíte de unit/widget tests sem regressão (459/459 — 15 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

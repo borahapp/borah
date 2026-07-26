@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
+import '../logger/app_logger.dart';
 import 'storage_exception.dart';
 import 'storage_filename.dart';
+import 'storage_magic_bytes.dart';
 import 'storage_repository.dart';
 import 'storage_upload_config.dart';
 
@@ -76,8 +78,18 @@ class StorageService {
     if (previousPath != null && previousPath != newPath) {
       try {
         await _repository.delete(bucket: bucket, path: previousPath);
-      } catch (_) {
-        // Best-effort - ver documentação do método acima.
+      } catch (e, stackTrace) {
+        // Best-effort - ver documentação do método acima. Não propaga,
+        // mas registra (RC-04B1 - achado da auditoria: sem isso, o
+        // arquivo antigo vira órfão sem nenhuma telemetria, violando
+        // AR-08 §16 "Monitoramento: arquivos órfãos/falhas de upload").
+        AppLogger.warning(
+          'Falha ao remover arquivo antigo após replace() - possível '
+          'arquivo órfão em "$bucket/$previousPath".',
+          tag: 'storage/StorageService.replace',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     }
 
@@ -137,6 +149,16 @@ class StorageService {
     final extension = normalizeExtension(originalFileName);
     if (!config.allowedExtensions.contains(extension)) {
       throw const StorageException('Formato de arquivo não suportado.');
+    }
+    // RC-04B1 - achado da auditoria: nem o cliente nem o Supabase
+    // Storage validam os bytes reais do arquivo, só o Content-Type/
+    // extensão declarados (ver RC-04B_STORAGE_SECURITY.md §RC-04B1
+    // Hardening). Esta checagem fecha essa lacuna para o caminho
+    // legítimo do app.
+    if (!matchesImageSignature(bytes, extension)) {
+      throw const StorageException(
+        'O conteúdo do arquivo não corresponde ao formato declarado.',
+      );
     }
     return extension;
   }
