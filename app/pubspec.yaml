@@ -75,6 +75,15 @@ dev_dependencies:
   # DV-01 - testes com repositorio mockado
   mocktail: ^1.0.4
 
+  # RC-04D - geracao do icone/splash de release a partir de um asset-fonte
+  # unico. Infraestrutura preparada, mas sem arte ainda: nao existe nenhum
+  # logo BORAH em alta resolucao no repositorio (ver "flutter_icons"/
+  # "flutter_native_splash" abaixo, que apontam para um caminho ainda
+  # inexistente). Rodar apenas apos o asset ser fornecido - ver
+  # RC-04D_RELEASE_READINESS.md.
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -128,3 +137,21 @@ flutter:
           weight: 600
         - asset: assets/fonts/Manrope-Variable.ttf
           weight: 700
+
+# RC-04D - infraestrutura de geracao de icone/splash pronta, aguardando o
+# asset-fonte real (ver comentario acima, em dev_dependencies). O caminho
+# "assets/icon/borah_icon.png" ainda NAO existe - rodar
+# `dart run flutter_launcher_icons` / `dart run flutter_native_splash:create`
+# somente depois de adiciona-lo.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/borah_icon.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/icon/borah_icon.png"
+  android_12:
+    color: "#FFFFFF"
+    image: "assets/icon/borah_icon.png"

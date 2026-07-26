@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- RC-04D: unica permissao necessaria hoje - chamadas de rede ao Supabase.
+         Selecao de galeria (image_picker) e tratada pelo manifest merger do
+         proprio plugin; camera, localizacao, notificacoes e armazenamento
+         direto nao sao usados pelo app. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="app"
+        android:label="BORAH"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

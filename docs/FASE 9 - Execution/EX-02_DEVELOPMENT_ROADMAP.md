@@ -429,6 +429,36 @@ Supabase, mesmo padrão de `AuthController`/`UserProfileController`
 decisões e limitações. Suíte de unit/widget tests sem regressão
 (479/479 — 20 testes novos).
 
+**RC-04D (Release Readiness & Store Preparation) concluída em
+2026-07-26** — preparativos técnicos para publicação, sem publicar,
+sem criar release e sem alterar regras de negócio. Auditoria inicial
+completa (versão, IDs, permissões, assinatura, ambientes, dependências,
+TODOs/prints/asserts, observabilidade em Release) encontrou: nome do
+app ainda como placeholder "App" (corrigido para "BORAH" em ambas as
+plataformas); zero permissões declaradas (adicionada só `INTERNET` no
+Android e `NSPhotoLibraryUsageDescription` no iOS — únicas realmente
+usadas, câmera/localização/notificações confirmadas não utilizadas em
+todo o código); `release` do Android ainda assinado com a chave de
+debug (já registrado desde o QA-03); ícone/splash ainda são o padrão
+do template Flutter, sem nenhum asset de logo BORAH no repositório.
+Decisões que exigiam segredos/ativos do responsável pela publicação
+foram resolvidas via `AskUserQuestion` (preparar infraestrutura sem
+gerar segredo/arte, em ambos os casos): `build.gradle.kts` passou a
+ler uma keystore real de `android/key.properties` (nunca versionado)
+quando presente, com fallback para debug signing na ausência —
+procedimento de geração documentado em `CI_CD_SECRETS.md` §2, nenhuma
+chave gerada nesta rodada; `minifyEnabled`/`shrinkResources`/ProGuard
+habilitados (não validados com build real — sem SDK Android completo
+nesta sessão); `flutter_launcher_icons`/`flutter_native_splash`
+adicionados como dev-dependencies com configuração pronta apontando
+para um asset ainda inexistente, para gerar ícone/splash assim que o
+design fornecer o logo. Ver `RC-04D_RELEASE_READINESS.md` para o
+checklist completo de release e as pendências restantes antes da
+publicação (keystore real, Apple Developer Team, asset de logo,
+validação de build real). Suíte de unit/widget tests sem regressão
+(479/479 — nenhum teste novo, rodada tocou apenas configuração de
+build/manifesto/plist e documentação).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
