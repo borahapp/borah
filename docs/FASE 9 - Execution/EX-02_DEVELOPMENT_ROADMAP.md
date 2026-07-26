@@ -402,6 +402,33 @@ indisponível nesta sessão, bloqueio documentado, não simulado. Ver
 `RC-04B_STORAGE_SECURITY.md` §14 para a análise completa dos 5 itens.
 Suíte de unit/widget tests sem regressão (459/459 — 15 testes novos).
 
+**RC-04C (LGPD & Account Deletion) concluída em 2026-07-25** — ciclo
+completo de exclusão de conta (RN-003/ET-04; PB-04 §7/§10). Interrompida
+duas vezes antes de qualquer código, conforme instruído: (1) nenhum
+método client-side do Supabase apaga a própria linha de `auth.users`
+(`deleteUser()` só existe em `auth.admin`, exige `SERVICE_ROLE_KEY`) —
+resolvido com uma função Postgres `SECURITY DEFINER`
+(`public.delete_own_account()`, RPC travada em `auth.uid()`); (2)
+auditoria de todas as referências a `auth.users` encontrou 5 relações
+(`reviews.user_id`, `comments.user_id`, `comment_reports.reported_by`,
+`audit_logs.actor_id`, `restaurants.created_by`) que bloqueiam a
+exclusão de qualquer usuário que já escreveu conteúdo — resolvido, por
+decisão aprovada explicitamente, reatribuindo esse conteúdo a uma conta
+de sistema fixa "Usuário removido" em vez de apagá-lo (preserva
+interações de outros usuários); consequência mecânica necessária
+encontrada durante o desenho: duas constraints `UNIQUE`
+(`reviews`/`comment_reports`) trocadas por índices únicos parciais para
+não colidir na reatribuição em massa. Fluxo completo implementado:
+confirmação explícita → reautenticação (senha) → limpeza do avatar no
+Storage (best-effort) → exclusão via RPC → logout local (best-effort) →
+retorno ao Login. Camadas Presentation → Application → Repository →
+Supabase, mesmo padrão de `AuthController`/`UserProfileController`
+(sem uma camada de Service própria, diferente de `core/`). Conectado à
+`SettingsPage` ("Excluir conta"). Ver
+`RC-04C_LGPD_ACCOUNT_DELETION.md` para a auditoria completa de dados,
+decisões e limitações. Suíte de unit/widget tests sem regressão
+(479/479 — 20 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

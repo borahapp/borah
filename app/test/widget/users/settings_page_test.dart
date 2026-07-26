@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/authentication/data/auth_repository_impl.dart';
 import 'package:app/features/authentication/domain/auth_repository.dart';
+import 'package:app/features/users/data/user_profile_repository_impl.dart';
+import 'package:app/features/users/domain/user_profile.dart';
+import 'package:app/features/users/domain/user_profile_repository.dart';
 import 'package:app/features/users/presentation/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +14,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+class MockUserProfileRepository extends Mock implements UserProfileRepository {}
 
 Widget _wrap(MockAuthRepository repository) {
   final router = GoRouter(
@@ -158,5 +164,70 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
 
     handle.dispose();
+  });
+
+  group('Excluir conta (RC-04C)', () {
+    late MockAuthRepository authenticatedRepository;
+    late MockUserProfileRepository profileRepository;
+    late ProviderContainer container;
+
+    Widget wrapAuthenticated() {
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [GoRoute(path: '/', builder: (_, _) => const SettingsPage())],
+      );
+      return UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      );
+    }
+
+    setUp(() {
+      authenticatedRepository = MockAuthRepository();
+      profileRepository = MockUserProfileRepository();
+      when(() => authenticatedRepository.onAuthStateChange).thenAnswer(
+        (_) => Stream.value((userId: 'user-1', email: 'ana@borah.com')),
+      );
+      when(() => profileRepository.getProfile('user-1')).thenAnswer(
+        (_) async => UserProfile(
+          id: 'user-1',
+          fullName: 'Ana',
+          bio: null,
+          avatarUrl: null,
+          city: null,
+          state: null,
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+        ),
+      );
+
+      container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authenticatedRepository),
+          userProfileRepositoryProvider.overrideWithValue(profileRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Aquece `authControllerProvider` (constrói o Notifier e registra o
+      // listener do stream) ANTES do teste interagir - sem isso, a
+      // primeira leitura aconteceria só dentro do `onTap`, no mesmo
+      // instante síncrono em que o valor ainda seria `AuthInitial` (o
+      // stream de autenticação só entrega seu valor num microtask
+      // seguinte à inscrição).
+      container.read(authControllerProvider);
+    });
+
+    testWidgets('tocar em "Excluir conta" abre o diálogo de confirmação', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrapAuthenticated());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Excluir conta'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.textContaining('Esta ação é permanente'), findsOneWidget);
+    });
   });
 }
