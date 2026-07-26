@@ -62,6 +62,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
+  # IV-01 - renderizador SVG, decisão de arquitetura explicitamente
+  # aprovada para consumir os ativos oficiais da marca (logos, símbolo e,
+  # em rodada futura, ranking/expressões/decorativos) sem duplicar cada
+  # um também em PNG. Pacote mantido pela publisher verificada flutter.dev.
+  flutter_svg: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -112,14 +118,20 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
-  # UI-03B (assets oficiais da marca BORAH). Estrutura documentada em
-  # assets/ASSETS.md. Somente os arquivos realmente consumidos por um
-  # widget sao declarados aqui - o GIF de loading (fallback) e o SVG do
-  # icone de localizacao (fonte vetorial, sem flutter_svg no projeto)
-  # ficam organizados em assets/ mas fora do bundle ate serem
-  # necessarios.
+  # IV-01 (identidade visual oficial). Estrutura documentada em
+  # assets/ASSETS.md. Reorganizado a partir da unica fonte de verdade
+  # (BORAH_Pacote_Implementacao_Claude) - substitui a antiga pasta
+  # assets/loading/ (mesmo arquivo de loading, agora sob assets/borah/).
+  # Somente os arquivos realmente consumidos por um widget entram aqui
+  # (mesma convencao da UI-03B): assets/borah/symbol/ e
+  # assets/borah/app_icon/ existem no repositorio (fonte para
+  # flutter_launcher_icons/flutter_native_splash, ferramentas que leem
+  # direto do disco em tempo de build) mas nao sao declarados no bundle,
+  # ja que nenhum widget os consome nesta rodada (ver IV-06/IV-07).
+  # assets/icons/borah_location.png permanece intocado (fora de escopo).
   assets:
-    - assets/loading/borah_loading.webp
+    - assets/borah/logos/
+    - assets/borah/animations/borah_loading_transparent.webp
     - assets/icons/borah_location.png
 
   # UI-01 (Design System oficial, Manual da Marca BORAH v1.0/jul-2026):
@@ -144,20 +156,20 @@ flutter:
         - asset: assets/fonts/Manrope-Variable.ttf
           weight: 700
 
-# RC-04D - infraestrutura de geracao de icone/splash pronta, aguardando o
-# asset-fonte real (ver comentario acima, em dev_dependencies). O caminho
-# "assets/icon/borah_icon.png" ainda NAO existe - rodar
-# `dart run flutter_launcher_icons` / `dart run flutter_native_splash:create`
-# somente depois de adiciona-lo.
+# IV-02 - matriz oficial do icone do app (BORAH_Pacote_Implementacao_Claude,
+# fonte unica de verdade), substituindo o caminho provisorio da RC-04D.
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/borah_icon.png"
+  image_path: "assets/borah/app_icon/borah_app_icon_1024.png"
   min_sdk_android: 21
 
+# IV-03 - splash nativo estatico e rapido (regra do material oficial),
+# simbolo isolado sobre fundo branco - mesmo fundo ja usado pelo
+# scaffoldBackgroundColor do Light Theme (AppTheme.light).
 flutter_native_splash:
   color: "#FFFFFF"
-  image: "assets/icon/borah_icon.png"
+  image: "assets/borah/symbol/borah_symbol_4096.png"
   android_12:
     color: "#FFFFFF"
-    image: "assets/icon/borah_icon.png"
+    image: "assets/borah/symbol/borah_symbol_4096.png"

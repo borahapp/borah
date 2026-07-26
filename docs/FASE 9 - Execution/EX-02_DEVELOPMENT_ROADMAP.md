@@ -502,6 +502,37 @@ documentadas que não bloqueiam um grupo pequeno e controlado de
 testadores**. Suíte de unit/widget tests sem regressão (503/503 — 24
 testes novos).
 
+**Product Readiness Review e BETA-01/BETA-02 (planejamento estratégico,
+2026-07-26)** — revisão executiva completa do produto (sem código) e
+plano operacional do Beta Fechado, entregues como artefatos fora do
+repositório, a pedido explícito. Aprovado o início da fase operacional
+pré-Beta com a integração da identidade visual oficial como primeira
+etapa.
+
+**IV-01 a IV-05 (Integração da Identidade Visual Oficial) concluída em
+2026-07-26** — substituição da identidade provisória pela identidade
+oficial (`identidade visual-borah/BORAH_Pacote_Implementacao_Claude`,
+única fonte de verdade), em 5 fases validadas sequencialmente: IV-01
+(assets oficiais copiados para `assets/borah/`, dependência nova
+`flutter_svg` aprovada explicitamente e documentada), IV-02 (ícone do
+launcher substituído em Android/iOS via `flutter_launcher_icons` a
+partir da matriz oficial 1024px), IV-03 (splash nativo substituído em
+Android/iOS via `flutter_native_splash`, símbolo oficial sobre fundo
+branco), IV-04 (logo oficial em `LoginPage`, substituindo o texto
+"BORAH" estilizado — usada a versão branca monocromática, não a
+colorida "dark"/"light", por perda de contraste contra o gradiente
+roxo já usado no cabeçalho, decisão registrada e justificada), IV-05
+(gradiente roxo reconciliado com o valor exato do manifesto oficial,
+substituindo o valor de 2 tons obtido por amostragem de pixel na FASE
+7A/UI-01). Cores e tipografia já estavam corretas desde a FASE 7A,
+confirmado na auditoria prévia. IV-06 a IV-09 (símbolo/expressões em
+estados vazios, ranking/gamificação, validação Dark Mode, assets de
+loja) explicitamente fora de escopo desta rodada. Ver
+`IV-01_A_05_BRAND_IDENTITY_INTEGRATION.md` para o detalhamento
+completo. Suíte de unit/widget tests sem regressão (503/503 — mesma
+contagem da RC-04E, testes existentes atualizados, nenhum novo
+necessário).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

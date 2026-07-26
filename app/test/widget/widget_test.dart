@@ -3,6 +3,7 @@ import 'package:app/core/router/app_router.dart';
 import 'package:app/features/authentication/data/auth_repository_impl.dart';
 import 'package:app/features/authentication/domain/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -26,7 +27,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('BORAH'), findsOneWidget);
+    // IV-04: logo oficial (SVG) no lugar do texto "BORAH".
+    expect(find.byType(SvgPicture), findsOneWidget);
     expect(find.text('Entrar'), findsOneWidget);
   });
 
