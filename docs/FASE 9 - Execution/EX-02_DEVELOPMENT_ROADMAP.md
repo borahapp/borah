@@ -345,6 +345,39 @@ senha do cliente é só cosmética (a real está no Supabase Dashboard);
 por tabela e as decisões arquiteturais registradas. Suíte de unit/widget
 tests sem regressão (408/408 — 8 testes novos).
 
+**RC-04B (Storage & Upload Security) concluída em 2026-07-25** —
+infraestrutura completa de armazenamento seguro do BORAH
+(`lib/core/storage/`), seguindo o mesmo padrão arquitetural de
+`CrashReporting`/`AppLogger`/`AppAnalytics`/`AppFeatureFlags`/
+`AppFeedback`: `StorageException` (única exceção da camada),
+`StorageRepository`/`SupabaseStorageService` (única fronteira com o SDK
+de Storage), `StorageService` (valida tamanho/MIME/extensão, gera nomes
+seguros, nunca reaproveita o nome enviado pelo usuário), providers
+Riverpod e a fachada estática `AppStorage`. Achado de arquitetura
+registrado no início da rodada: 3 datasources de feature já acessavam o
+Storage diretamente (`UserRemoteDatasource`/`RestaurantRemoteDatasource`/
+`ReviewRemoteDatasource`) — mantidos intocados por instrução explícita
+("não implementar upload em telas específicas nesta etapa"), migração
+registrada como backlog. Nova migration
+(`20260725120000_create_storage_buckets.sql`) cria os 3 buckets
+efetivamente usados pelo código existente (`avatars` privado 5MB,
+`restaurants` público 10MB, `review-photos` público 10MB — nome
+padronizado nesta rodada em vez do genérico `reviews` inicialmente
+sugerido, para casar com o código já existente), com limite de
+tamanho/MIME aplicado já no próprio bucket (camada redundante à
+validação do cliente) e RLS completa: leitura pública/qualquer
+autenticado conforme o caso, escrita restrita ao dono ou a
+administrador/moderador (`can_moderate()`, mesmo critério da RC-04A).
+Geração de nome via timestamp + sufixo aleatório (`Random.secure()`,
+sem nova dependência) — nunca o nome original, evitando path
+traversal/sobrescrita acidental. Suíte pgTAP de RLS de Storage entregue
+(`supabase/tests/database/40_rls_storage.test.sql`, 18 asserções),
+escrita e revisada estaticamente, **não executada nesta rodada** pela
+mesma limitação de ambiente já registrada na RC-04A (sem Docker local
+disponível). Ver `RC-04B_STORAGE_SECURITY.md` para arquitetura
+completa, buckets, políticas e decisões arquiteturais. Suíte de
+unit/widget tests sem regressão (444/444 — 36 testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
