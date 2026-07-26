@@ -59,17 +59,23 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
     await pumpUntil(
       tester,
-      () => find.text('Ver perfil').evaluate().isNotEmpty,
+      () => find
+          .widgetWithText(NavigationDestination, 'Restaurantes')
+          .evaluate()
+          .isNotEmpty,
       maxAttempts: 100,
       timeoutMessage:
           'O login (pré-condição do teste) não navegou para a Home a tempo.',
     );
 
-    await tester.tap(find.text('Ver perfil'));
+    // RC-04E: Perfil agora é uma aba do HomeShellPage, não mais um botão
+    // de navegação avulso.
+    await tester.tap(find.widgetWithText(NavigationDestination, 'Perfil'));
     await pumpUntil(
       tester,
       () => find.byIcon(Icons.settings).evaluate().isNotEmpty,
-      timeoutMessage: 'Não chegou ao ProfilePage após tocar em "Ver perfil".',
+      timeoutMessage:
+          'Não chegou ao ProfilePage após trocar para a aba "Perfil".',
     );
 
     await tester.tap(find.byIcon(Icons.settings));

@@ -7,6 +7,7 @@ import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/feedback/app_animated_fraction.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_gradients.dart';
@@ -62,9 +63,16 @@ class _GamificationProfilePageState
         child: switch (status) {
           GamificationProfileInitial() || GamificationProfileLoading() =>
             const LoadingScreen(key: ValueKey('loading')),
-          GamificationProfileError(:final message) => Center(
+          GamificationProfileError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () {
+              final userId = ref.read(currentUserIdProvider);
+              if (userId == null) return;
+              ref
+                  .read(gamificationProfileControllerProvider.notifier)
+                  .loadForUser(userId);
+            },
           ),
           GamificationProfileLoaded(
             :final progress,
@@ -169,7 +177,7 @@ class _ProfileView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
-        Text('Badges', style: theme.textTheme.titleMedium),
+        Text('Conquistas', style: theme.textTheme.titleMedium),
         const SizedBox(height: AppSpacing.sm),
         ...allBadges.map((badge) {
           final earned = earnedBadgeIds.contains(badge.id);

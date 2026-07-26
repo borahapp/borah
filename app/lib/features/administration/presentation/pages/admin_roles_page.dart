@@ -5,6 +5,7 @@ import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -102,7 +103,11 @@ class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
               child: switch (status) {
                 AdminRolesInitial() ||
                 AdminRolesLoading() => const LoadingScreen(),
-                AdminRolesError(:final message) => Center(child: Text(message)),
+                AdminRolesError(:final message) => ErrorState(
+                  message: message,
+                  onRetry: () =>
+                      ref.read(adminRolesControllerProvider.notifier).load(),
+                ),
                 AdminRolesEmpty() => const EmptyState(
                   message: 'Nenhum administrador cadastrado.',
                 ),

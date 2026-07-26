@@ -7,7 +7,7 @@ import '../data/auth_repository_impl.dart';
 import '../domain/auth_repository.dart';
 import '../presentation/states/auth_status.dart';
 
-final _authStateChangesProvider = StreamProvider<AuthUserData?>((ref) {
+final _authStateChangesProvider = StreamProvider<AuthSessionUpdate>((ref) {
   return ref.watch(authRepositoryProvider).onAuthStateChange;
 });
 
@@ -17,11 +17,34 @@ class AuthController extends Notifier<AuthStatus> {
   @override
   AuthStatus build() {
     ref.listen(_authStateChangesProvider, (_, next) {
-      next.whenData((userData) {
-        state = userData == null
-            ? const Unauthenticated()
-            : Authenticated(userId: userData.userId, email: userData.email);
-      });
+      next.when(
+        data: (update) {
+          // RC-04E: sessão de recuperação de senha nunca deve virar um
+          // login normal - o router redireciona para "Definir nova
+          // senha" enquanto o status for este.
+          if (update.event == AuthSessionEvent.passwordRecovery) {
+            state = const PasswordRecoveryInProgress();
+            return;
+          }
+          state = update.user == null
+              ? const Unauthenticated()
+              : Authenticated(
+                  userId: update.user!.userId,
+                  email: update.user!.email,
+                );
+        },
+        error: (error, _) {
+          // RC-04E: link de recuperação de senha inválido/expirado chega
+          // aqui como erro do stream - antes era silenciosamente
+          // ignorado (`whenData` não trata `error`).
+          state = AuthError(
+            error is AuthRepositoryException
+                ? error.message
+                : 'Não foi possível concluir a operação. Tente novamente.',
+          );
+        },
+        loading: () {},
+      );
     });
     return const AuthInitial();
   }
@@ -129,6 +152,41 @@ class AuthController extends Notifier<AuthStatus> {
       state = const AuthError('Não foi possível enviar o link de recuperação.');
     }
   }
+
+  /// Define a nova senha durante uma sessão de recuperação
+  /// (`PasswordRecoveryInProgress`, RC-04E). Em caso de erro, o status
+  /// volta para `PasswordRecoveryInProgress` (em vez de `AuthError`) para
+  /// que a tela "Definir nova senha" continue visível e o usuário possa
+  /// tentar novamente sem perder a sessão de recuperação ainda ativa.
+  Future<void> updatePassword(String newPassword) async {
+    state = const AuthLoading();
+    try {
+      await _repository.updatePassword(newPassword);
+      final current = _repository.currentUser;
+      state = current == null
+          ? const Unauthenticated()
+          : Authenticated(userId: current.userId, email: current.email);
+    } on AuthRepositoryException catch (e) {
+      _passwordRecoveryError = e.message;
+      state = const PasswordRecoveryInProgress();
+    } catch (_) {
+      _passwordRecoveryError = 'Não foi possível definir a nova senha.';
+      state = const PasswordRecoveryInProgress();
+    }
+  }
+
+  /// Mensagem da última falha ao tentar `updatePassword`, consumida uma
+  /// única vez pela tela "Definir nova senha" (mesmo padrão de "erro
+  /// pontual" já usado por outras telas via `listenForAuthErrors`, que
+  /// não se aplica aqui porque o status volta a `PasswordRecoveryInProgress`
+  /// em vez de `AuthError`).
+  String? consumePasswordRecoveryError() {
+    final message = _passwordRecoveryError;
+    _passwordRecoveryError = null;
+    return message;
+  }
+
+  String? _passwordRecoveryError;
 
   /// Reenvia o e-mail de confirmação (RC-02) sem alterar `state`: o
   /// usuário continua em `EmailVerificationPending` durante a chamada -

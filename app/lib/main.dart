@@ -10,9 +10,18 @@ import 'core/feedback/app_feedback.dart';
 import 'core/network/supabase_client_provider.dart';
 import 'core/observability/crash_reporting.dart';
 import 'core/observability/sentry_provider_observer.dart';
+import 'design_system/components/feedback/error_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // RC-04E: sem isso, uma exceção durante o build de um widget mostra a
+  // tela de erro padrão do Flutter (texto técnico em inglês, sem a
+  // identidade visual do app) em vez de um fallback amigável. O Sentry
+  // já captura o erro normalmente antes deste builder rodar
+  // (`FlutterError.onError`, instalado por `CrashReporting.run`).
+  ErrorWidget.builder = (details) =>
+      ErrorState(message: 'Algo deu errado. Tente novamente.');
 
   // RC-03A: initializeSupabase() e runApp() rodam dentro da zona de
   // captura do Sentry (ver CrashReporting.run) - qualquer erro durante o

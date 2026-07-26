@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../users/presentation/widgets/profile_avatar.dart';
@@ -47,9 +48,12 @@ class _FollowListPageState extends ConsumerState<FollowListPage> {
         child: switch (status) {
           FollowListInitial() ||
           FollowListLoading() => const LoadingScreen(key: ValueKey('loading')),
-          FollowListError(:final message) => Center(
+          FollowListError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () => ref
+                .read(followListControllerProvider.notifier)
+                .load(widget.userId, widget.type),
           ),
           FollowListEmpty() => EmptyState(
             key: const ValueKey('empty'),

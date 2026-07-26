@@ -459,6 +459,49 @@ validação de build real). Suíte de unit/widget tests sem regressão
 (479/479 — nenhum teste novo, rodada tocou apenas configuração de
 build/manifesto/plist e documentação).
 
+**RC-04E (Closed Beta Preparation) concluída em 2026-07-26** — auditoria
+completa de UX/estabilidade/navegação pensando exclusivamente no Beta
+Fechado, com dois achados arquiteturais interrompidos e resolvidos por
+decisão explícita do usuário antes de qualquer implementação: (1)
+`/home` era um placeholder de desenvolvedor (`_BootstrapPlaceholderPage`)
+— substituído por `RestaurantsSearchPage` (não o Feed, que mostraria
+estado vazio para testers sem seguidores) dentro de um novo
+`HomeShellPage`, que finalmente conecta o `AppBottomNavigation` (já
+implementado desde o UI-02, nunca usado) às abas
+Restaurantes/Feed/Favoritos/Perfil — consequência mecânica encontrada
+durante a implementação (remover o placeholder deixava 7 telas prontas
+sem nenhum caminho de navegação) resolvida com o mesmo componente,
+também por decisão explícita; (2) recuperação de senha era um beco sem
+saída completo (sem `redirectTo`, sem rota de callback, sem tela de
+nova senha, sem deep link) — completado de ponta a ponta: evento
+`passwordRecovery` do Supabase tratado como estado próprio
+(`PasswordRecoveryInProgress`, distinto de um login normal), deep link
+`borah://password-recovery` configurado em Android/iOS, nova tela
+`NewPasswordPage`, erros do stream de sessão agora tratados (antes
+descartados silenciosamente por `whenData`). Criado também um tradutor
+centralizado de mensagens de erro do Supabase
+(`SupabaseErrorTranslator`), aplicado obrigatoriamente em
+login/cadastro/recuperação-redefinição de senha/exclusão de conta
+(demais ~8 repositórios documentados como backlog priorizado, não
+expandidos nesta rodada, por decisão explícita de escopo). Melhorias
+mecânicas de qualidade sem decisão de negócio: `ErrorState` com retry
+conectado em 19 telas que ainda mostravam erro sem nenhuma ação;
+`ConfirmationDialog` conectado em "Excluir avaliação"/"Excluir
+comentário" (disparavam direto antes); denúncia de comentário com
+validação de motivo vazio e feedback de sucesso; upload de capa de
+restaurante com loading inline (regressão vs. o padrão já usado para
+fotos de avaliação); seleção de imagem com tratamento de falha de
+plataforma; `ProfileAvatar` sem mais recriar a URL assinada a cada
+rebuild; `ErrorWidget.builder` customizado; `locale` pt_BR explícito
+(`flutter_localizations`, pacote do próprio SDK do Flutter). Ver
+`RC-04E_CLOSED_BETA.md` para a auditoria completa, o backlog detalhado
+(paginação nunca acionada em rankings/notificações, assimetria de
+denúncia entre avaliações e comentários, tradução de erros incompleta)
+e a recomendação final: **pronto para Beta Fechado, com ressalvas
+documentadas que não bloqueiam um grupo pequeno e controlado de
+testadores**. Suíte de unit/widget tests sem regressão (503/503 — 24
+testes novos).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

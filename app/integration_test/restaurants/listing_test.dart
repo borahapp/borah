@@ -81,14 +81,9 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: BorahApp()));
     await signInViaUi(tester, email: email, password: password);
 
-    await tester.tap(find.text('Ver restaurantes'));
-    await pumpUntil(
-      tester,
-      () => find.text('Restaurantes').evaluate().isNotEmpty,
-      timeoutMessage:
-          'A tela de Restaurantes não abriu a tempo (carregamento inicial).',
-    );
-
+    // RC-04E: a Home já abre na aba "Restaurantes" (HomeShellPage) por
+    // padrão - `signInViaUi` já aguarda a navegação até ela, sem
+    // necessidade de trocar de aba aqui.
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Buscar por nome'),
       restaurantName,

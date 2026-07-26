@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/audit_log_controller.dart';
@@ -35,7 +36,10 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
         appBar: const AppTopBar(title: 'Auditoria'),
         body: switch (status) {
           AuditLogInitial() || AuditLogLoading() => const LoadingScreen(),
-          AuditLogError(:final message) => Center(child: Text(message)),
+          AuditLogError(:final message) => ErrorState(
+            message: message,
+            onRetry: () => ref.read(auditLogControllerProvider.notifier).load(),
+          ),
           AuditLogEmpty() => const EmptyState(
             message: 'Nenhum registro de auditoria ainda.',
           ),

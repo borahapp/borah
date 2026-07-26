@@ -206,6 +206,104 @@ void main() {
       expect(find.widgetWithText(OutlinedButton, 'Editar'), findsNothing);
       expect(find.widgetWithText(TextButton, 'Excluir'), findsNothing);
     });
+
+    // RC-04E: excluir era imediato, sem nenhuma confirmação.
+    testWidgets('tocar em "Excluir" pede confirmação antes de excluir', (
+      tester,
+    ) async {
+      when(
+        () => repository.getById('rv-1'),
+      ).thenAnswer((_) async => _review(userId: 'user-1'));
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>[]);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => false);
+      when(() => repository.delete('rv-1')).thenAnswer((_) async {});
+
+      // RC-04E: sucesso navega de volta via `context.pop()` - precisa de
+      // uma pilha real (empilhada com `push`, não `initialLocation`) para
+      // ter para onde voltar, diferente do `_wrap()` padrão (usado nos
+      // demais testes deste arquivo), que trata a página como raiz.
+      final router = GoRouter(
+        initialLocation: '/list',
+        routes: [
+          GoRoute(
+            path: '/list',
+            builder: (context, state) => Scaffold(
+              body: Center(
+                child: TextButton(
+                  onPressed: () => context.push('/review'),
+                  child: const Text('Abrir avaliação'),
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/review',
+            builder: (_, _) => const ReviewDetailPage(reviewId: 'rv-1'),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            reviewRepositoryProvider.overrideWithValue(repository),
+            currentUserIdProvider.overrideWithValue('user-1'),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abrir avaliação'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Excluir'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      verifyNever(() => repository.delete(any()));
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(TextButton, 'Excluir'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      verify(() => repository.delete('rv-1')).called(1);
+      expect(find.text('Abrir avaliação'), findsOneWidget);
+    });
+
+    testWidgets('cancelar a confirmação não exclui a avaliação', (
+      tester,
+    ) async {
+      when(
+        () => repository.getById('rv-1'),
+      ).thenAnswer((_) async => _review(userId: 'user-1'));
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>[]);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(_wrap(repository, currentUserId: 'user-1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Excluir'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      verifyNever(() => repository.delete(any()));
+    });
   });
 
   group('imagens', () {

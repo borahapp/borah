@@ -7,6 +7,7 @@ import '../../../../design_system/components/feedback/app_animated_switcher.dart
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/rankings_controller.dart';
@@ -84,9 +85,11 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
                 RankingsInitial() || RankingsLoading() => const LoadingScreen(
                   key: ValueKey('loading'),
                 ),
-                RankingsError(:final message) => Center(
+                RankingsError(:final message) => ErrorState(
                   key: const ValueKey('error'),
-                  child: Text(message),
+                  message: message,
+                  onRetry: () =>
+                      ref.read(rankingsControllerProvider.notifier).load(),
                 ),
                 RankingsEmpty() => const EmptyState(
                   key: ValueKey('empty'),

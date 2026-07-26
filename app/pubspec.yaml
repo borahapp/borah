@@ -56,6 +56,12 @@ dependencies:
   posthog_flutter: ^5.33.0
   package_info_plus: ^9.0.1
 
+  # RC-04E - locale explícito (pt_BR) para as strings padrão do próprio
+  # Flutter (Material/Cupertino/Widgets). Pacote do SDK do Flutter, sem
+  # custo de manutenção externo (mesmo status de `flutter_test`).
+  flutter_localizations:
+    sdk: flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

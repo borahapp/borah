@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -48,9 +49,16 @@ class _NotificationPreferencesPageState
           NotificationPreferencesLoading() => const LoadingScreen(
             key: ValueKey('loading'),
           ),
-          NotificationPreferencesError(:final message) => Center(
+          NotificationPreferencesError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () {
+              final userId = ref.read(currentUserIdProvider);
+              if (userId == null) return;
+              ref
+                  .read(notificationPreferencesControllerProvider.notifier)
+                  .load(userId);
+            },
           ),
           NotificationPreferencesLoaded(:final inAppEnabled) => SwitchListTile(
             key: const ValueKey('loaded'),

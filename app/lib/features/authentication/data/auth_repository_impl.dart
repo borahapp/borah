@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthChangeEvent, AuthException;
 
+import '../../../core/errors/supabase_error_translator.dart';
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/auth_repository.dart';
 import 'auth_remote_datasource.dart';
@@ -35,17 +37,26 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> updatePassword(String newPassword) {
+    return _guard(() => _datasource.updatePassword(newPassword));
+  }
+
+  @override
   Future<void> resendVerificationEmail(String email) {
     return _guard(() => _datasource.resendVerificationEmail(email));
   }
 
   /// Traduz `AuthException` (supabase_flutter) para `AuthRepositoryException`,
   /// para que nenhuma camada acima de `data/` precise conhecer o Supabase.
+  /// Mensagem já traduzida para português (RC-04E) nos fluxos cobertos por
+  /// `SupabaseErrorTranslator`.
   Future<void> _guard(Future<void> Function() action) async {
     try {
       await action();
     } on AuthException catch (e) {
-      throw AuthRepositoryException(e.message);
+      throw AuthRepositoryException(
+        SupabaseErrorTranslator.translateAuthError(e),
+      );
     }
   }
 
@@ -57,12 +68,36 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Stream<AuthUserData?> get onAuthStateChange {
-    return _datasource.onAuthStateChange.map((event) {
-      final user = event.session?.user;
-      if (user == null) return null;
-      return (userId: user.id, email: user.email);
-    });
+  Stream<AuthSessionUpdate> get onAuthStateChange {
+    return _datasource.onAuthStateChange
+        .map<AuthSessionUpdate>((state) {
+          final user = state.session?.user;
+          final event = switch (state.event) {
+            AuthChangeEvent.passwordRecovery =>
+              AuthSessionEvent.passwordRecovery,
+            AuthChangeEvent.signedOut => AuthSessionEvent.signedOut,
+            _ =>
+              user == null
+                  ? AuthSessionEvent.signedOut
+                  : AuthSessionEvent.signedIn,
+          };
+          return (
+            event: event,
+            user: user == null ? null : (userId: user.id, email: user.email),
+          );
+        })
+        .handleError((Object error, StackTrace stackTrace) {
+          // RC-04E: link de recuperação inválido/expirado chega aqui como
+          // erro do stream (`GoTrueClient.notifyException`), não como
+          // dado - traduzido do mesmo jeito que qualquer outro erro de
+          // autenticação, para manter o domínio livre do tipo do Supabase.
+          if (error is AuthException) {
+            throw AuthRepositoryException(
+              SupabaseErrorTranslator.translateAuthError(error),
+            );
+          }
+          throw error;
+        });
   }
 }
 

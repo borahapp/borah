@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/inputs/app_search_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -77,8 +78,11 @@ class _AdminRestaurantsPageState extends ConsumerState<AdminRestaurantsPage> {
               child: switch (status) {
                 AdminRestaurantsInitial() ||
                 AdminRestaurantsLoading() => const LoadingScreen(),
-                AdminRestaurantsError(:final message) => Center(
-                  child: Text(message),
+                AdminRestaurantsError(:final message) => ErrorState(
+                  message: message,
+                  onRetry: () => ref
+                      .read(adminRestaurantsControllerProvider.notifier)
+                      .load(),
                 ),
                 AdminRestaurantsEmpty() => const EmptyState(
                   message: 'Nenhum restaurante encontrado.',
