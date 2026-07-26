@@ -7,6 +7,7 @@ import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
 import '../../../../design_system/components/inputs/app_search_field.dart';
@@ -94,9 +95,12 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
                 RestaurantsFiltering() => const LoadingScreen(
                   key: ValueKey('loading'),
                 ),
-                RestaurantsError(:final message) => Center(
+                RestaurantsError(:final message) => ErrorState(
                   key: const ValueKey('error'),
-                  child: Text(message),
+                  message: message,
+                  onRetry: () => ref
+                      .read(restaurantsControllerProvider.notifier)
+                      .loadInitial(),
                 ),
                 RestaurantsEmpty() => const EmptyState(
                   key: ValueKey('empty'),

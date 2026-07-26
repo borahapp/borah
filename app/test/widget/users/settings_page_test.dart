@@ -54,7 +54,7 @@ void main() {
     repository = MockAuthRepository();
     when(
       () => repository.onAuthStateChange,
-    ).thenAnswer((_) => const Stream<AuthUserData?>.empty());
+    ).thenAnswer((_) => const Stream<AuthSessionUpdate>.empty());
   });
 
   testWidgets('tocar em "Sair" abre diálogo de confirmação', (tester) async {
@@ -186,7 +186,10 @@ void main() {
       authenticatedRepository = MockAuthRepository();
       profileRepository = MockUserProfileRepository();
       when(() => authenticatedRepository.onAuthStateChange).thenAnswer(
-        (_) => Stream.value((userId: 'user-1', email: 'ana@borah.com')),
+        (_) => Stream.value((
+          event: AuthSessionEvent.signedIn,
+          user: (userId: 'user-1', email: 'ana@borah.com'),
+        )),
       );
       when(() => profileRepository.getProfile('user-1')).thenAnswer(
         (_) async => UserProfile(

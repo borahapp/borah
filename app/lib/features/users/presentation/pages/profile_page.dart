@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
@@ -55,9 +56,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         child: switch (status) {
           ProfileInitial() ||
           ProfileLoading() => const LoadingScreen(key: ValueKey('loading')),
-          ProfileError(:final message) => Center(
+          ProfileError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () {
+              final userId = ref.read(currentUserIdProvider);
+              if (userId == null) return;
+              ref
+                  .read(userProfileControllerProvider.notifier)
+                  .loadProfile(userId);
+            },
           ),
           ProfileLoaded(:final profile) ||
           ProfileUpdating(:final profile) ||
@@ -123,6 +131,32 @@ class _ProfileView extends StatelessWidget {
           AppOutlinedButton(
             label: 'Editar perfil',
             onPressed: () => context.push('/profile/edit'),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          // RC-04E: acesso rápido a telas já existentes que, antes desta
+          // rodada, só eram alcançáveis pelo antigo placeholder de
+          // desenvolvedor em `/home` - mesmo padrão de `ListTile` já usado
+          // em `SettingsPage`.
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.emoji_events_outlined),
+                  title: const Text('Gamificação'),
+                  onTap: () => context.push('/gamification'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.leaderboard_outlined),
+                  title: const Text('Rankings'),
+                  onTap: () => context.push('/rankings'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: const Text('Notificações'),
+                  onTap: () => context.push('/notifications'),
+                ),
+              ],
+            ),
           ),
         ],
       ),

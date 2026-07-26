@@ -5,9 +5,11 @@ import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/dialogs/app_dialog.dart';
+import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -62,18 +64,41 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
 
+    // RC-04E: o diálogo agora exige um motivo preenchido (antes fechava
+    // silenciosamente sem enviar nada); a validação acontece dentro do
+    // próprio `_ReportDialog`, que só retorna um motivo não-vazio.
     final reason = await showDialog<String>(
       context: context,
       builder: (context) => _ReportDialog(),
     );
-    if (reason == null || reason.isEmpty) return;
+    if (reason == null) return;
 
     await ref
         .read(commentsControllerProvider.notifier)
         .report(commentId, reportedBy: userId, reason: reason);
+
+    // RC-04E: antes não havia nenhum feedback de que a denúncia foi
+    // enviada - o usuário não tinha como saber se funcionou.
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Denúncia enviada.')));
   }
 
-  void _delete(String commentId) {
+  Future<void> _delete(String commentId) async {
+    // RC-04E: exclusão de comentário é permanente e, até esta rodada,
+    // disparava direto sem nenhuma confirmação (achado do levantamento
+    // do UI-02).
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Excluir comentário',
+      message:
+          'Esta ação é permanente e não pode ser desfeita. Deseja '
+          'realmente excluir este comentário?',
+      confirmLabel: 'Excluir',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
     ref.read(commentsControllerProvider.notifier).delete(commentId);
   }
 
@@ -100,9 +125,12 @@ class _CommentsPageState extends ConsumerState<CommentsPage> {
                 CommentsInitial() || CommentsLoading() => const LoadingScreen(
                   key: ValueKey('loading'),
                 ),
-                CommentsError(:final message) => Center(
+                CommentsError(:final message) => ErrorState(
                   key: const ValueKey('error'),
-                  child: Text(message),
+                  message: message,
+                  onRetry: () => ref
+                      .read(commentsControllerProvider.notifier)
+                      .loadForReview(widget.reviewId),
                 ),
                 CommentsEmpty() => const EmptyState(
                   key: ValueKey('empty'),
@@ -177,6 +205,7 @@ class _ReportDialog extends StatefulWidget {
 }
 
 class _ReportDialogState extends State<_ReportDialog> {
+  final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
 
   @override
@@ -185,21 +214,31 @@ class _ReportDialogState extends State<_ReportDialog> {
     super.dispose();
   }
 
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop(_reasonController.text.trim());
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppDialog(
       title: 'Denunciar comentário',
-      content: AppTextField(controller: _reasonController, label: 'Motivo'),
+      content: Form(
+        key: _formKey,
+        child: AppTextField(
+          controller: _reasonController,
+          label: 'Motivo',
+          validator: (value) => value == null || value.trim().isEmpty
+              ? 'Informe o motivo da denúncia.'
+              : null,
+        ),
+      ),
       actions: [
         AppTextButton(
           label: 'Cancelar',
           onPressed: () => Navigator.of(context).pop(),
         ),
-        AppPrimaryButton(
-          label: 'Denunciar',
-          onPressed: () =>
-              Navigator.of(context).pop(_reasonController.text.trim()),
-        ),
+        AppPrimaryButton(label: 'Denunciar', onPressed: _submit),
       ],
     );
   }

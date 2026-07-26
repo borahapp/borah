@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -26,11 +27,13 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) return;
-      ref.read(feedControllerProvider.notifier).loadForUser(userId);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  void _load() {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    ref.read(feedControllerProvider.notifier).loadForUser(userId);
   }
 
   Future<void> _refresh() {
@@ -47,9 +50,10 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         child: switch (status) {
           FeedInitial() ||
           FeedLoading() => const LoadingScreen(key: ValueKey('loading')),
-          FeedError(:final message) => Center(
+          FeedError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: _load,
           ),
           FeedEmpty() => const EmptyState(
             key: ValueKey('empty'),

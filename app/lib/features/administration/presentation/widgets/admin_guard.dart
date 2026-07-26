@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../application/current_user_role_provider.dart';
 
@@ -18,8 +19,11 @@ class AdminGuard extends ConsumerWidget {
 
     return roleAsync.when(
       loading: () => const Scaffold(body: LoadingScreen()),
-      error: (_, _) => const Scaffold(
-        body: Center(child: Text('Não foi possível verificar permissões.')),
+      error: (_, _) => Scaffold(
+        body: ErrorState(
+          message: 'Não foi possível verificar permissões.',
+          onRetry: () => ref.invalidate(currentUserRoleProvider),
+        ),
       ),
       data: (role) {
         if (role == null) {

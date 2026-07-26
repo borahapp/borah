@@ -64,13 +64,16 @@ void main() {
     // GoRouter (Authenticated + rota de auth -> /home).
     await pumpUntil(
       tester,
-      () => find.text('Ver perfil').evaluate().isNotEmpty,
+      () => find
+          .widgetWithText(NavigationDestination, 'Restaurantes')
+          .evaluate()
+          .isNotEmpty,
       maxAttempts: 100,
       timeoutMessage: 'O login não navegou para a Home a tempo.',
     );
 
     expect(
-      find.text('Ver perfil'),
+      find.widgetWithText(NavigationDestination, 'Restaurantes'),
       findsOneWidget,
       reason: 'Login bem-sucedido deveria navegar para a Home.',
     );

@@ -42,3 +42,12 @@ final class PasswordResetSent extends AuthStatus {
 
   final String email;
 }
+
+/// Sessão de recuperação de senha ativa (RC-04E) - estabelecida
+/// automaticamente pelo `supabase_flutter` ao abrir o deep link enviado
+/// por e-mail. Distinto de `Authenticated` de propósito: o router
+/// redireciona para a tela "Definir nova senha" enquanto o status for
+/// este, em vez de tratar como um login normal.
+final class PasswordRecoveryInProgress extends AuthStatus {
+  const PasswordRecoveryInProgress();
+}

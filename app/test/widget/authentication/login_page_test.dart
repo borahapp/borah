@@ -40,7 +40,7 @@ void main() {
     repository = MockAuthRepository();
     when(
       () => repository.onAuthStateChange,
-    ).thenAnswer((_) => const Stream<AuthUserData?>.empty());
+    ).thenAnswer((_) => const Stream<AuthSessionUpdate>.empty());
   });
 
   testWidgets('renderização inicial mostra título, campos e ações', (

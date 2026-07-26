@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/admin_dashboard_controller.dart';
@@ -37,7 +38,11 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
         appBar: const AppTopBar(title: 'Administração'),
         body: switch (status) {
           DashboardInitial() || DashboardLoading() => const LoadingScreen(),
-          DashboardError(:final message) => Center(child: Text(message)),
+          DashboardError(:final message) => ErrorState(
+            message: message,
+            onRetry: () =>
+                ref.read(adminDashboardControllerProvider.notifier).load(),
+          ),
           DashboardLoaded(:final kpis) => Padding(
             padding: const EdgeInsets.all(24),
             child: Column(

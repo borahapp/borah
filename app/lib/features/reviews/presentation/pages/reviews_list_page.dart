@@ -6,6 +6,7 @@ import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/reviews_controller.dart';
@@ -53,9 +54,12 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
         child: switch (status) {
           ReviewsInitial() ||
           ReviewsLoading() => const LoadingScreen(key: ValueKey('loading')),
-          ReviewsError(:final message) => Center(
+          ReviewsError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () => ref
+                .read(reviewsControllerProvider.notifier)
+                .loadForRestaurant(widget.restaurantId),
           ),
           ReviewsEmpty() => const EmptyState(
             key: ValueKey('empty'),

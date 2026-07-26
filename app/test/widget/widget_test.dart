@@ -16,7 +16,7 @@ void main() {
     when(() => repository.currentUser).thenReturn(null);
     when(
       () => repository.onAuthStateChange,
-    ).thenAnswer((_) => const Stream<AuthUserData?>.empty());
+    ).thenAnswer((_) => const Stream<AuthSessionUpdate>.empty());
 
     await tester.pumpWidget(
       ProviderScope(
@@ -37,7 +37,7 @@ void main() {
       when(() => repository.currentUser).thenReturn(null);
       when(
         () => repository.onAuthStateChange,
-      ).thenAnswer((_) => const Stream<AuthUserData?>.empty());
+      ).thenAnswer((_) => const Stream<AuthSessionUpdate>.empty());
 
       final container = ProviderContainer(
         overrides: [authRepositoryProvider.overrideWithValue(repository)],

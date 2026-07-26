@@ -7,6 +7,7 @@ import '../../../../core/services/image_picker_service.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
@@ -72,6 +73,14 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      // RC-04E: falha de plataforma (ex.: permissão de galeria negada
+      // pelo SO) antes não tinha nenhum tratamento - o botão parecia
+      // travado, sem feedback nenhum.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
+      );
     }
   }
 
@@ -83,7 +92,20 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
         .toggleLike(widget.reviewId, userId);
   }
 
-  void _delete() {
+  Future<void> _delete() async {
+    // RC-04E: exclusão de avaliação é permanente e, até esta rodada,
+    // disparava direto sem nenhuma confirmação (achado do levantamento
+    // do UI-02).
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Excluir avaliação',
+      message:
+          'Esta ação é permanente e não pode ser desfeita. Deseja '
+          'realmente excluir esta avaliação?',
+      confirmLabel: 'Excluir',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
     ref.read(reviewDetailControllerProvider.notifier).delete(widget.reviewId);
   }
 

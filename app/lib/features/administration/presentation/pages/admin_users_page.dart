@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/inputs/app_search_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -64,7 +65,11 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
               child: switch (status) {
                 AdminUsersInitial() ||
                 AdminUsersLoading() => const LoadingScreen(),
-                AdminUsersError(:final message) => Center(child: Text(message)),
+                AdminUsersError(:final message) => ErrorState(
+                  message: message,
+                  onRetry: () =>
+                      ref.read(adminUsersControllerProvider.notifier).load(),
+                ),
                 AdminUsersEmpty() => const EmptyState(
                   message: 'Nenhum usuário encontrado.',
                 ),

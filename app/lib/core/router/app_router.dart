@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../design_system/animations/app_motion.dart';
-import '../../design_system/components/buttons/app_text_button.dart';
 import '../../design_system/components/feedback/error_state.dart';
 import '../observability/crash_reporting.dart';
 import '../../features/authentication/application/auth_controller.dart';
 import '../../features/authentication/presentation/pages/email_verification_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
+import '../../features/authentication/presentation/pages/new_password_page.dart';
 import '../../features/authentication/presentation/pages/password_reset_page.dart';
 import '../../features/authentication/presentation/pages/signup_page.dart';
 import '../../features/authentication/presentation/pages/splash_page.dart';
@@ -43,6 +43,7 @@ import '../../features/users/presentation/pages/change_avatar_page.dart';
 import '../../features/users/presentation/pages/edit_profile_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
 import '../../features/users/presentation/pages/settings_page.dart';
+import 'home_shell_page.dart';
 
 const _authRoutes = {
   '/login',
@@ -118,6 +119,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final status = ref.read(authControllerProvider);
       final isAuthRoute = _authRoutes.contains(location);
 
+      // RC-04E: uma sessão de recuperação de senha nunca deve navegar
+      // para nenhum outro lugar além de "Definir nova senha" - nem para
+      // rotas protegidas (ainda não é bem um login), nem para
+      // login/cadastro (o `redirect` abaixo trataria isso como
+      // `Authenticated`, o que não é o caso).
+      if (status is PasswordRecoveryInProgress) {
+        return location == '/password-recovery' ? null : '/password-recovery';
+      }
+      if (location == '/password-recovery') {
+        return status is Authenticated ? '/home' : '/login';
+      }
+
       if (status is Authenticated && isAuthRoute) return '/home';
       if (status is! Authenticated && _isProtectedRoute(location)) {
         return '/login';
@@ -151,12 +164,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PasswordResetPage(),
       ),
       GoRoute(
+        path: '/password-recovery',
+        builder: (context, state) => const NewPasswordPage(),
+      ),
+      GoRoute(
         path: '/email-verification',
         builder: (context, state) => const EmailVerificationPage(),
       ),
+      // RC-04E: `/home` passa a ser o `HomeShellPage`, conectando a
+      // navegação inferior (já existente, nunca usada até esta rodada) às
+      // 4 telas centrais (Restaurantes/Feed/Favoritos/Perfil) - substitui
+      // o antigo `_BootstrapPlaceholderPage` (placeholder de desenvolvedor)
+      // sem depender de o usuário já seguir alguém (a aba inicial é
+      // Restaurantes, que carrega conteúdo desde o primeiro acesso).
       GoRoute(
         path: '/home',
-        builder: (context, state) => const _BootstrapPlaceholderPage(),
+        builder: (context, state) => const HomeShellPage(),
       ),
       GoRoute(
         path: '/profile',
@@ -289,55 +312,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-/// Placeholder até a implementação da Home real (fora do escopo do DV-01/DV-02).
-class _BootstrapPlaceholderPage extends StatelessWidget {
-  const _BootstrapPlaceholderPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('BORAH'),
-            const SizedBox(height: 16),
-            AppTextButton(
-              label: 'Ver perfil',
-              onPressed: () => GoRouter.of(context).push('/profile'),
-            ),
-            AppTextButton(
-              label: 'Ver restaurantes',
-              onPressed: () => GoRouter.of(context).push('/restaurants'),
-            ),
-            AppTextButton(
-              label: 'Ver ranking',
-              onPressed: () => GoRouter.of(context).push('/rankings'),
-            ),
-            AppTextButton(
-              label: 'Ver favoritos',
-              onPressed: () => GoRouter.of(context).push('/favorites'),
-            ),
-            AppTextButton(
-              label: 'Ver feed',
-              onPressed: () => GoRouter.of(context).push('/feed'),
-            ),
-            AppTextButton(
-              label: 'Painel administrativo',
-              onPressed: () => GoRouter.of(context).push('/admin'),
-            ),
-            AppTextButton(
-              label: 'Ver notificações',
-              onPressed: () => GoRouter.of(context).push('/notifications'),
-            ),
-            AppTextButton(
-              label: 'Gamificação',
-              onPressed: () => GoRouter.of(context).push('/gamification'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

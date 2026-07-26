@@ -16,7 +16,7 @@ void main() {
     repository = MockAuthRepository();
     when(
       () => repository.onAuthStateChange,
-    ).thenAnswer((_) => const Stream<AuthUserData?>.empty());
+    ).thenAnswer((_) => const Stream<AuthSessionUpdate>.empty());
     container = ProviderContainer(
       overrides: [authRepositoryProvider.overrideWithValue(repository)],
     );
@@ -139,6 +139,89 @@ void main() {
           .signUp(name: 'Ana', email: 'ana@borah.com', password: '123456');
 
       expect(container.read(authControllerProvider), isA<AuthError>());
+    });
+  });
+
+  // RC-04E: eventos do stream de sessão além de signedIn/signedOut.
+  group('onAuthStateChange - eventos do stream', () {
+    test('evento passwordRecovery -> PasswordRecoveryInProgress', () async {
+      when(() => repository.onAuthStateChange).thenAnswer(
+        (_) => Stream.value((
+          event: AuthSessionEvent.passwordRecovery,
+          user: (userId: 'user-1', email: 'ana@borah.com'),
+        )),
+      );
+
+      // O provider é lazy - precisa ser lido para o listener em build()
+      // ser registrado e o valor do stream ser entregue (mesmo padrão de
+      // "aquecimento" já usado em settings_page_test.dart, RC-04C).
+      container.read(authControllerProvider);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        container.read(authControllerProvider),
+        isA<PasswordRecoveryInProgress>(),
+      );
+    });
+
+    test(
+      'erro no stream (link de recuperação inválido/expirado) -> AuthError',
+      () async {
+        when(() => repository.onAuthStateChange).thenAnswer(
+          (_) => Stream<AuthSessionUpdate>.error(
+            const AuthRepositoryException(
+              'Este link expirou. Solicite um novo.',
+            ),
+          ),
+        );
+
+        container.read(authControllerProvider);
+        await Future<void>.delayed(Duration.zero);
+
+        final status = container.read(authControllerProvider);
+        expect(status, isA<AuthError>());
+        expect(
+          (status as AuthError).message,
+          'Este link expirou. Solicite um novo.',
+        );
+      },
+    );
+  });
+
+  group('updatePassword', () {
+    test('sucesso -> Authenticated', () async {
+      when(() => repository.updatePassword(any())).thenAnswer((_) async {});
+      when(
+        () => repository.currentUser,
+      ).thenReturn((userId: 'user-1', email: 'ana@borah.com'));
+
+      await container
+          .read(authControllerProvider.notifier)
+          .updatePassword('novaSenha123');
+
+      expect(container.read(authControllerProvider), isA<Authenticated>());
+    });
+
+    test('falha -> volta para PasswordRecoveryInProgress e guarda a mensagem '
+        'de erro para consumo único', () async {
+      when(() => repository.updatePassword(any())).thenThrow(
+        const AuthRepositoryException(
+          'A nova senha deve ser diferente da senha atual.',
+        ),
+      );
+
+      final notifier = container.read(authControllerProvider.notifier);
+      await notifier.updatePassword('mesmaSenha');
+
+      expect(
+        container.read(authControllerProvider),
+        isA<PasswordRecoveryInProgress>(),
+      );
+      expect(
+        notifier.consumePasswordRecoveryError(),
+        'A nova senha deve ser diferente da senha atual.',
+      );
+      expect(notifier.consumePasswordRecoveryError(), isNull);
     });
   });
 

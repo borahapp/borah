@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -47,7 +48,11 @@ class _ModerationPageState extends ConsumerState<ModerationPage> {
         appBar: const AppTopBar(title: 'Denúncias'),
         body: switch (status) {
           ModerationInitial() || ModerationLoading() => const LoadingScreen(),
-          ModerationError(:final message) => Center(child: Text(message)),
+          ModerationError(:final message) => ErrorState(
+            message: message,
+            onRetry: () =>
+                ref.read(moderationControllerProvider.notifier).load(),
+          ),
           ModerationEmpty() => const EmptyState(
             message: 'Nenhuma denúncia pendente.',
           ),

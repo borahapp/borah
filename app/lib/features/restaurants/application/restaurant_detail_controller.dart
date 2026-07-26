@@ -66,7 +66,18 @@ class RestaurantDetailController extends Notifier<RestaurantDetailStatus> {
     required Uint8List bytes,
     required String fileExtension,
   }) async {
-    state = const RestaurantDetailSaving();
+    // RC-04E: mantém os dados já carregados visíveis durante o upload,
+    // em vez de substituir a tela inteira por um spinner (regressão vs.
+    // o padrão já usado para fotos de avaliação, RC-02).
+    final previous = state;
+    state = switch (previous) {
+      RestaurantDetailLoaded(:final restaurant) ||
+      RestaurantDetailSaveSuccess(:final restaurant) ||
+      RestaurantDetailCoverUploading(
+        :final restaurant,
+      ) => RestaurantDetailCoverUploading(restaurant),
+      _ => const RestaurantDetailSaving(),
+    };
     try {
       final restaurant = await _repository.updateCoverImage(
         restaurantId,

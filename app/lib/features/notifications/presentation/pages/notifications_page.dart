@@ -6,6 +6,7 @@ import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -60,9 +61,16 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         child: switch (status) {
           NotificationsInitial() || NotificationsLoading() =>
             const LoadingScreen(key: ValueKey('loading')),
-          NotificationsError(:final message) => Center(
+          NotificationsError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () {
+              final userId = ref.read(currentUserIdProvider);
+              if (userId == null) return;
+              ref
+                  .read(notificationsControllerProvider.notifier)
+                  .loadForUser(userId);
+            },
           ),
           NotificationsEmpty() => const EmptyState(
             key: ValueKey('empty'),

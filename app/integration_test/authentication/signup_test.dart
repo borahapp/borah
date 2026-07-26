@@ -107,7 +107,13 @@ void main() {
     // pelo mesmo motivo documentado em `app_smoke_test.dart`.
     bool reachedEmailVerification() =>
         find.text('Voltar para o login').evaluate().isNotEmpty;
-    bool reachedHome() => find.text('Ver perfil').evaluate().isNotEmpty;
+    // RC-04E: `/home` (HomeShellPage) abre na aba "Restaurantes" por
+    // padrão - `NavigationDestination` evita ambiguidade com o título
+    // "Restaurantes" da própria `AppTopBar` da tela.
+    bool reachedHome() => find
+        .widgetWithText(NavigationDestination, 'Restaurantes')
+        .evaluate()
+        .isNotEmpty;
 
     await pumpUntil(
       tester,
@@ -134,7 +140,10 @@ void main() {
     } else if (reachedHome()) {
       // Confirm email = OFF (cenário atual do borah-qa): sessão já
       // criada, navegação direta para a Home.
-      expect(find.text('Ver perfil'), findsOneWidget);
+      expect(
+        find.widgetWithText(NavigationDestination, 'Restaurantes'),
+        findsOneWidget,
+      );
       expect(
         Supabase.instance.client.auth.currentSession,
         isNotNull,

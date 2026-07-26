@@ -17,11 +17,13 @@ class AppBottomNavigationItem {
 /// 3. Cores/indicador vêm de `Theme.of(context)`.
 ///
 /// Achado real do levantamento do UI-02: não existe nenhum shell de
-/// navegação inferior hoje — `/home` é um placeholder explícito
-/// (`_BootstrapPlaceholderPage` em `core/router/app_router.dart`) com
-/// uma lista de `TextButton`s de navegação ad hoc. Este componente
-/// fica pronto para quando a Home real for construída; nenhuma tela é
-/// conectada a ele nesta rodada.
+/// navegação inferior hoje. `/home` (RC-04E) hoje reaproveita a tela de
+/// Pesquisa de Restaurantes já pronta como ecrã inicial pós-login,
+/// substituindo o antigo placeholder de desenvolvedor — mas isso não
+/// é o mesmo que um shell de navegação persistente. Este componente
+/// fica pronto para quando um shell real (com abas para Home/Feed/
+/// Favoritos/Perfil, por exemplo) for construído; nenhuma tela é
+/// conectada a ele ainda.
 class AppBottomNavigation extends StatelessWidget {
   const AppBottomNavigation({
     super.key,

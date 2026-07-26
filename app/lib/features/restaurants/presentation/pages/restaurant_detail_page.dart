@@ -8,6 +8,7 @@ import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
@@ -78,6 +79,14 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      // RC-04E: falha de plataforma (ex.: permissão de galeria negada
+      // pelo SO) antes não tinha nenhum tratamento - o botão parecia
+      // travado, sem feedback nenhum.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
+      );
     }
   }
 
@@ -112,12 +121,16 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
           RestaurantDetailSaving() => const LoadingScreen(
             key: ValueKey('loading'),
           ),
-          RestaurantDetailError(:final message) => Center(
+          RestaurantDetailError(:final message) => ErrorState(
             key: const ValueKey('error'),
-            child: Text(message),
+            message: message,
+            onRetry: () => ref
+                .read(restaurantDetailControllerProvider.notifier)
+                .load(widget.restaurantId),
           ),
           RestaurantDetailLoaded(:final restaurant) ||
-          RestaurantDetailSaveSuccess(:final restaurant) => _DetailView(
+          RestaurantDetailSaveSuccess(:final restaurant) ||
+          RestaurantDetailCoverUploading(:final restaurant) => _DetailView(
             key: const ValueKey('loaded'),
             name: restaurant.name,
             category: restaurant.category,
@@ -127,6 +140,7 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
             state: restaurant.state,
             averageRating: restaurant.averageRating,
             totalReviews: restaurant.totalReviews,
+            isChangingCover: status is RestaurantDetailCoverUploading,
             onChangeCoverImage: _changeCoverImage,
             onViewReviews: () =>
                 context.push('/restaurants/${widget.restaurantId}/reviews'),
@@ -148,6 +162,7 @@ class _DetailView extends StatelessWidget {
     required this.state,
     required this.averageRating,
     required this.totalReviews,
+    required this.isChangingCover,
     required this.onChangeCoverImage,
     required this.onViewReviews,
   });
@@ -160,6 +175,7 @@ class _DetailView extends StatelessWidget {
   final String? state;
   final double? averageRating;
   final int totalReviews;
+  final bool isChangingCover;
   final VoidCallback onChangeCoverImage;
   final VoidCallback onViewReviews;
 
@@ -207,6 +223,7 @@ class _DetailView extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           AppOutlinedButton(
             label: 'Alterar foto de capa',
+            isLoading: isChangingCover,
             onPressed: onChangeCoverImage,
           ),
           const SizedBox(height: AppSpacing.sm),

@@ -47,6 +47,14 @@ class _ChangeAvatarPageState extends ConsumerState<ChangeAvatarPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      // RC-04E: falha de plataforma (ex.: permissão de galeria negada
+      // pelo SO) antes não tinha nenhum tratamento - o botão parecia
+      // travado, sem feedback nenhum.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
+      );
     }
   }
 

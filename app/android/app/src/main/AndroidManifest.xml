@@ -29,6 +29,19 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- RC-04E: deep link de callback da recuperação de senha
+                 (borah://password-recovery). O supabase_flutter já observa
+                 esse esquema automaticamente e troca o link por uma sessão -
+                 nenhum código adicional é necessário além deste intent-filter.
+                 Requer que o mesmo esquema esteja cadastrado em
+                 Authentication → URL Configuration → Redirect URLs no
+                 Supabase Dashboard (ver RC-04E_CLOSED_BETA.md). -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="borah" android:host="password-recovery"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

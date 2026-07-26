@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/cards/ranking_card.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
@@ -64,7 +65,10 @@ class _RankingUsersPageState extends ConsumerState<RankingUsersPage> {
             child: switch (status) {
               RankingUsersInitial() ||
               RankingUsersLoading() => const LoadingScreen(),
-              RankingUsersError(:final message) => Center(child: Text(message)),
+              RankingUsersError(:final message) => ErrorState(
+                message: message,
+                onRetry: _load,
+              ),
               RankingUsersEmpty() => const EmptyState(
                 message: 'Nenhum resultado ainda.',
               ),

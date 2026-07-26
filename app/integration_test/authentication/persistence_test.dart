@@ -66,7 +66,10 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
     await pumpUntil(
       tester,
-      () => find.text('Ver perfil').evaluate().isNotEmpty,
+      () => find
+          .widgetWithText(NavigationDestination, 'Restaurantes')
+          .evaluate()
+          .isNotEmpty,
       maxAttempts: 100,
       timeoutMessage:
           'O login (pré-condição do teste) não navegou para a Home a tempo.',
@@ -84,7 +87,10 @@ void main() {
     await pumpUntil(
       tester,
       () =>
-          find.text('Ver perfil').evaluate().isNotEmpty ||
+          find
+              .widgetWithText(NavigationDestination, 'Restaurantes')
+              .evaluate()
+              .isNotEmpty ||
           find.text('Entrar').evaluate().isNotEmpty,
       maxAttempts: 100,
       timeoutMessage:
@@ -93,7 +99,7 @@ void main() {
     );
 
     expect(
-      find.text('Ver perfil'),
+      find.widgetWithText(NavigationDestination, 'Restaurantes'),
       findsOneWidget,
       reason:
           'A Splash deveria ter restaurado a sessão automaticamente e '

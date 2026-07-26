@@ -23,28 +23,28 @@ Future<void> signInViaUi(
   await tester.enterText(find.widgetWithText(TextFormField, 'Senha'), password);
   await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
 
+  // RC-04E: `/home` passou a ser o `HomeShellPage` (navegação inferior
+  // com a aba "Restaurantes" selecionada por padrão) - `NavigationDestination`
+  // identifica a aba sem ambiguidade com o título "Restaurantes" da
+  // própria `AppTopBar` da tela (ambos usariam `find.text` senão).
   await pumpUntil(
     tester,
-    () => find.text('Ver perfil').evaluate().isNotEmpty,
+    () => find
+        .widgetWithText(NavigationDestination, 'Restaurantes')
+        .evaluate()
+        .isNotEmpty,
     maxAttempts: 100,
     timeoutMessage: 'O login não navegou para a Home a tempo.',
   );
 }
 
-/// A partir da Home, busca o restaurante pelo nome (distintivo o
-/// suficiente para não colidir com outros dados do ambiente QA) e abre
-/// a tela de Detalhes.
+/// A partir da Home (aba "Restaurantes", selecionada por padrão), busca
+/// o restaurante pelo nome (distintivo o suficiente para não colidir com
+/// outros dados do ambiente QA) e abre a tela de Detalhes.
 Future<void> openRestaurantByName(
   WidgetTester tester,
   String restaurantName,
 ) async {
-  await tester.tap(find.text('Ver restaurantes'));
-  await pumpUntil(
-    tester,
-    () => find.text('Restaurantes').evaluate().isNotEmpty,
-    timeoutMessage: 'A tela de Restaurantes não abriu a tempo.',
-  );
-
   await tester.enterText(
     find.widgetWithText(TextFormField, 'Buscar por nome'),
     restaurantName,
@@ -77,34 +77,29 @@ Future<void> openRestaurantByName(
   );
 }
 
-/// A partir da Home, abre a tela de Favoritos (QA-03, Rodada D).
+/// A partir da Home, troca para a aba "Favoritos" do `HomeShellPage`
+/// (RC-04E). `NavigationDestination` evita ambiguidade com o título
+/// "Favoritos" da própria `AppTopBar` da tela (`IndexedStack` mantém as
+/// duas abas montadas - só a selecionada fica onstage).
 Future<void> openFavorites(WidgetTester tester) async {
-  await tester.tap(find.text('Ver favoritos'));
-  await pumpUntil(
-    tester,
-    () => find.text('Favoritos').evaluate().isNotEmpty,
-    timeoutMessage: 'A tela de Favoritos não abriu a tempo.',
-  );
+  await tester.tap(find.widgetWithText(NavigationDestination, 'Favoritos'));
+  await tester.pumpAndSettle();
 }
 
-/// A partir da Home, abre a tela de Feed (QA-03, Rodada D).
+/// A partir da Home, troca para a aba "Feed" do `HomeShellPage` (RC-04E).
 Future<void> openFeed(WidgetTester tester) async {
-  await tester.tap(find.text('Ver feed'));
-  await pumpUntil(
-    tester,
-    () => find.text('Feed').evaluate().isNotEmpty,
-    timeoutMessage: 'A tela de Feed não abriu a tempo.',
-  );
+  await tester.tap(find.widgetWithText(NavigationDestination, 'Feed'));
+  await tester.pumpAndSettle();
 }
 
-/// A partir da Home, abre a tela de Perfil (QA-03, Rodada E). Espera
-/// pelo botão "Editar perfil" (só aparece em `ProfileLoaded`/
-/// `ProfileUpdating`/`ProfileUpdateSuccess`) em vez do ícone de
-/// configurações, que fica no `AppBar` de `ProfilePage` fora do
+/// A partir da Home, troca para a aba "Perfil" do `HomeShellPage`
+/// (RC-04E). Espera pelo botão "Editar perfil" (só aparece em
+/// `ProfileLoaded`/`ProfileUpdating`/`ProfileUpdateSuccess`) em vez do
+/// ícone de configurações, que fica no `AppBar` de `ProfilePage` fora do
 /// `switch` de estado - ele já aparece durante `ProfileLoading`, antes
 /// dos dados do perfil chegarem (achado real durante a Rodada E).
 Future<void> openProfile(WidgetTester tester) async {
-  await tester.tap(find.text('Ver perfil'));
+  await tester.tap(find.widgetWithText(NavigationDestination, 'Perfil'));
   await pumpUntil(
     tester,
     () => find.text('Editar perfil').evaluate().isNotEmpty,
