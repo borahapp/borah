@@ -565,6 +565,29 @@ já registrada desde a RC-04E) — cada caso com a razão documentada em
 ("Finalizar a identidade visual") do roadmap operacional pré-Beta está
 concluída. Suíte de unit/widget tests sem regressão (503/503).
 
+**BETA-03 (Configuração do Ambiente de Produção e Preparação das
+Lojas) concluída em 2026-07-26** — auditoria completa (Android/iOS
+release, assinatura, `DEVELOPMENT_TEAM`, Google Play, TestFlight,
+redirect URLs, Supabase de Produção, variáveis de ambiente, CI/CD,
+bundle IDs, keystore, certificados) seguida de gap analysis e
+implementação restrita ao que não depende de contas externas nem de
+segredos reais: `release.yml` passou a decodificar a keystore Android
+condicionalmente (secret ausente → mesmo comportamento de antes,
+assinatura de debug), injetar `--dart-define` de Produção nas builds
+Android (vazio até os secrets existirem, sem regressão) e ganhou um
+novo job `build_release_ios` (`macos-latest`, `--no-codesign`) como
+portão de qualidade equivalente ao Android, sem gerar IPA assinado.
+`CI_CD_SECRETS.md` documentado com os novos secrets de Produção e o
+Environment `production` recomendado. Achado crítico registrado sem
+tentar contornar: **nenhuma Política de Privacidade ou Termos de Uso
+existe** — bloqueador direto de submissão nas duas lojas, decisão de
+conteúdo jurídico do proprietário, não implementado nesta rodada.
+Checklist operacional completo entregue em
+`BETA-03_PRODUCTION_STORE_PREPARATION.md`, incluindo inventário de
+dados coletados (Data Safety/App Privacy) já pronto para preenchimento
+nos consoles. Suíte de unit/widget tests sem regressão (503/503) — só
+workflows/documentação alterados, nenhum código de app.
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
