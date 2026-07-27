@@ -247,6 +247,27 @@ void main() {
       expect(event.name, 'notification_opened');
       expect(event.properties['notification_type'], 'new_follower');
     });
+
+    test('trackAccountDeleted', () async {
+      await AppAnalytics.trackAccountDeleted();
+      expect(service.trackedEvents.single.name, 'account_deleted');
+    });
+
+    test('trackPhotoUploaded para avatar, sucesso', () async {
+      await AppAnalytics.trackPhotoUploaded(type: 'avatar', success: true);
+      final event = service.trackedEvents.single;
+      expect(event.name, 'photo_uploaded');
+      expect(event.properties['type'], 'avatar');
+      expect(event.properties['success'], true);
+    });
+
+    test('trackPhotoUploaded para review, falha', () async {
+      await AppAnalytics.trackPhotoUploaded(type: 'review', success: false);
+      final event = service.trackedEvents.single;
+      expect(event.name, 'photo_uploaded');
+      expect(event.properties['type'], 'review');
+      expect(event.properties['success'], false);
+    });
   });
 
   group('sanitização (RC-03A/RC-03C)', () {

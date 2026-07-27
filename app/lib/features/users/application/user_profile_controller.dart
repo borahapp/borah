@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../data/user_profile_repository_impl.dart';
 import '../domain/user_profile_repository.dart';
 import '../presentation/states/user_profile_status.dart';
@@ -69,10 +71,17 @@ class UserProfileController extends Notifier<UserProfileStatus> {
         bytes: bytes,
         fileExtension: fileExtension,
       );
+      unawaited(AppAnalytics.trackPhotoUploaded(type: 'avatar', success: true));
       state = ProfileUpdateSuccess(updated);
     } on UserProfileRepositoryException catch (e) {
+      unawaited(
+        AppAnalytics.trackPhotoUploaded(type: 'avatar', success: false),
+      );
       state = ProfileError(e.message);
     } catch (_) {
+      unawaited(
+        AppAnalytics.trackPhotoUploaded(type: 'avatar', success: false),
+      );
       state = const ProfileError('Não foi possível atualizar a foto.');
     }
   }

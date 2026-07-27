@@ -190,4 +190,19 @@ abstract final class AppAnalytics {
     'notification_opened',
     properties: {'notification_type': notificationType},
   );
+
+  /// Disparado somente após a exclusão da própria conta ser concluída com
+  /// sucesso no servidor (RC-04C) — nunca em caso de falha de
+  /// reautenticação ou de erro na própria exclusão.
+  static Future<void> trackAccountDeleted() => track('account_deleted');
+
+  /// Cobre os dois pontos de upload de foto do app: avatar
+  /// (`UserProfileController.updateAvatar`) e foto de avaliação
+  /// (`ReviewDetailController.addPhoto`) — [type] distingue qual é qual
+  /// (`'avatar'`/`'review'`); [success] registra tanto o caminho de
+  /// sucesso quanto o de falha do upload.
+  static Future<void> trackPhotoUploaded({
+    required String type,
+    required bool success,
+  }) => track('photo_uploaded', properties: {'type': type, 'success': success});
 }

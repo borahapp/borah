@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../../../core/logger/app_logger.dart';
 import '../../../core/storage/app_storage.dart';
 import '../../authentication/application/auth_controller.dart';
@@ -81,6 +84,11 @@ class AccountDeletionController extends Notifier<AccountDeletionStatus> {
       );
       return;
     }
+
+    // Disparado antes do signOut() abaixo de propósito: signOut() já
+    // chama `AppAnalytics.reset()` internamente (ver AuthController),
+    // que limparia o userId identificado antes deste evento sair.
+    unawaited(AppAnalytics.trackAccountDeleted());
 
     try {
       await ref.read(authControllerProvider.notifier).signOut();

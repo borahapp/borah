@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../data/review_repository_impl.dart';
 import '../domain/review.dart';
 import '../domain/review_repository.dart';
@@ -48,6 +50,7 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
         rating: rating,
         comment: comment,
       );
+      unawaited(AppAnalytics.trackReviewCreated(review.id, rating: rating));
       state = ReviewDetailSaveSuccess(
         review,
         photoUrls: const [],
@@ -126,14 +129,21 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
         fileExtension: fileExtension,
       );
       final photoUrls = await _repository.listPhotoUrls(id);
+      unawaited(AppAnalytics.trackPhotoUploaded(type: 'review', success: true));
       state = ReviewDetailSaveSuccess(
         review,
         photoUrls: photoUrls,
         likedByCurrentUser: previous?.likedByCurrentUser ?? false,
       );
     } on ReviewRepositoryException catch (e) {
+      unawaited(
+        AppAnalytics.trackPhotoUploaded(type: 'review', success: false),
+      );
       state = ReviewDetailError(e.message);
     } catch (_) {
+      unawaited(
+        AppAnalytics.trackPhotoUploaded(type: 'review', success: false),
+      );
       state = const ReviewDetailError('Não foi possível enviar a foto.');
     }
   }
