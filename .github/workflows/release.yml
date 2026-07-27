@@ -15,6 +15,18 @@ name: Release
 # sem nenhum --dart-define, como acontecia antes desta rodada). Nenhum
 # destes secrets foi criado ou simulado - sao apenas os NOMES que o
 # workflow ja sabe consumir assim que existirem.
+#
+# BETA-08C1: POSTHOG_HOST_PRODUCTION passa a ser sempre enviado
+# explicitamente (nunca dependendo do defaultValue de
+# AppEnvironment.postHogHost) - ver docs/operations/CI_CD_SECRETS.md
+# secao 2.1. ESTE SECRET NUNCA DEVE FICAR VAZIO uma vez cadastrado: como
+# a flag --dart-define=POSTHOG_HOST=... sempre esta presente na
+# compilacao, um valor vazio chega como string vazia ao app (nao como o
+# default US), silenciando todo o Analytics de Producao sem nenhum erro
+# visivel (PostHogAnalyticsService engole falhas por design, RC-03C).
+# Cadastrar sempre com o host correto (US ou EU) assim que o projeto
+# PostHog de Producao existir - ver
+# docs/operations/POSTHOG_PRODUCTION_SETUP.md.
 on:
   push:
     tags:
@@ -83,12 +95,14 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }} \
             --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
             --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
+            --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
             --dart-define=APP_ENVIRONMENT=production
           flutter build appbundle --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_PROD_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }} \
             --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
             --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
+            --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
             --dart-define=APP_ENVIRONMENT=production
 
       - uses: actions/upload-artifact@v4
@@ -148,4 +162,5 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }} \
             --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
             --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
+            --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
             --dart-define=APP_ENVIRONMENT=production
