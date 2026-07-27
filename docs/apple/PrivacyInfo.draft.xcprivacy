@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  BETA-10C1: rascunho, NAO validado pelo Xcode/Apple.
+
+  Movido de app/ios/Runner/PrivacyInfo.xcprivacy para ca (BETA-10C1) por
+  decisao explicita do usuario: o arquivo original foi criado na BETA-10C
+  com base em exemplos reais de manifestos ja aceitos pela Apple
+  (image_picker_ios, share_plus, package_info_plus, posthog_flutter, lidos
+  diretamente do cache local de pacotes), mas 5 das 6 constantes de
+  NSPrivacyCollectedDataType (EmailAddress, Name, PhotosorVideos, UserID,
+  CrashData) nao puderam ser confirmadas contra uma copia ao vivo da
+  documentacao oficial da Apple nesta sessao (WebFetch/busca nao
+  retornaram o conteudo completo da pagina). Sem essa confirmacao e sem
+  o arquivo estar vinculado ao target Runner no Xcode (nunca esteve),
+  nao ha evidencia de que este conteudo seja aceito pelo ecossistema
+  Apple - por isso permanece como rascunho em docs/, fora do alvo da
+  aplicacao, ate a primeira validacao real num ambiente macOS/Xcode.
+
+  Antes de mover este arquivo de volta para app/ios/Runner/ e removê-lo
+  daqui:
+  1. Abrir o projeto no Xcode (Xcode 15+) e usar o editor visual de
+     Privacy Manifest para validar/corrigir as 5 constantes acima contra
+     o schema oficial vigente.
+  2. Adicionar o arquivo ao target Runner (arrastar no Xcode), garantindo
+     que apareça na fase "Copy Bundle Resources".
+  3. Confirmar, apos `pod install`, se o pod nativo do Sentry
+     (Sentry/HybridSDK) ja traz seu proprio manifesto - se trouxer, pode
+     ser que as entradas de CrashData aqui se tornem redundantes.
+
+  As duas unicas constantes com evidencia direta e verificada (lidas do
+  proprio manifesto do posthog_flutter, ja aceito pela Apple) sao
+  NSPrivacyCollectedDataTypeProductInteraction e
+  NSPrivacyAccessedAPICategoryUserDefaults - as demais exigem a
+  confirmacao acima antes de qualquer uso real.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCrashData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
