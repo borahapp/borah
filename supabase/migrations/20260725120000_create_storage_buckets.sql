@@ -38,9 +38,18 @@ values
 on conflict (id) do nothing;
 
 -- RLS já vem habilitada por padrão em `storage.objects` em qualquer
--- projeto Supabase - reforçado aqui só por consistência com o padrão
--- do restante do projeto (idempotente, não falha se já estiver ativa).
-alter table storage.objects enable row level security;
+-- projeto Supabase, pela própria plataforma - por isso nenhum `ALTER
+-- TABLE ... ENABLE ROW LEVEL SECURITY` é executado aqui. Achado real
+-- (BETA-05, provisionamento de borah-production): essa linha existia
+-- nesta migration antes, mas falha com `must be owner of table objects`
+-- em qualquer projeto Supabase real - o papel usado pelo CLI/migrations
+-- não é dono de `storage.objects` (tabela gerenciada pela plataforma),
+-- só tem os GRANTs necessários para criar as policies abaixo. Como o
+-- RLS já vem habilitado por padrão, a instrução nunca foi necessária -
+-- só as `create policy` a seguir. Corrigido diretamente nesta migration
+-- (exceção à disciplina de nunca editar uma migration já mesclada) por
+-- decisão explícita do usuário, já que ela nunca havia sido aplicada
+-- com sucesso em nenhum ambiente Supabase real (dev, qa ou produção).
 
 -- Nenhum GRANT é necessário aqui (diferente das tabelas de `public`,
 -- ver a lição da migration 20260720130000): `storage.objects`/

@@ -41,7 +41,10 @@ insert into auth.users (
 values (
   '00000000-0000-0000-0000-000000000001',
   'deleted-user@borah.internal',
-  crypt(gen_random_uuid()::text, gen_salt('bf')),
+  extensions.crypt(
+    gen_random_uuid()::text,
+    extensions.gen_salt('bf')
+  ),
   now(), now(), now(),
   '{"provider": "email", "providers": ["email"]}',
   '{}',
