@@ -25,7 +25,7 @@ Cadastrar em **Settings → Secrets and variables → Actions**, idealmente dent
 
 ## 2. Secrets pendentes (Release assinado)
 
-**Atualizado na RC-04D.** `android/app/build.gradle.kts` já está preparado para ler uma keystore de release a partir de `android/key.properties` (nunca versionado — coberto por `android/.gitignore`), com fallback automático para a assinatura de **debug** quando o arquivo não existir (preserva `flutter run --release` local). O template `android/key.properties.example` documenta o formato esperado. **Falta apenas gerar a keystore real e preencher os valores** — nenhuma chave/senha foi gerada nesta rodada, por exigir custódia exclusiva de quem vai publicar o app.
+**Atualizado na RC-04D; workflow adaptado na BETA-03.** `android/app/build.gradle.kts` já está preparado para ler uma keystore de release a partir de `android/key.properties` (nunca versionado — coberto por `android/.gitignore`), com fallback automático para a assinatura de **debug** quando o arquivo não existir (preserva `flutter run --release` local). O template `android/key.properties.example` documenta o formato esperado. **Falta apenas gerar a keystore real e preencher os valores** — nenhuma chave/senha foi gerada nesta rodada, por exigir custódia exclusiva de quem vai publicar o app.
 
 Passo a passo para o responsável (fora deste chat, guardando o `.jks` e as senhas em um cofre seguro — nunca em texto puro):
 
@@ -33,18 +33,37 @@ Passo a passo para o responsável (fora deste chat, guardando o `.jks` e as senh
 2. Copiar `android/key.properties.example` para `android/key.properties` e preencher `storePassword`/`keyPassword`/`keyAlias`/`storeFile`.
 3. Para builds locais, colocar `release.jks` em `android/` (ou usar caminho absoluto em `storeFile`). Para CI, cadastrar os 4 secrets abaixo.
 
-O workflow `.github/workflows/release.yml` já existe e gera artefatos, mas **não estão aptos para a Play Store** até que os secrets abaixo sejam cadastrados e o workflow seja adaptado para decodificá-los em um `key.properties` temporário:
+`.github/workflows/release.yml` **já decodifica estes secrets automaticamente** (job `build_release`, passo "Decode Android release keystore") — cadastrá-los é a única ação restante:
 
-| Secret (futuro) | Finalidade | Formato esperado |
+| Secret | Finalidade | Formato esperado |
 |---|---|---|
 | `ANDROID_KEYSTORE` | Arquivo `.jks`/`.keystore` de release, codificado em Base64 | string Base64 (`base64 -w0 release.jks`) |
 | `ANDROID_KEYSTORE_PASSWORD` | Senha da keystore | string |
 | `ANDROID_KEY_ALIAS` | Alias da chave dentro da keystore | string |
 | `ANDROID_KEY_PASSWORD` | Senha da chave (pode ser igual à da keystore) | string |
 
-Uso típico: decodificar o Base64 em `android/key.properties`/`release.jks` no início do job de release, e nunca imprimir nenhum desses valores em log. A adaptação do `release.yml` para fazer essa decodificação permanece pendente — fora do escopo desta rodada, que preparou apenas o lado Gradle.
+O passo só roda quando `ANDROID_KEYSTORE` está cadastrado (`if: secrets.ANDROID_KEYSTORE != ''`); sem ele, o job continua funcionando exatamente como antes (assinatura de debug), sem quebrar. Nenhum valor é impresso em log.
 
-Equivalente iOS: `ios/Runner.xcodeproj` está com `CODE_SIGN_STYLE = Automatic` e sem `DEVELOPMENT_TEAM` configurado — requer uma conta Apple Developer Program real, configurada diretamente no Xcode por quem for publicar (nada a preparar em código para isso).
+Equivalente iOS: `ios/Runner.xcodeproj` está com `CODE_SIGN_STYLE = Automatic` e sem `DEVELOPMENT_TEAM` configurado — requer uma conta Apple Developer Program real, configurada diretamente no Xcode por quem for publicar (nada a preparar em código para isso). O novo job `build_release_ios` (BETA-03) roda `flutter build ios --release --no-codesign` como portão de qualidade (confirma que a build de Release compila para iOS), mas **não gera um IPA assinado nem o envia ao TestFlight** — isso continua sendo um passo manual (Xcode Organizer → Archive → Distribute App) até que a conta Apple Developer exista e, opcionalmente, uma automação tipo Fastlane match seja adotada (não implementada nesta rodada — exigiria um repositório de certificados e chaves de API da App Store Connect, ambos segredos reais).
+
+**Custo do runner `macos-latest`:** o GitHub Actions cobra minutos de runner macOS a uma taxa bem mais alta que Linux (aprox. 10×). Como `build_release_ios` só roda em push de tag `v*.*.*` ou disparo manual (não em todo push/PR, ao contrário do job Android), o impacto é baixo, mas vale o responsável pelo billing do repositório estar ciente antes da primeira tag real.
+
+---
+
+## 2.1 Secrets pendentes (variáveis de ambiente de Produção)
+
+**Novo na BETA-03.** `.github/workflows/release.yml` agora injeta `--dart-define` nas builds de Release (Android e iOS) a partir dos secrets abaixo — hoje inexistentes, então os builds gerados por este workflow continuam **funcionalmente vazios** (sem `SUPABASE_URL` real) até que sejam cadastrados. Nenhum destes aponta para o mesmo projeto usado por Development/QA — depende de um projeto Supabase de Produção ainda não provisionado (ação do proprietário, ver `BETA-03_PRODUCTION_STORE_PREPARATION.md`).
+
+| Secret (futuro) | Finalidade | Onde obter |
+|---|---|---|
+| `SUPABASE_PROD_URL` | URL do projeto Supabase de Produção, usada como `SUPABASE_URL` | Dashboard do Supabase → projeto de Produção → Project Settings → API (projeto ainda não existe) |
+| `SUPABASE_PROD_ANON_KEY` | Chave anônima/pública do projeto de Produção | Mesma página acima |
+| `SENTRY_DSN_PRODUCTION` | DSN do projeto Sentry de Produção (RC-03A) | Projeto Sentry dedicado, ainda não provisionado — ver §2.2 do checklist BETA-03 |
+| `POSTHOG_API_KEY_PRODUCTION` | Project token do PostHog de Produção (RC-03C) | Projeto PostHog dedicado, ainda não provisionado |
+
+Mesma filosofia não-bloqueante do §1: enquanto os secrets não existirem, `${{ secrets.X }}` resolve para string vazia e o `--dart-define` correspondente chega vazio — idêntico ao comportamento anterior a esta rodada (nenhum `--dart-define` era passado). Nenhum regressão foi introduzida; a plumbing só passa a funcionar de verdade quando o proprietário cadastrar os valores reais.
+
+**Nunca reutilizar** as chaves do `borah-development` ou `borah-qa` aqui — mesma regra do §1, agora estendida ao ambiente de Produção.
 
 ---
 
@@ -58,6 +77,14 @@ Nenhum destes itens pode ser configurado por arquivo neste repositório — são
 
 - Adicionar os 4 secrets do §1 como *Environment secrets* (não *Repository secrets*) — isolam o acesso apenas aos jobs que declaram `environment: qa` (como `integration_test` em `ci.yml`).
 - Opcional, recomendado quando o repositório passar a aceitar contribuições externas: marcar **"Required reviewers"** para exigir aprovação manual antes de qualquer job que use o Environment `qa` rodar em um Pull Request de fora do time.
+
+### 3.1.1 Environment `production` (novo, BETA-03)
+
+**Settings → Environments → New environment → `production`.**
+
+- Adicionar os secrets do §2 (`ANDROID_KEYSTORE*`) e do §2.1 (`SUPABASE_PROD_*`, `SENTRY_DSN_PRODUCTION`, `POSTHOG_API_KEY_PRODUCTION`) como *Environment secrets*, isolados do Environment `qa`.
+- **Fortemente recomendado**: marcar **"Required reviewers"** com o próprio responsável pela publicação — `release.yml` dispara em push de tag `v*.*.*`, e uma tag pode ser criada por engano; um portão de aprovação manual antes de gastar minutos de runner (principalmente `macos-latest`, mais caro) e antes de qualquer artefato assinado ser gerado é uma proteção barata.
+- Diferente do Environment `qa` (usado por um job de teste, que roda em todo push/PR), `production` só é referenciado pelos jobs de `release.yml` — nenhum job de `ci.yml` deve declarar `environment: production`.
 
 ### 3.2 Branch Protection (`develop` e `main`)
 
