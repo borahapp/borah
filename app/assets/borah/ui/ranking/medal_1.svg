@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="BORAH medalha 1 lugar">
+  <title>BORAH medalha 1 lugar</title>
+  <defs>
+    <linearGradient id="limeGradient" gradientUnits="userSpaceOnUse" x1="0" y1="33.5" x2="0" y2="504.5">
+      <stop offset="0" stop-color="#C2FF00"/>
+      <stop offset="0.58" stop-color="#B8FF3B"/>
+      <stop offset="1" stop-color="#96D600"/>
+    </linearGradient>
+    <linearGradient id="purpleGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C47FF"/>
+      <stop offset="0.55" stop-color="#5B2EFF"/>
+      <stop offset="1" stop-color="#3D19C7"/>
+    </linearGradient>
+    <linearGradient id="darkFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B0714" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0B0714" stop-opacity="0.94"/>
+    </linearGradient>
+    
+    </defs>
+  
+      <path d="M384 480 L440 730 L512 676 L584 730 L640 480 Z" fill="#5B2EFF" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/>
+      <circle cx="512" cy="340" r="184" fill="#FFFFFF"/>
+      <circle cx="512" cy="340" r="158" fill="#B8FF3B" stroke="#5B2EFF" stroke-width="18"/>
+      <g transform="translate(466.52 422) scale(0.24 -0.24)" fill="#5B2EFF" opacity="1"><path d="M259 -11Q209 -11 189.0 9.0Q169 29 169 80V418L159 409Q125 379 97.5 380.0Q70 381 38 415Q5 450 7.0 481.0Q9 512 49 547L176 661Q184 669 193 674Q200 680 211 684Q219 687 227 688Q241 691 260 691Q310 691 330.0 670.5Q350 650 350 599V79Q350 29 330.0 9.0Q310 -11 259 -11Z" transform="translate(0 0)"/></g>
+      <polygon points="512,198 519.641,215.483 538.63,217.348 524.364,230.017 528.458,248.652 512,239 495.542,248.652 499.636,230.017 485.37,217.348 504.359,215.483" fill="#5B2EFF"/>
+    
+</svg>

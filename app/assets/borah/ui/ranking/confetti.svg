@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Confetes BORAH">
+  <title>Confetes BORAH</title>
+  <defs>
+    <linearGradient id="limeGradient" gradientUnits="userSpaceOnUse" x1="0" y1="33.5" x2="0" y2="504.5">
+      <stop offset="0" stop-color="#C2FF00"/>
+      <stop offset="0.58" stop-color="#B8FF3B"/>
+      <stop offset="1" stop-color="#96D600"/>
+    </linearGradient>
+    <linearGradient id="purpleGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C47FF"/>
+      <stop offset="0.55" stop-color="#5B2EFF"/>
+      <stop offset="1" stop-color="#3D19C7"/>
+    </linearGradient>
+    <linearGradient id="darkFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B0714" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0B0714" stop-opacity="0.94"/>
+    </linearGradient>
+    
+    </defs>
+  <path d="M92 116 L142 166" stroke="#5B2EFF" stroke-width="26" stroke-linecap="round"/><circle cx="246" cy="102" r="20" fill="#B8FF3B"/><rect x="366" y="92" width="40" height="72" rx="12" fill="#5B2EFF" transform="rotate(22 386 128)"/><path d="M102 354 Q154 304 202 352" fill="none" stroke="#B8FF3B" stroke-width="24" stroke-linecap="round"/><polygon points="330,294 343.519,325.393 377.553,328.549 351.874,351.107 359.389,384.451 330,367 300.611,384.451 308.126,351.107 282.447,328.549 316.481,325.393" fill="#5B2EFF"/><path d="M424 274 L456 232" stroke="#B8FF3B" stroke-width="28" stroke-linecap="round"/>
+</svg>

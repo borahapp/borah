@@ -533,6 +533,38 @@ completo. Suíte de unit/widget tests sem regressão (503/503 — mesma
 contagem da RC-04E, testes existentes atualizados, nenhum novo
 necessário).
 
+**IV-06 a IV-09 (Conclusão da Identidade Visual Oficial) concluída em
+2026-07-26** — medalhas oficiais (`medal_1/2/3.svg`) aplicadas ao pódio
+do `RankingCard`, compartilhado pelas telas de Ranking de restaurantes
+e de usuários; expressões oficiais do símbolo (`symbol_smiling`,
+`symbol_surprised`) aplicadas em `EmptyState` (14 telas) e `ErrorState`
+(19 telas). **Achado crítico durante a implementação**: os 4 SVGs de
+expressão continham um elemento `<svg>` aninhado (técnica de
+crop/transform da ferramenta de exportação) incompatível com o
+compilador do `flutter_svg` 2.x, fazendo a ilustração renderizar em
+branco sem nenhum erro em rede/console/testes de widget — só detectado
+por verificação visual real (`flutter build web` + preview em
+navegador, na ausência de emulador Android). Corrigido achatando o
+`<svg>` aninhado em um `<g transform>` matematicamente equivalente,
+apenas nas cópias de execução do projeto — os arquivos-fonte do pacote
+oficial permanecem intocados, conforme a própria regra do material
+("não modificar os originais; documentar a derivação"). Padronização de
+gamificação/rankings (IV-07) confirmada sem inconsistências adicionais
+a corrigir. Auditoria de Dark Mode (IV-08) validou visualmente Login e
+o novo `ErrorState` (rota 404) em Light/Dark — demais telas autenticadas
+ficam pendentes de verificação por falta de emulador/backend de teste
+neste ambiente. Preparação de assets de loja (IV-09): ícone Google Play
+512px, já pronto no pacote oficial, copiado ao projeto pela primeira
+vez; screenshots e feature graphic seguem ausentes no próprio pacote
+oficial (documentado, nenhuma arte nova criada). Diversos assets
+decorativos e selos de grupo/destaque foram deliberadamente **não**
+aplicados por falta de um ponto de uso real na tela ou de dado que os
+justifique (ex.: ausência de entidade "Grupo" no modelo de dados,
+já registrada desde a RC-04E) — cada caso com a razão documentada em
+`IV-06_A_09_BRAND_IDENTITY_COMPLETION.md`. Com isso, a Etapa 1
+("Finalizar a identidade visual") do roadmap operacional pré-Beta está
+concluída. Suíte de unit/widget tests sem regressão (503/503).
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:

@@ -162,8 +162,9 @@ Nenhum teste automatizado novo foi necessário: esta rodada alterou apenas confi
 
 1. **Gerar a keystore de release Android** e preencher `android/key.properties` (procedimento em `docs/operations/CI_CD_SECRETS.md` §2) — ação exclusiva do responsável pela publicação.
 2. **Configurar `DEVELOPMENT_TEAM` no Xcode** com uma conta Apple Developer Program real.
-3. **Fornecer o asset de logo BORAH em alta resolução** (`assets/icon/borah_icon.png`) e rodar `flutter_launcher_icons`/`flutter_native_splash` para gerar os ícones/splash reais.
+3. ~~Fornecer o asset de logo BORAH em alta resolução e rodar `flutter_launcher_icons`/`flutter_native_splash`~~ — ✅ **resolvido na IV-02/IV-03** (`IV-01_A_05_BRAND_IDENTITY_INTEGRATION.md`); ícone Google Play 512px também copiado do pacote oficial na IV-09 (`IV-06_A_09_BRAND_IDENTITY_COMPLETION.md`). Screenshots de loja e feature graphic seguem ausentes — não existem no pacote oficial e não foram criados (nenhuma arte nova), ver item 8.
 4. **Validar a build de release real** (`flutter build appbundle --release` / `flutter build ipa --release`) em um ambiente com SDK Android/Xcode completos — não disponível nesta sessão — para confirmar que o `minifyEnabled`/`shrinkResources` não quebra nenhuma dependência nativa em tempo de execução.
 5. **Adaptar `.github/workflows/release.yml`** para decodificar os 4 secrets de keystore em CI (hoje o workflow gera artefatos, mas ainda sem a etapa de assinatura real).
 6. **Escrever descrição curta/completa da loja** e demais conteúdos de marketing (fora do escopo de código desta rodada).
 7. **Executar as suítes pgTAP pendentes** (RC-04A/RC-04B, já registradas anteriormente) — segue bloqueado exclusivamente pela indisponibilidade do Docker Desktop neste ambiente, sem relação com esta rodada.
+8. **Capturar screenshots reais de loja e produzir o feature graphic** (Google Play, 1024×500) — dependem de um dispositivo/emulador real ou build de release funcional (item 4), já que não existe arte oficial pronta para isso no pacote de identidade visual.
