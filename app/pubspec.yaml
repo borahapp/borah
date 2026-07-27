@@ -47,7 +47,14 @@ dependencies:
   share_plus: ^10.1.4
 
   # RC-03A - Crash Reporting (captura global de erros, ver core/observability/)
-  sentry_flutter: ^8.14.2
+  # BETA-10B: atualizado de ^8.14.2 para ^9.25.0 - a 8.14.2 fixa
+  # `kotlinOptions.languageVersion = "1.6"` no seu proprio build.gradle
+  # (nao editavel, vive no pub cache), incompativel com o Kotlin Gradle
+  # Plugin 2.3.20 usado pelo projeto (settings.gradle.kts) - Kotlin 2.x
+  # removeu suporte a compilar com languageVersion 1.6. Nao existe
+  # nenhuma versao 8.x mais recente que corrija isso (8.14.2 e a ultima
+  # da serie 8) - a correcao real exige cruzar para a serie 9.
+  sentry_flutter: ^9.25.0
 
   # RC-03B - anotacoes @visibleForTesting nos hooks de teste do AppLogger
   # (ja era dependencia transitiva; declarada aqui para satisfazer o lint

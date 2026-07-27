@@ -64,7 +64,7 @@ void main() {
 
     test('redige e-mail na mensagem do evento', () {
       final event = SentryEvent(
-        message: const SentryMessage('Erro ao processar user@example.com'),
+        message: SentryMessage('Erro ao processar user@example.com'),
       );
 
       final sanitized = sanitizeSentryEvent(event);
