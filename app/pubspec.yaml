@@ -126,12 +126,24 @@ flutter:
   # (mesma convencao da UI-03B): assets/borah/symbol/ e
   # assets/borah/app_icon/ existem no repositorio (fonte para
   # flutter_launcher_icons/flutter_native_splash, ferramentas que leem
-  # direto do disco em tempo de build) mas nao sao declarados no bundle,
-  # ja que nenhum widget os consome nesta rodada (ver IV-06/IV-07).
+  # direto do disco em tempo de build) mas nao sao declarados no bundle.
   # assets/icons/borah_location.png permanece intocado (fora de escopo).
+  #
+  # IV-06/IV-07: expressoes (EmptyState/ErrorState) e medalhas
+  # (RankingCard, 1o/2o/3o lugar). Demais arquivos de ui/ranking/
+  # (crown_best, star, confetti, ranking_up, badge_*) e ui/decorative/
+  # existem no repositorio (copiados na integra, por instrucao) mas sem
+  # nenhum ponto de consumo nesta rodada - ver
+  # IV-06_A_09_BRAND_IDENTITY_COMPLETION.md para a justificativa de cada
+  # um.
   assets:
     - assets/borah/logos/
     - assets/borah/animations/borah_loading_transparent.webp
+    - assets/borah/ui/expressions/symbol_smiling.svg
+    - assets/borah/ui/expressions/symbol_surprised.svg
+    - assets/borah/ui/ranking/medal_1.svg
+    - assets/borah/ui/ranking/medal_2.svg
+    - assets/borah/ui/ranking/medal_3.svg
     - assets/icons/borah_location.png
 
   # UI-01 (Design System oficial, Manual da Marca BORAH v1.0/jul-2026):

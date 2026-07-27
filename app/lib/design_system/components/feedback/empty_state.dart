@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../tokens/app_spacing.dart';
 
@@ -6,16 +7,17 @@ import '../../tokens/app_spacing.dart';
 ///
 /// Achado real do levantamento do UI-02: 13 mensagens de estado vazio
 /// diferentes (ex.: "Nenhuma avaliação ainda.", "Você ainda não tem
-/// favoritos.") são hoje um `Center(child: Text('...'))` isolado,
-/// repetido em cada arquivo, sem ícone nem ação. Este componente
-/// centraliza a estrutura visual - a mensagem em si continua sendo
-/// responsabilidade de cada tela (nenhuma tela foi migrada nesta
-/// rodada).
+/// favoritos.") eram um `Center(child: Text('...'))` isolado, repetido
+/// em cada arquivo, sem ilustração nem ação — resolvido na RC-02
+/// (componente único) e, nesta rodada (IV-06), com a expressão oficial
+/// do símbolo BORAH sorrindo em vez de um ícone Material genérico.
+/// Nenhuma das 14 telas que usam este componente customiza o ícone
+/// antigo (confirmado por busca antes da mudança), então a troca se
+/// aplica de forma consistente em todas de uma vez.
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.message, this.icon, this.action});
+  const EmptyState({super.key, required this.message, this.action});
 
   final String message;
-  final IconData? icon;
 
   /// Ação opcional (ex.: `AppPrimaryButton` "Adicionar restaurante").
   final Widget? action;
@@ -30,10 +32,13 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 48, color: theme.colorScheme.onSurfaceVariant),
-              const SizedBox(height: AppSpacing.md),
-            ],
+            SvgPicture.asset(
+              'assets/borah/ui/expressions/symbol_smiling.svg',
+              width: 64,
+              height: 64,
+              semanticsLabel: 'Símbolo do BORAH sorrindo',
+            ),
+            const SizedBox(height: AppSpacing.md),
             Text(
               message,
               style: theme.textTheme.bodyLarge,
