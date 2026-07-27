@@ -588,6 +588,28 @@ dados coletados (Data Safety/App Privacy) já pronto para preenchimento
 nos consoles. Suíte de unit/widget tests sem regressão (503/503) — só
 workflows/documentação alterados, nenhum código de app.
 
+**BETA-04 (Plano Operacional de Provisionamento) concluída em
+2026-07-27** — auditoria dos 22+ itens externos necessários para
+publicação (Google Play, Apple Developer, App Store Connect,
+TestFlight, Supabase/Sentry/PostHog de Produção, GitHub Secrets,
+keystore, certificados, provisioning profiles, bundle IDs, redirect
+URLs, OAuth, política de privacidade, termos de uso, página/e-mail de
+suporte, ícones, feature graphic, screenshots, classificação
+indicativa, Data Safety/App Privacy), com ordem recomendada de
+execução, tempo estimado, custo e responsável por item. Verificação de
+políticas atuais das lojas (não assumidas de memória) revelou um risco
+de cronograma relevante: contas pessoais do Google Play criadas após
+13/11/2023 exigem um ciclo de Closed Testing com 12 testadores por 14
+dias corridos antes do acesso à Produção (não bloqueia o Internal
+Testing da Etapa 3B, mas atrasa qualquer plano de Produção depois);
+Apple Developer Program como Organização exige D-U-N-S Number e leva
+1–2 semanas, contra 24–48h para conta Individual — decisão registrada
+como pendente do proprietário, não resolvida nesta rodada. Documento
+único (`BETA-04_PROVISIONING_OPERATIONAL_PLAN.md`) com checklist final
+de autorização para a Etapa 3B. Nenhum código, workflow ou secret
+alterado — commit de documentação direto em `develop`, sem feature
+branch, conforme protocolo desta rodada.
+
 Executar QA-\* em sequência.
 
 Cada documento deve incluir:
