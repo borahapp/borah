@@ -77,12 +77,30 @@ Fluxo esperado, curado manualmente via Supabase Studio (não existe painel admin
 
 Não há hoje nenhuma automação que promova o `status` sozinha — é uma decisão deliberada desta rodada (evitar acoplar o site ao app/autenticação, fora do escopo pedido).
 
-## 7. Fluxo do formulário (client-side, `site/assets/js/main.js`)
+## 7. Contrato da API e fluxo do formulário (client-side, `site/assets/js/main.js`)
+
+**Resposta HTTP** (todas as respostas da função, ajustado nesta rodada — ver seção 11):
+
+```json
+{ "success": true | false, "message": "texto pronto para exibição" }
+```
+
+| Situação | HTTP | `success` |
+|---|---|---|
+| Cadastro/mensagem gravados | 200 | `true` |
+| E-mail duplicado (`beta_waitlist`) | 409 | `false` |
+| Validação inválida (e-mail/nome/mensagem/Content-Type/Turnstile ausente) | 400 | `false` |
+| Bloqueado por honeypot/tempo mínimo | 200 | `false` (silencioso, não revela a um bot que foi detectado) |
+| Erro do Supabase/servidor | 500 | `false` |
+| Método não permitido | 405 | `false` |
 
 - **Validação de e-mail**: `type="email"` + `required` no HTML; a Edge Function também valida o formato no servidor (nunca confia só no client).
-- **Duplicidade**: a função retorna `{ ok: false, error: "duplicate" }` quando o `unique index` rejeita o INSERT (`23505`); o JS trata isso como uma mensagem de sucesso amigável ("Você já está na lista de espera do Beta!"), não como erro.
-- **Mensagens ao usuário**: `errorMessageFor(code)` em `main.js` mapeia cada código de erro (`invalid_email`, `invalid_name`, `invalid_message`, `captcha_required`/`captcha_failed`, genérico) para uma frase específica.
-- **Erro do Supabase/rede**: qualquer falha de rede ou erro 500 cai no `.catch()` do `fetch()` e mostra a mensagem genérica "Não foi possível enviar agora. Tente novamente em instantes."
+- **Validação de nome**: `name` continua **opcional** em `beta_waitlist` (decisão de produto já aprovada, campo nullable); quando informado, a função exige um mínimo de 2 caracteres (HTTP 400 caso contrário). Em `contact_messages`, `name` continua obrigatório (já era antes).
+- **Duplicidade**: a função retorna HTTP 409 + `{success:false, message:"Este e-mail já está cadastrado."}` quando o `unique index` rejeita o INSERT (`23505`); o JS do formulário de Beta mostra "Este e-mail já está cadastrado na lista de espera." como uma mensagem de sucesso amigável (o formulário se comporta como se tivesse dado certo do ponto de vista do visitante).
+- **Mensagens ao usuário (Beta/waitlist)**: 3 mensagens fixas no cliente (`main.js`), conforme especificado — sucesso ("🎉 Cadastro realizado!..."), duplicado ("Este e-mail já está cadastrado na lista de espera.") e erro genérico ("Não foi possível concluir seu cadastro. Tente novamente em alguns instantes."). Erros de validação (400, exceto duplicidade) mostram a `message` específica devolvida pelo servidor (ex.: "E-mail inválido."), mais informativo que o genérico.
+- **Mensagens ao usuário (Contato)**: usa a `message` devolvida pelo servidor diretamente (sem cópia fixa adicional — não fazia parte do prompt que motivou este ajuste).
+- **Loading**: o botão de submit mostra "Enviando..." e fica desabilitado durante a chamada; volta ao rótulo original (sucesso ou erro).
+- **Erro de rede**: falha do `fetch()` (sem resposta HTTP nenhuma) cai no `.catch()` e mostra a mesma mensagem genérica de erro.
 - **Proteção contra múltiplos envios**: o botão de submit é desabilitado assim que clicado e reabilitado só após a resposta (sucesso ou erro); o widget do Turnstile é resetado (`turnstile.reset()`) a cada tentativa, já que um token só pode ser usado uma vez.
 
 ## 8. Configuração necessária antes do deploy (pendências reais)
@@ -105,3 +123,15 @@ supabase secrets set TURNSTILE_SECRET_KEY=<valor-real>
 ## 10. Validação executada nesta rodada
 
 Docker não está disponível neste ambiente (confirmado via `docker info`), então não foi possível rodar `supabase functions serve`/`supabase db reset` localmente — mesma limitação já registrada em rodadas anteriores (AR-06/EX-01B). As migrations e a Edge Function foram **escritas e revisadas estaticamente**, seguindo os mesmos padrões (GRANT explícito, RLS habilitada, comentários `ATENÇÃO`) já usados em todas as migrations anteriores do projeto. Antes do primeiro deploy real, recomenda-se rodar `supabase db reset` e `supabase functions serve website-form-submit` localmente (com Docker disponível) para validar de ponta a ponta.
+
+## 11. Divergência registrada: prompt "BETA-11C" recebido após esta rodada já estar em produção
+
+Um prompt formal reapresentando o nome "BETA-11C" pediu uma tabela `waitlist` e uma função `join-waitlist` mais simples (sem Turnstile/honeypot, schema reduzido a `id/name/email/source/created_at`, `name` obrigatório). Nesse momento `beta_waitlist`/`contact_messages`/`website-form-submit` já estavam commitados e mesclados em `main`. Decisão tomada com o usuário: **não recriar/duplicar** — manter a tabela, a função e a proteção Turnstile/honeypot como estão, adotando apenas o ajuste de contrato de resposta que fazia sentido:
+
+- `{ok, error}` → `{success, message}` (mensagem já pronta para exibição, em vez de um código que o cliente precisava traduzir).
+- E-mail duplicado: HTTP 200 → **HTTP 409**.
+- Validação de nome: adicionado mínimo de 2 caracteres em `beta_waitlist` **quando o nome é informado** — mas o campo **continua opcional** (`name` nullable), não se tornou obrigatório como o prompt pedia, para não reverter a decisão de produto já aprovada em BETA-09B1/BETA-11B. Se a intenção for realmente tornar o nome obrigatório no formulário de Beta, isso exige uma decisão explícita separada (mudaria a migration `name text` → `name text not null` e o HTML do formulário).
+- Validação de `Content-Type: application/json` explícita (o prompt pedia; antes era implícito via `req.json()`).
+- Loading visual no botão de submit ("Enviando...").
+
+Todos os outros elementos do prompt (Turnstile, honeypot, tempo mínimo, `status`/`invited_at`/`confirmed_at`/`notes`, tabela `contact_messages`) foram **mantidos**, por já estarem revisados, aprovados e em produção — recriá-los do zero introduziria uma segunda tabela/função conflitante e removeria a única camada de proteção contra spam automatizado hoje existente.

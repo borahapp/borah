@@ -43,9 +43,13 @@ const FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1/website
     });
   }
 
-  function showMessage(el, text) {
+  function showMessage(el, lines) {
     if (!el) return;
-    el.textContent = text;
+    el.innerHTML = "";
+    (Array.isArray(lines) ? lines : [lines]).forEach(function (line, index) {
+      if (index > 0) el.appendChild(document.createElement("br"));
+      el.appendChild(document.createTextNode(line));
+    });
     el.classList.add("visible");
   }
 
@@ -54,23 +58,19 @@ const FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1/website
     el.classList.remove("visible");
   }
 
-  function errorMessageFor(code) {
-    switch (code) {
-      case "duplicate":
-        return "Você já está na lista de espera do Beta!";
-      case "invalid_email":
-        return "Verifique se o e-mail digitado está correto.";
-      case "invalid_name":
-        return "Por favor, preencha seu nome.";
-      case "invalid_message":
-        return "Por favor, escreva sua mensagem.";
-      case "captcha_required":
-      case "captcha_failed":
-        return "Não foi possível confirmar que você não é um robô. Tente novamente.";
-      default:
-        return "Não foi possível enviar agora. Tente novamente em instantes.";
-    }
-  }
+  // Mensagens fixas exigidas para o formulário de Beta (waitlist);
+  // as demais respostas do servidor já vêm com `message` pronto para
+  // exibição (ver supabase/functions/website-form-submit/index.ts).
+  var WAITLIST_SUCCESS = [
+    "🎉 Cadastro realizado!",
+    "Você entrou para a lista de espera do Beta Fechado.",
+    "Avisaremos por e-mail quando novas vagas forem abertas.",
+  ];
+  var WAITLIST_DUPLICATE = "Este e-mail já está cadastrado na lista de espera.";
+  var WAITLIST_GENERIC_ERROR = [
+    "Não foi possível concluir seu cadastro.",
+    "Tente novamente em alguns instantes.",
+  ];
 
   function getTurnstileToken(form) {
     var widget = form.querySelector(".cf-turnstile");
@@ -100,6 +100,13 @@ const FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1/website
     var success = document.getElementById(successId);
     var errorEl = document.getElementById(errorId);
     var submitButton = form.querySelector('button[type="submit"]');
+    var idleLabel = submitButton ? submitButton.textContent : "";
+
+    function setLoading(isLoading) {
+      if (!submitButton) return;
+      submitButton.disabled = isLoading;
+      submitButton.textContent = isLoading ? "Enviando..." : idleLabel;
+    }
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -117,7 +124,7 @@ const FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1/website
         buildPayload(data),
       );
 
-      if (submitButton) submitButton.disabled = true;
+      setLoading(true);
 
       fetch(FUNCTIONS_URL, {
         method: "POST",
@@ -130,30 +137,27 @@ const FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1/website
           });
         })
         .then(function (result) {
-          if (result.body && result.body.ok) {
-            showMessage(success, successMessageFor(type));
+          var body = result.body || {};
+          if (body.success) {
+            showMessage(success, type === "waitlist" ? WAITLIST_SUCCESS : body.message);
             form.reset();
-          } else if (result.body && result.body.error === "duplicate") {
-            showMessage(success, errorMessageFor("duplicate"));
+          } else if (type === "waitlist" && result.status === 409) {
+            showMessage(success, WAITLIST_DUPLICATE);
             form.reset();
+          } else if (type === "waitlist" && result.status !== 400) {
+            showMessage(errorEl, WAITLIST_GENERIC_ERROR);
           } else {
-            showMessage(errorEl, errorMessageFor(result.body && result.body.error));
+            showMessage(errorEl, body.message || "Não foi possível enviar agora. Tente novamente em instantes.");
           }
         })
         .catch(function () {
-          showMessage(errorEl, errorMessageFor());
+          showMessage(errorEl, type === "waitlist" ? WAITLIST_GENERIC_ERROR : "Não foi possível enviar agora. Tente novamente em instantes.");
         })
         .finally(function () {
-          if (submitButton) submitButton.disabled = false;
+          setLoading(false);
           resetTurnstile(form);
         });
     });
-  }
-
-  function successMessageFor(type) {
-    return type === "waitlist"
-      ? "Você entrou na lista de espera do Beta! Avisaremos por e-mail assim que as vagas abrirem."
-      : "Mensagem enviada! Responderemos o quanto antes pelo e-mail informado.";
   }
 
   document.addEventListener("DOMContentLoaded", function () {
