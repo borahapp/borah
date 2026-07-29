@@ -1,0 +1,177 @@
+name: Release
+
+# QA-03, Rodada F. Gatilhos: push de tag SemVer (AR-04 §11/DV-12 §3,
+# formato vMAJOR.MINOR.PATCH) ou disparo manual para testar o pipeline
+# sem publicar uma tag ainda.
+#
+# BETA-03: decodificacao da keystore Android e injecao das variaveis de
+# ambiente de Producao via --dart-define agora fazem parte deste
+# workflow (ver docs/operations/CI_CD_SECRETS.md secao 2). Enquanto os
+# secrets abaixo nao forem cadastrados pelo responsavel pela
+# publicacao, o comportamento permanece identico ao anterior: sem
+# ANDROID_KEYSTORE, a assinatura cai para a chave de debug (fallback ja
+# existente em `android/app/build.gradle.kts`); sem SUPABASE_PROD_*, os
+# --dart-define correspondentes chegam vazios (mesmo efeito de rodar
+# sem nenhum --dart-define, como acontecia antes desta rodada). Nenhum
+# destes secrets foi criado ou simulado - sao apenas os NOMES que o
+# workflow ja sabe consumir assim que existirem.
+#
+# BETA-08C1: POSTHOG_HOST_PRODUCTION passa a ser sempre enviado
+# explicitamente (nunca dependendo do defaultValue de
+# AppEnvironment.postHogHost) - ver docs/operations/CI_CD_SECRETS.md
+# secao 2.1. ESTE SECRET NUNCA DEVE FICAR VAZIO uma vez cadastrado: como
+# a flag --dart-define=POSTHOG_HOST=... sempre esta presente na
+# compilacao, um valor vazio chega como string vazia ao app (nao como o
+# default US), silenciando todo o Analytics de Producao sem nenhum erro
+# visivel (PostHogAnalyticsService engole falhas por design, RC-03C).
+# Cadastrar sempre com o host correto (US ou EU) assim que o projeto
+# PostHog de Producao existir - ver
+# docs/operations/POSTHOG_PRODUCTION_SETUP.md.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build_release:
+    name: Build Release Artifacts (Android)
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/**/*.gradle*', 'app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - run: flutter pub get
+      # Portão de qualidade antes de publicar (DV-12 §5) - mesmas
+      # validações da CI, repetidas aqui porque uma tag pode, em tese,
+      # ser criada a partir de qualquer commit, não só de um já validado
+      # em `main`.
+      - run: flutter analyze
+      - run: flutter test
+
+      # BETA-03: decodifica a keystore de release apenas se o secret
+      # existir - sem ele, nenhum arquivo e criado e o Gradle cai para
+      # a assinatura de debug (comportamento inalterado, ver
+      # build.gradle.kts). Nunca imprime os valores em log.
+      - name: Decode Android release keystore (se configurada)
+        if: ${{ secrets.ANDROID_KEYSTORE != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > android/release.jks
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=release.jks
+          EOF
+
+      - name: Build APK/AAB (Producao)
+        # OBS-01A: variaveis de ambiente do SISTEMA (nao --dart-define) -
+        # o plugin io.sentry.android.gradle le com System.getenv() durante
+        # a fase de build nativo (Gradle/Kotlin), um contexto totalmente
+        # separado do que o --dart-define injeta no bytecode Dart. Sem
+        # SENTRY_AUTH_TOKEN, o upload do mapping.txt e pulado
+        # automaticamente (build.gradle.kts ja trata isso) - mesmo
+        # comportamento nao-bloqueante dos demais secrets.
+        env:
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_PROD_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
+            --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
+            --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
+            --dart-define=APP_ENVIRONMENT=production
+          flutter build appbundle --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_PROD_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
+            --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
+            --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
+            --dart-define=APP_ENVIRONMENT=production
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: app/build/app/outputs/bundle/release/app-release.aab
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+            app/build/app/outputs/bundle/release/app-release.aab
+
+  build_release_ios:
+    # BETA-03: portao de qualidade equivalente ao Android acima, mas sem
+    # assinatura/exportacao de IPA - isso exige um Time Apple Developer
+    # real (DEVELOPMENT_TEAM) e certificados, indisponiveis nesta rodada
+    # (nenhuma conta externa, nenhum certificado inventado, conforme
+    # instruido). `--no-codesign` confirma que a build de Release
+    # compila e empacota corretamente para iOS antes de qualquer
+    # tentativa manual de archive/export via Xcode para o TestFlight.
+    name: Build Release Artifacts (iOS, sem assinatura)
+    runs-on: macos-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/.fvm/fvm_config.json
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_PROD_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
+            --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
+            --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
+            --dart-define=APP_ENVIRONMENT=production

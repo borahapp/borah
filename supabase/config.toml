@@ -385,6 +385,13 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# BETA-11C - endpoint público do site institucional (sem login). O
+# Turnstile, não o JWT gateway do Supabase, é a camada de proteção
+# contra abuso aqui - ver supabase/functions/website-form-submit/index.ts.
+[functions.website-form-submit]
+enabled = true
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

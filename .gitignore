@@ -17,4 +17,6 @@ supabase/.temp/
 .env
 .env.local
 .env.development
+.env.qa
+.env.staging
 .env.production

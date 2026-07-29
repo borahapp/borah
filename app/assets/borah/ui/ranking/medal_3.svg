@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="BORAH medalha 3 lugar">
+  <title>BORAH medalha 3 lugar</title>
+  <defs>
+    <linearGradient id="limeGradient" gradientUnits="userSpaceOnUse" x1="0" y1="33.5" x2="0" y2="504.5">
+      <stop offset="0" stop-color="#C2FF00"/>
+      <stop offset="0.58" stop-color="#B8FF3B"/>
+      <stop offset="1" stop-color="#96D600"/>
+    </linearGradient>
+    <linearGradient id="purpleGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C47FF"/>
+      <stop offset="0.55" stop-color="#5B2EFF"/>
+      <stop offset="1" stop-color="#3D19C7"/>
+    </linearGradient>
+    <linearGradient id="darkFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B0714" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0B0714" stop-opacity="0.94"/>
+    </linearGradient>
+    
+    </defs>
+  
+      <path d="M384 480 L440 730 L512 676 L584 730 L640 480 Z" fill="#B8FF3B" stroke="#FFFFFF" stroke-width="18" stroke-linejoin="round"/>
+      <circle cx="512" cy="340" r="184" fill="#FFFFFF"/>
+      <circle cx="512" cy="340" r="158" fill="#5B2EFF" stroke="#B8FF3B" stroke-width="18"/>
+      <g transform="translate(444.2 422) scale(0.24 -0.24)" fill="#B8FF3B" opacity="1"><path d="M281 -21Q227 -21 179.0 -3.0Q131 15 93.5 46.5Q56 78 35.0 118.5Q14 159 14 203Q14 266 114 266Q142 266 156.5 261.0Q171 256 180.0 243.5Q189 231 198 208L205 196Q211 183 229.0 170.5Q247 158 282 158Q309 158 328.0 165.0Q347 172 357.5 185.0Q368 198 368 215Q368 235 358.0 248.0Q348 261 331.0 267.0Q314 273 291 273Q269 273 248.0 276.0Q227 279 213.5 297.0Q200 315 200 360Q200 406 213.5 423.5Q227 441 248.5 443.5Q270 446 292 446Q312 446 325.5 448.5Q339 451 346.0 458.0Q353 465 353 478Q353 493 345.5 503.5Q338 514 324.0 519.5Q310 525 291 525Q267 525 253.0 519.0Q239 513 231.5 503.5Q224 494 219 485Q200 443 168.5 434.5Q137 426 93 450Q50 476 44.0 505.0Q38 534 58 574Q58 574 58 574Q58 574 64 586Q69 598 84.0 617.0Q99 636 124.0 655.5Q149 675 188.0 688.0Q227 701 281 701Q344 701 391.5 681.0Q439 661 471.5 629.0Q504 597 520.5 558.5Q537 520 537 482Q537 445 524.5 419.5Q512 394 495.5 379.5Q479 365 468 359Q477 353 491.0 341.5Q505 330 518.5 312.0Q532 294 541.5 270.5Q551 247 551 217Q551 148 516.0 94.5Q481 41 420.0 10.0Q359 -21 281 -21Z" transform="translate(0 0)"/></g>
+      <polygon points="512,198 519.641,215.483 538.63,217.348 524.364,230.017 528.458,248.652 512,239 495.542,248.652 499.636,230.017 485.37,217.348 504.359,215.483" fill="#B8FF3B"/>
+    
+</svg>

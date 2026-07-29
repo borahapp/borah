@@ -2,25 +2,313 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Root router (AR-02). Only the bootstrap placeholder route exists here —
-/// feature routes are added as each DV-xx module is implemented.
+import '../../design_system/animations/app_motion.dart';
+import '../../design_system/components/feedback/error_state.dart';
+import '../observability/crash_reporting.dart';
+import '../../features/authentication/application/auth_controller.dart';
+import '../../features/authentication/presentation/pages/email_verification_page.dart';
+import '../../features/authentication/presentation/pages/login_page.dart';
+import '../../features/authentication/presentation/pages/new_password_page.dart';
+import '../../features/authentication/presentation/pages/password_reset_page.dart';
+import '../../features/authentication/presentation/pages/signup_page.dart';
+import '../../features/authentication/presentation/pages/splash_page.dart';
+import '../../features/authentication/presentation/states/auth_status.dart';
+import '../../features/administration/presentation/pages/admin_dashboard_page.dart';
+import '../../features/administration/presentation/pages/admin_restaurants_page.dart';
+import '../../features/administration/presentation/pages/admin_roles_page.dart';
+import '../../features/administration/presentation/pages/admin_users_page.dart';
+import '../../features/administration/presentation/pages/audit_log_page.dart';
+import '../../features/administration/presentation/pages/moderation_page.dart';
+import '../../features/favorites/presentation/pages/favorites_page.dart';
+import '../../features/gamification/presentation/pages/gamification_profile_page.dart';
+import '../../features/gamification/presentation/pages/ranking_users_page.dart';
+import '../../features/notifications/domain/app_notification.dart';
+import '../../features/notifications/presentation/pages/notification_detail_page.dart';
+import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
+import '../../features/rankings/presentation/pages/rankings_page.dart';
+import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
+import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
+import '../../features/restaurants/presentation/pages/restaurants_search_page.dart';
+import '../../features/reviews/presentation/pages/create_review_page.dart';
+import '../../features/reviews/presentation/pages/edit_review_page.dart';
+import '../../features/reviews/presentation/pages/review_detail_page.dart';
+import '../../features/reviews/presentation/pages/reviews_list_page.dart';
+import '../../features/social/presentation/pages/comments_page.dart';
+import '../../features/social/presentation/pages/feed_page.dart';
+import '../../features/social/presentation/pages/follow_list_page.dart';
+import '../../features/social/presentation/pages/public_profile_page.dart';
+import '../../features/social/presentation/states/follow_list_status.dart';
+import '../../features/users/presentation/pages/change_avatar_page.dart';
+import '../../features/users/presentation/pages/edit_profile_page.dart';
+import '../../features/users/presentation/pages/profile_page.dart';
+import '../../features/users/presentation/pages/settings_page.dart';
+import 'home_shell_page.dart';
+
+const _authRoutes = {
+  '/login',
+  '/signup',
+  '/password-reset',
+  '/email-verification',
+};
+
+/// Prefixos de rota que exigem usuário autenticado (DV-01 "proteção de
+/// rotas"). Prefixo (não igualdade exata) para cobrir sub-rotas e rotas
+/// com parâmetro, como `/restaurants/:id`.
+const _protectedRoutePrefixes = [
+  '/home',
+  '/profile',
+  '/settings',
+  '/restaurants',
+  '/reviews',
+  '/rankings',
+  '/favorites',
+  '/feed',
+  '/users',
+  '/admin',
+  '/notifications',
+  '/gamification',
+];
+
+bool _isProtectedRoute(String location) {
+  return _protectedRoutePrefixes.any(
+    (prefix) => location == prefix || location.startsWith('$prefix/'),
+  );
+}
+
+/// Notifica o GoRouter quando o AuthStatus muda, sem recriar o router
+/// inteiro (evita reset da pilha de navegação a cada mudança de estado).
+class _GoRouterRefreshNotifier extends ChangeNotifier {
+  _GoRouterRefreshNotifier(Ref ref) {
+    ref.listen(authControllerProvider, (_, _) => notifyListeners());
+  }
+}
+
+/// Root router (AR-02). A Splash decide o redirecionamento inicial
+/// (DV-01) — o redirect abaixo só protege rotas após a decisão inicial,
+/// e nunca consulta o Supabase diretamente (lê apenas authControllerProvider).
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final refreshNotifier = _GoRouterRefreshNotifier(ref);
+  ref.onDispose(refreshNotifier.dispose);
+
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refreshNotifier,
+    errorBuilder: (context, state) {
+      // RC-03A: erro de navegação (rota desconhecida ou falha ao
+      // construir uma página) - reporta ao Sentry com o mesmo tratamento
+      // de qualquer outro erro capturado manualmente, e mostra um estado
+      // de erro consistente com o resto do app em vez da tela de erro
+      // padrão do GoRouter.
+      CrashReporting.captureException(
+        state.error ?? Exception('Rota desconhecida: ${state.uri}'),
+        StackTrace.current,
+        origin: 'go_router',
+      );
+      return Scaffold(
+        body: ErrorState(
+          message: 'Não foi possível abrir esta tela.',
+          onRetry: () => context.go('/'),
+        ),
+      );
+    },
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      if (location == '/') return null; // a Splash decide sozinha
+
+      final status = ref.read(authControllerProvider);
+      final isAuthRoute = _authRoutes.contains(location);
+
+      // RC-04E: uma sessão de recuperação de senha nunca deve navegar
+      // para nenhum outro lugar além de "Definir nova senha" - nem para
+      // rotas protegidas (ainda não é bem um login), nem para
+      // login/cadastro (o `redirect` abaixo trataria isso como
+      // `Authenticated`, o que não é o caso).
+      if (status is PasswordRecoveryInProgress) {
+        return location == '/password-recovery' ? null : '/password-recovery';
+      }
+      if (location == '/password-recovery') {
+        return status is Authenticated ? '/home' : '/login';
+      }
+
+      if (status is Authenticated && isAuthRoute) return '/home';
+      if (status is! Authenticated && _isProtectedRoute(location)) {
+        return '/login';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const _BootstrapPlaceholderPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SplashPage(),
+          transitionDuration: AppMotion.scaled(context, AppMotion.slow),
+          reverseTransitionDuration: AppMotion.scaled(context, AppMotion.slow),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: AppMotion.standard,
+              ),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
+      GoRoute(
+        path: '/password-reset',
+        builder: (context, state) => const PasswordResetPage(),
+      ),
+      GoRoute(
+        path: '/password-recovery',
+        builder: (context, state) => const NewPasswordPage(),
+      ),
+      GoRoute(
+        path: '/email-verification',
+        builder: (context, state) => const EmailVerificationPage(),
+      ),
+      // RC-04E: `/home` passa a ser o `HomeShellPage`, conectando a
+      // navegação inferior (já existente, nunca usada até esta rodada) às
+      // 4 telas centrais (Restaurantes/Feed/Favoritos/Perfil) - substitui
+      // o antigo `_BootstrapPlaceholderPage` (placeholder de desenvolvedor)
+      // sem depender de o usuário já seguir alguém (a aba inicial é
+      // Restaurantes, que carrega conteúdo desde o primeiro acesso).
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => const HomeShellPage(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfilePage(),
+      ),
+      GoRoute(
+        path: '/profile/avatar',
+        builder: (context, state) => const ChangeAvatarPage(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/restaurants',
+        builder: (context, state) => const RestaurantsSearchPage(),
+      ),
+      GoRoute(
+        path: '/restaurants/new',
+        builder: (context, state) => const CreateRestaurantPage(),
+      ),
+      GoRoute(
+        path: '/restaurants/:id',
+        builder: (context, state) =>
+            RestaurantDetailPage(restaurantId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/restaurants/:id/reviews',
+        builder: (context, state) =>
+            ReviewsListPage(restaurantId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/restaurants/:id/reviews/new',
+        builder: (context, state) =>
+            CreateReviewPage(restaurantId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reviews/:id',
+        builder: (context, state) =>
+            ReviewDetailPage(reviewId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reviews/:id/edit',
+        builder: (context, state) =>
+            EditReviewPage(reviewId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/rankings',
+        builder: (context, state) => const RankingsPage(),
+      ),
+      GoRoute(
+        path: '/favorites',
+        builder: (context, state) => const FavoritesPage(),
+      ),
+      GoRoute(path: '/feed', builder: (context, state) => const FeedPage()),
+      GoRoute(
+        path: '/reviews/:id/comments',
+        builder: (context, state) =>
+            CommentsPage(reviewId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/users/:id',
+        builder: (context, state) =>
+            PublicProfilePage(userId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/users/:id/followers',
+        builder: (context, state) => FollowListPage(
+          userId: state.pathParameters['id']!,
+          type: FollowListType.followers,
+        ),
+      ),
+      GoRoute(
+        path: '/users/:id/following',
+        builder: (context, state) => FollowListPage(
+          userId: state.pathParameters['id']!,
+          type: FollowListType.following,
+        ),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminDashboardPage(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const AdminUsersPage(),
+      ),
+      GoRoute(
+        path: '/admin/restaurants',
+        builder: (context, state) => const AdminRestaurantsPage(),
+      ),
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (context, state) => const ModerationPage(),
+      ),
+      GoRoute(
+        path: '/admin/roles',
+        builder: (context, state) => const AdminRolesPage(),
+      ),
+      GoRoute(
+        path: '/admin/audit-logs',
+        builder: (context, state) => const AuditLogPage(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: '/notifications/preferences',
+        builder: (context, state) => const NotificationPreferencesPage(),
+      ),
+      GoRoute(
+        path: '/notifications/:id',
+        builder: (context, state) => NotificationDetailPage(
+          notification: state.extra! as AppNotification,
+        ),
+      ),
+      GoRoute(
+        path: '/gamification',
+        builder: (context, state) => const GamificationProfilePage(),
+      ),
+      GoRoute(
+        path: '/gamification/ranking',
+        builder: (context, state) => const RankingUsersPage(),
       ),
     ],
   );
 });
-
-class _BootstrapPlaceholderPage extends StatelessWidget {
-  const _BootstrapPlaceholderPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('BORAH')));
-  }
-}

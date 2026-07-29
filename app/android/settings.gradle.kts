@@ -21,6 +21,9 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.0.1" apply false
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
+    // OBS-01A: upload automatico do mapping.txt do R8/ProGuard ao Sentry nas
+    // builds de Release - ver comentario completo em app/build.gradle.kts.
+    id("io.sentry.android.gradle") version "6.16.0" apply false
 }
 
 include(":app")

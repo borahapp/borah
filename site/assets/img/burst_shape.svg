@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Forma explosão BORAH">
+  <title>Forma explosão BORAH</title>
+  <defs>
+    <linearGradient id="limeGradient" gradientUnits="userSpaceOnUse" x1="0" y1="33.5" x2="0" y2="504.5">
+      <stop offset="0" stop-color="#C2FF00"/>
+      <stop offset="0.58" stop-color="#B8FF3B"/>
+      <stop offset="1" stop-color="#96D600"/>
+    </linearGradient>
+    <linearGradient id="purpleGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C47FF"/>
+      <stop offset="0.55" stop-color="#5B2EFF"/>
+      <stop offset="1" stop-color="#3D19C7"/>
+    </linearGradient>
+    <linearGradient id="darkFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B0714" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0B0714" stop-opacity="0.94"/>
+    </linearGradient>
+    
+    </defs>
+  <polygon points="256,36 285.173,90.552 331.244,49.268 340,110.508 397.413,87.47 384.695,148.012 446.526,146 413.868,198.541 472.658,217.797 424,256 472.658,294.203 413.868,313.459 446.526,366 384.695,363.988 397.413,424.53 340,401.492 331.244,462.732 285.173,421.448 256,476 226.827,421.448 180.756,462.732 172,401.492 114.587,424.53 127.305,363.988 65.474,366 98.132,313.459 39.342,294.203 88,256 39.342,217.797 98.132,198.541 65.474,146 127.305,148.012 114.587,87.47 172,110.508 180.756,49.268 226.827,90.552" fill="#5B2EFF"/><circle cx="256" cy="256" r="102" fill="#B8FF3B"/>
+</svg>

@@ -314,3 +314,42 @@ Alterações no sistema de cores deverão:
 - Dark Mode previsto.
 - Acessibilidade validada.
 - Governança estabelecida.
+
+---
+
+# 21. Implementação Atual (FASE 7A, UI-01)
+
+Valores reais, implementados em duas camadas (ajuste de arquitetura,
+FASE 7A): `app/lib/design_system/brand/brand_colors.dart` (`BrandColors`
+— identidade pura da marca, só as 3 cores do manual) e
+`app/lib/design_system/tokens/app_colors.dart` (`AppColors` — camada
+Material, deriva de `BrandColors` para construir o `ColorScheme`:
+escala neutra, semânticas, pares `on-*`). O manual não é um color
+system completo — só as 3 cores de marca vêm dele.
+
+| Token | Hex | Origem |
+|---|---|---|
+| Roxo BORAH (`primary`) | `#5B2EFF` | Manual §05 |
+| Verde BORAH (`tertiary`) | `#B8FF3B` | Manual §05 |
+| Preto Uva | `#0B0714` | Manual §05 |
+| Roxo BORAH (tinta clara, Dark Theme) | `#9477FF` | Derivada — Roxo puro como texto sobre fundo escuro fica abaixo do WCAG AA (2.58–3.11:1); a tinta atinge 5.00–6.01:1 |
+| Success | `#B8FF3B` (= Verde BORAH) | Derivada |
+| Warning | `#FFB020` | Derivada |
+| Error | `#FF3B5C` | Derivada |
+| Info | `#9477FF` (= tinta do Roxo) | Derivada |
+
+**Pares `on-*` validados por contraste WCAG (luminância relativa sRGB):**
+
+| Par | Contraste |
+|---|---|
+| Branco sobre Roxo BORAH | 6.40:1 |
+| Preto Uva sobre Verde BORAH | 16.50:1 (confirmado também no próprio material do manual, por amostragem de pixel) |
+| Branco sobre Preto Uva | 19.91:1 |
+
+**Gradientes (`BrandGradients`, `app/lib/design_system/brand/brand_gradients.dart`):**
+o Manual da Marca **não fornece valores hex para os gradientes** — a
+arte da página 6 (§05) mostra dois gradientes visualmente, mas o PDF
+não lista nenhum hex em texto para eles. Os valores abaixo foram
+obtidos por amostragem direta de pixel dessa arte, não estimados
+visualmente nem inventados: Roxo `#6B2FFF → #4915D0`; Verde
+`#C2FF02 → #97D702`.

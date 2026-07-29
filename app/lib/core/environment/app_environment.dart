@@ -7,4 +7,33 @@ abstract final class AppEnvironment {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  /// DSN do Sentry (RC-03A). Vazio por padrão - o pacote `sentry` não
+  /// envia nenhum evento quando o DSN está vazio (comportamento nativo,
+  /// documentado em `SentryOptions.dsn`), então rodar sem `--dart-define`
+  /// (ex.: `flutter run` local sem configuração) fica silencioso por
+  /// padrão, sem nenhum gate extra necessário no código.
+  static const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
+  /// Nome do ambiente atual (RC-03A): `development` | `qa` | `beta` |
+  /// `production`. Marca todo evento reportado ao Sentry, permitindo
+  /// filtrar por ambiente no dashboard. Default `development` - o valor
+  /// mais seguro quando o app roda sem nenhum `--dart-define`.
+  static const environmentName = String.fromEnvironment(
+    'APP_ENVIRONMENT',
+    defaultValue: 'development',
+  );
+
+  /// Project token do PostHog (RC-03C). Vazio por padrão - `Posthog()
+  /// .setup()` já no-opa graciosamente quando o token está vazio (mesmo
+  /// espírito do `SENTRY_DSN` vazio acima).
+  static const postHogApiKey = String.fromEnvironment('POSTHOG_API_KEY');
+
+  /// Host de ingestão do PostHog (RC-03C). Default aponta para a nuvem
+  /// pública US do PostHog — trocar via `--dart-define` para uma instância
+  /// self-hosted ou região EU, quando aplicável.
+  static const postHogHost = String.fromEnvironment(
+    'POSTHOG_HOST',
+    defaultValue: 'https://us.i.posthog.com',
+  );
 }
