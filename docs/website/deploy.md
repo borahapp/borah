@@ -1,6 +1,6 @@
 # Website Institucional — Deploy e Configuração de Domínio
 
-**Contexto:** BETA-11B. A decisão de hospedagem (GitHub Pages) já foi tomada e justificada em `docs/release/hosting.md` (BETA-10D) — este documento cobre apenas os passos operacionais de publicação, que **não foram executados nesta rodada** (a rodada termina com o site pronto para publicação, não publicado).
+**Contexto:** BETA-11B, atualizado em BETA-11C e BETA-11D.1. A decisão de hospedagem (GitHub Pages) já foi tomada e justificada em `docs/release/hosting.md` (BETA-10D). O workflow de publicação (`.github/workflows/pages.yml`) foi criado no BETA-11D.1, mas **ainda não foi executado** — falta habilitar a fonte "GitHub Actions" nas Settings do repositório e autorizar o merge `develop` → `main`, ambos pendentes de ação/aprovação explícita do proprietário.
 
 ## 1. Pré-requisitos já atendidos por esta rodada
 
@@ -19,12 +19,17 @@ supabase secrets set TURNSTILE_SECRET_KEY=<valor-real-do-cloudflare>
 
 Depois, substituir os 3 placeholders descritos em `docs/website/forms.md`, seção 8 (`FUNCTIONS_URL` em `main.js`, `data-sitekey` nos 3 formulários) pelos valores reais, antes de publicar `site/`.
 
-## 2. Passos de publicação (ação futura, fora desta rodada)
+## 2. Passos de publicação
 
-1. **Configurar GitHub Pages** no repositório: Settings → Pages → Source → escolher a branch (`main`, após merge do `develop`) e a pasta `/site`.
-2. **Aguardar o certificado TLS automático** do GitHub Pages ser emitido para o domínio customizado (pode levar até 24h na primeira configuração).
-3. **Habilitar "Enforce HTTPS"** em Settings → Pages assim que o certificado estiver disponível.
-4. **Verificar que o arquivo `CNAME`** (já criado, conteúdo `appborah.com.br`) foi de fato publicado na raiz do site pelo GitHub Pages — ele é regenerado automaticamter a cada deploy a partir do arquivo em `site/CNAME`, então não deve ser removido do repositório.
+**BETA-11D.1** criou `.github/workflows/pages.yml`, que publica automaticamente o conteúdo de `site/` a cada push em `main`, usando as Actions oficiais do GitHub Pages (`actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`). Por que um workflow em vez do modo "Deploy from a branch" das Settings: o GitHub Pages, nesse modo, só publica a partir da raiz do repositório ou de `/docs` — nenhuma das duas opções serve, já que o site vive em `site/` (e `docs/` já é usado para toda a documentação de engenharia do projeto). O workflow contorna essa limitação publicando exatamente a pasta `site/`, sem mover nada.
+
+Passos restantes (ação futura, ainda não executados):
+
+1. **Habilitar GitHub Pages com fonte "GitHub Actions"** no repositório: Settings → Pages → Source → `GitHub Actions` (não "Deploy from a branch" — o workflow já cuida disso). Isso só precisa ser feito uma vez.
+2. **Fazer o merge `develop` → `main`** (aguardando autorização explícita separada — ver `docs/launch/rollback_plan.md`/decisão do proprietário) — o workflow só roda em push para `main`.
+3. **Aguardar o certificado TLS automático** do GitHub Pages ser emitido para o domínio customizado (pode levar até 24h na primeira configuração).
+4. **Habilitar "Enforce HTTPS"** em Settings → Pages assim que o certificado estiver disponível.
+5. **Verificar que o arquivo `CNAME`** (já criado, conteúdo `appborah.com.br`, dentro de `site/`) foi de fato publicado na raiz do site pelo GitHub Pages — o `actions/upload-pages-artifact` inclui esse arquivo automaticamente por estar dentro do `path: "./site"`, então não deve ser removido do repositório.
 
 ## 3. Configuração de DNS (ação exclusiva do proprietário do domínio, fora do repositório)
 
@@ -55,6 +60,20 @@ node scripts/build-legal-pages.mjs
 
 Isso regenera `site/privacidade/index.html` e `site/termos/index.html`. Sem esse passo, o site publicado ficaria com uma versão desatualizada do texto jurídico.
 
-## 6. Automação futura (fora do escopo desta rodada)
+## 6. Workflow de publicação (`.github/workflows/pages.yml`, BETA-11D.1)
 
-Um workflow de GitHub Actions dedicado (ex.: `.github/workflows/pages.yml`) pode rodar `node scripts/build-legal-pages.mjs` automaticamente e publicar `site/` a cada push na branch de produção, eliminando o passo manual acima. Não foi criado nesta rodada por não ter sido pedido e por envolver decisão adicional sobre gatilho/trigger do workflow.
+```yaml
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+```
+
+Só publica em push para `main` (ou disparo manual via `workflow_dispatch`) e usa `concurrency: { group: "pages", cancel-in-progress: false }` para nunca deixar duas publicações sobrepostas em andamento. As permissões seguem o mínimo exigido pelas Actions oficiais de Pages (`contents: read` para o checkout, `pages: write` para publicar, `id-token: write` para a Action assinar o deploy via OIDC) — esta é a primeira vez que um workflow do projeto declara um bloco `permissions:` explícito.
+
+**Lacuna conhecida (não resolvida neste ajuste):** o workflow **não** roda `node scripts/build-legal-pages.mjs` antes de publicar — continua sendo um passo manual (seção 5) antes de qualquer merge para `main`. Se uma atualização em `docs/legal/*.md` for mesclada sem rodar o script antes, o site publicado ficará com uma versão desatualizada das páginas jurídicas. Automatizar esse passo dentro do workflow fica como melhoria futura, fora do escopo pedido para o BETA-11D.1 (que pediu especificamente as 3 Actions oficiais de Pages, sem alterar a estrutura do projeto).

@@ -1,0 +1,60 @@
+name: Deploy Website to GitHub Pages
+
+# BETA-11D.1. GitHub Pages só publica a partir da raiz do repositório
+# (`/`) ou de `/docs` na branch escolhida - nenhuma das duas opções
+# serve aqui, já que o site institucional vive em `site/`
+# (`docs/` já é usado para toda a documentação de engenharia do
+# projeto, e mover `site/` para a raiz misturaria os arquivos do site
+# com o resto do repositório). Este workflow usa as Actions oficiais
+# do GitHub Pages (configure-pages/upload-pages-artifact/deploy-pages)
+# para publicar exclusivamente o conteúdo de `site/`, sem mover ou
+# reestruturar nada.
+#
+# Só roda em push para `main` (a branch de produção) - `develop`
+# nunca publica o site diretamente.
+#
+# Não regenera as páginas jurídicas (`docs/legal/*.md` ->
+# `site/privacidade|termos/index.html`) automaticamente - isso
+# continua sendo um passo manual (`node scripts/build-legal-pages.mjs`)
+# antes de qualquer merge para `main`, conforme
+# docs/website/deploy.md secao 5. Ver docs/website/deploy.md secao 7
+# para uma nota sobre essa lacuna.
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Evita duas publicações concorrentes do site; não cancela um deploy
+# em andamento para não deixar o Pages num estado parcialmente
+# publicado.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site/ as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./site"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
