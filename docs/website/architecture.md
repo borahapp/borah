@@ -39,13 +39,23 @@ site/
 ├── sitemap.xml
 └── assets/
     ├── css/style.css       -> design system (tokens de docs/design/design_system.md)
-    ├── js/main.js          -> menu mobile, acordeão de FAQ, formulários via mailto
+    ├── js/main.js          -> menu mobile, acordeão de FAQ, formulários via Edge Function (BETA-11C)
     ├── fonts/              -> Fredoka e Manrope (mesmas fontes do app, cópia local)
     └── img/                -> logo, símbolo, ilustrações, ícone, favicon (cópias de app/assets/)
 
 scripts/
 └── build-legal-pages.mjs   -> gera site/privacidade e site/termos a partir de docs/legal/
 ```
+
+## 2.1. Caminhos relativos (BETA-11D.2)
+
+Todo `href`/`src` interno do site (CSS, JS, imagens, ícones, favicon, navegação entre páginas) usa **caminho relativo** — nunca absoluto ("/…"). Motivo: o GitHub Pages de projeto (`https://<org>.github.io/<repo>/`) serve o site num subcaminho até o domínio customizado (`site/CNAME`) entrar no ar; um caminho absoluto como `/assets/css/style.css` resolve contra a raiz real do host (`https://<org>.github.io/`), não contra o subcaminho, quebrando todo asset (404 — bug real encontrado após o primeiro deploy de teste no GitHub Pages). Caminhos relativos funcionam corretamente nos dois cenários — subcaminho do GitHub Pages e raiz do domínio customizado — sem nenhuma configuração ou prefixo hardcoded.
+
+Como os 3 níveis de profundidade do site diferem:
+- `site/index.html` (profundidade 0): caminhos relativos "nus" (`assets/css/style.css`, `sobre/`, `./`).
+- `site/{sobre,suporte,contato,privacidade,termos}/index.html` (profundidade 1): prefixo `../` (`../assets/css/style.css`, `../sobre/`, `../`).
+
+As únicas URLs que permanecem absolutas de propósito são as que **precisam** ser absolutas por natureza: `canonical`, `og:url`, `og:image` (sempre apontam para o domínio de produção final, `www.appborah.com.br`, independentemente de onde o preview está hospedado no momento) e as URLs em `sitemap.xml`/`robots.txt` (exigidas como absolutas pela própria especificação desses formatos).
 
 ## 3. Identidade visual reutilizada (não recriada)
 

@@ -13,6 +13,20 @@
 // suficiente para o subconjunto de Markdown realmente usado nesses dois
 // arquivos: #, ##, **negrito**, tabelas | col | col |, listas "- item" e
 // parágrafos simples. Não é um parser de Markdown genérico.
+//
+// BETA-11D.2 — todos os links de navegação/assets usam caminhos
+// RELATIVOS (nunca absolutos "/…"). Motivo: o GitHub Pages de projeto
+// serve o site num subcaminho (https://<org>.github.io/<repo>/) até o
+// domínio customizado (site/CNAME) entrar no ar — caminhos absolutos
+// como "/assets/…" resolvem contra a raiz real do host, quebrando todo
+// asset sob esse subcaminho. Caminhos relativos funcionam
+// corretamente nos dois cenários (subcaminho do GitHub Pages e raiz do
+// domínio customizado), sem precisar de nenhuma configuração. As duas
+// páginas geradas por este script vivem sempre em profundidade 1
+// (site/privacidade/, site/termos/), por isso o prefixo é sempre
+// "../" — ver as mesmas regras aplicadas manualmente nas páginas
+// autorais (site/index.html na profundidade 0, demais na
+// profundidade 1).
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -149,9 +163,9 @@ function pageTemplate({ title, description, path, bodyHtml }) {
 <meta property="og:url" content="https://www.appborah.com.br${path}" />
 <meta property="og:image" content="https://www.appborah.com.br/assets/img/og-cover.png" />
 <meta name="twitter:card" content="summary_large_image" />
-<link rel="icon" href="/assets/img/favicon.png" />
-<link rel="apple-touch-icon" href="/assets/img/borah_app_icon_1024.png" />
-<link rel="stylesheet" href="/assets/css/style.css" />
+<link rel="icon" href="../assets/img/favicon.png" />
+<link rel="apple-touch-icon" href="../assets/img/borah_app_icon_1024.png" />
+<link rel="stylesheet" href="../assets/css/style.css" />
 </head>
 <body>
 ${nav}
@@ -163,30 +177,33 @@ ${bodyHtml}
 </section>
 </main>
 ${renderFooter()}
-<script src="/assets/js/main.js"></script>
+<script src="../assets/js/main.js"></script>
 </body>
 </html>
 `;
 }
 
+// currentPath usa a forma lógica ("/", "/sobre/", …) só para decidir o
+// aria-current; o href real emitido é sempre relativo (profundidade 1
+// - ver comentário no topo do arquivo).
 function renderNav(currentPath) {
   const links = [
-    ["/", "Início"],
-    ["/sobre/", "Sobre"],
-    ["/suporte/", "Suporte"],
-    ["/privacidade/", "Privacidade"],
-    ["/termos/", "Termos"],
-    ["/contato/", "Contato"],
+    ["/", "../", "Início"],
+    ["/sobre/", "../sobre/", "Sobre"],
+    ["/suporte/", "../suporte/", "Suporte"],
+    ["/privacidade/", "../privacidade/", "Privacidade"],
+    ["/termos/", "../termos/", "Termos"],
+    ["/contato/", "../contato/", "Contato"],
   ];
   const items = links
     .map(
-      ([href, label]) =>
-        `<li><a href="${href}"${href === currentPath ? ' aria-current="page"' : ""}>${label}</a></li>`,
+      ([logicalPath, href, label]) =>
+        `<li><a href="${href}"${logicalPath === currentPath ? ' aria-current="page"' : ""}>${label}</a></li>`,
     )
     .join("");
   return `<header class="site-header">
   <div class="container">
-    <a class="brand" href="/"><img src="/assets/img/borah_symbol.svg" alt="" width="32" height="32" /> BORAH</a>
+    <a class="brand" href="../"><img src="../assets/img/borah_symbol.svg" alt="" width="32" height="32" /> BORAH</a>
     <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav-links">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
@@ -200,20 +217,20 @@ function renderFooter() {
   <div class="container">
     <div class="footer-grid">
       <div>
-        <a class="brand" href="/" style="color:#fff"><img src="/assets/img/borah_symbol.svg" alt="" width="28" height="28" /> BORAH</a>
+        <a class="brand" href="../" style="color:#fff"><img src="../assets/img/borah_symbol.svg" alt="" width="28" height="28" /> BORAH</a>
         <p style="margin-top:12px;max-width:32ch">Todo grupo tem seus rolês. Agora eles têm um ranking.</p>
       </div>
       <div>
         <h4>Produto</h4>
-        <ul><li><a href="/">Início</a></li><li><a href="/sobre/">Sobre</a></li></ul>
+        <ul><li><a href="../">Início</a></li><li><a href="../sobre/">Sobre</a></li></ul>
       </div>
       <div>
         <h4>Legal</h4>
-        <ul><li><a href="/privacidade/">Política de Privacidade</a></li><li><a href="/termos/">Termos de Uso</a></li></ul>
+        <ul><li><a href="../privacidade/">Política de Privacidade</a></li><li><a href="../termos/">Termos de Uso</a></li></ul>
       </div>
       <div>
         <h4>Contato</h4>
-        <ul><li><a href="/suporte/">Suporte</a></li><li><a href="/contato/">Fale conosco</a></li><li><a href="mailto:Borahh.app@gmail.com">Borahh.app@gmail.com</a></li></ul>
+        <ul><li><a href="../suporte/">Suporte</a></li><li><a href="../contato/">Fale conosco</a></li><li><a href="mailto:Borahh.app@gmail.com">Borahh.app@gmail.com</a></li></ul>
       </div>
     </div>
     <div class="footer-bottom">
