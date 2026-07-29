@@ -15,6 +15,15 @@
 // camada real de proteção contra abuso, não o gateway de JWT do
 // Supabase.
 //
+// BETA-11C (ajuste de contrato) - um novo prompt pediu uma tabela
+// `waitlist`/função `join-waitlist` mais simples, sem Turnstile/
+// honeypot. Decisão (revisada com o usuário): manter `beta_waitlist`/
+// `contact_messages`/`website-form-submit`/Turnstile como estão (já
+// revisados e em produção), só adotando o contrato de resposta
+// {success, message} + HTTP 409 para duplicidade pedido nesse prompt -
+// ver docs/website/forms.md secao 11 para o registro completo dessa
+// divergência.
+//
 // ATENÇÃO: escrita e revisada estaticamente, sem execução real via
 // `supabase functions serve` (Docker indisponível neste ambiente -
 // ver AR-06/EX-01B). Validar com `supabase functions serve` antes do
@@ -44,8 +53,13 @@ function corsHeaders(origin: string | null): HeadersInit {
   };
 }
 
-function jsonResponse(body: unknown, status: number, origin: string | null): Response {
-  return new Response(JSON.stringify(body), {
+function jsonResponse(
+  success: boolean,
+  message: string,
+  status: number,
+  origin: string | null,
+): Response {
+  return new Response(JSON.stringify({ success, message }), {
     status,
     headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
@@ -78,6 +92,8 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 
+const MIN_NAME_LENGTH = 2;
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
 
@@ -85,36 +101,43 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders(origin) });
   }
   if (req.method !== "POST") {
-    return jsonResponse({ ok: false, error: "method_not_allowed" }, 405, origin);
+    return jsonResponse(false, "Método não permitido.", 405, origin);
+  }
+
+  const contentType = req.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return jsonResponse(false, "Content-Type inválido, esperado application/json.", 400, origin);
   }
 
   let payload: Record<string, unknown>;
   try {
     payload = await req.json();
   } catch {
-    return jsonResponse({ ok: false, error: "invalid_json" }, 400, origin);
+    return jsonResponse(false, "Corpo da requisição inválido.", 400, origin);
   }
 
   const { type, turnstileToken, honeypot, startedAt } = payload;
 
   // Honeypot: campo que só um bot preencheria (invisível para humanos).
+  // Resposta genérica de propósito (200 + success:false) para não
+  // revelar ao bot que foi detectado.
   if (typeof honeypot === "string" && honeypot.trim() !== "") {
-    return jsonResponse({ ok: false, error: "rejected" }, 200, origin);
+    return jsonResponse(false, "Não foi possível concluir seu cadastro.", 200, origin);
   }
 
-  // Tempo mínimo de preenchimento.
+  // Tempo mínimo de preenchimento - mesma lógica de silêncio acima.
   if (typeof startedAt === "number" && Date.now() - startedAt < MIN_FILL_TIME_MS) {
-    return jsonResponse({ ok: false, error: "rejected" }, 200, origin);
+    return jsonResponse(false, "Não foi possível concluir seu cadastro.", 200, origin);
   }
 
   if (!isNonEmptyString(turnstileToken)) {
-    return jsonResponse({ ok: false, error: "captcha_required" }, 400, origin);
+    return jsonResponse(false, "Verificação de segurança ausente. Recarregue a página e tente novamente.", 400, origin);
   }
 
   const remoteIp = req.headers.get("x-forwarded-for");
   const captchaOk = await verifyTurnstile(turnstileToken, remoteIp);
   if (!captchaOk) {
-    return jsonResponse({ ok: false, error: "captcha_failed" }, 400, origin);
+    return jsonResponse(false, "Não foi possível confirmar que você não é um robô. Tente novamente.", 400, origin);
   }
 
   const supabase = createClient(
@@ -128,7 +151,13 @@ Deno.serve(async (req) => {
     const source = isNonEmptyString(payload.source) ? payload.source : "website";
 
     if (!isEmail(email)) {
-      return jsonResponse({ ok: false, error: "invalid_email" }, 400, origin);
+      return jsonResponse(false, "E-mail inválido.", 400, origin);
+    }
+    // `name` continua opcional (decisão de produto já aprovada -
+    // beta_waitlist.name é nullable); quando informado, precisa ter um
+    // tamanho mínimo razoável.
+    if (isNonEmptyString(name) && name.trim().length < MIN_NAME_LENGTH) {
+      return jsonResponse(false, `Nome deve ter pelo menos ${MIN_NAME_LENGTH} caracteres.`, 400, origin);
     }
 
     const { error } = await supabase.from("beta_waitlist").insert({
@@ -139,26 +168,26 @@ Deno.serve(async (req) => {
 
     if (error) {
       if (error.code === "23505") {
-        return jsonResponse({ ok: false, error: "duplicate" }, 200, origin);
+        return jsonResponse(false, "Este e-mail já está cadastrado.", 409, origin);
       }
       console.error("beta_waitlist insert failed", error);
-      return jsonResponse({ ok: false, error: "server_error" }, 500, origin);
+      return jsonResponse(false, "Não foi possível concluir seu cadastro.", 500, origin);
     }
 
-    return jsonResponse({ ok: true }, 200, origin);
+    return jsonResponse(true, "Cadastro realizado com sucesso.", 200, origin);
   }
 
   if (type === "contact") {
     const { email, name, message, subject } = payload;
 
     if (!isEmail(email)) {
-      return jsonResponse({ ok: false, error: "invalid_email" }, 400, origin);
+      return jsonResponse(false, "E-mail inválido.", 400, origin);
     }
     if (!isNonEmptyString(name)) {
-      return jsonResponse({ ok: false, error: "invalid_name" }, 400, origin);
+      return jsonResponse(false, "Por favor, preencha seu nome.", 400, origin);
     }
     if (!isNonEmptyString(message)) {
-      return jsonResponse({ ok: false, error: "invalid_message" }, 400, origin);
+      return jsonResponse(false, "Por favor, escreva sua mensagem.", 400, origin);
     }
 
     const { error } = await supabase.from("contact_messages").insert({
@@ -170,11 +199,11 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("contact_messages insert failed", error);
-      return jsonResponse({ ok: false, error: "server_error" }, 500, origin);
+      return jsonResponse(false, "Não foi possível enviar sua mensagem.", 500, origin);
     }
 
-    return jsonResponse({ ok: true }, 200, origin);
+    return jsonResponse(true, "Mensagem enviada com sucesso.", 200, origin);
   }
 
-  return jsonResponse({ ok: false, error: "invalid_type" }, 400, origin);
+  return jsonResponse(false, "Tipo de formulário inválido.", 400, origin);
 });
