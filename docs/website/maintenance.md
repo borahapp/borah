@@ -12,6 +12,16 @@ node scripts/build-legal-pages.mjs
 
 Editar o HTML gerado diretamente funciona até a próxima execução do script, quando a edição manual é silenciosamente sobrescrita.
 
+## 1.1. Regra de ouro: nunca usar caminhos absolutos ("/…")
+
+Todo novo `href`/`src` (asset ou link interno) deve ser relativo — ver `architecture.md`, seção 2.1, para o motivo (bug real de 404 no GitHub Pages, corrigido no BETA-11D.2). Ao adicionar uma página nova ou um novo asset, confirmar com:
+
+```bash
+grep -rn 'href="/\|src="/' site/*.html site/*/index.html
+```
+
+Sem resultado = sem regressão. As únicas exceções esperadas são `canonical`/`og:url`/`og:image` (sempre absolutos ao domínio de produção) e as URLs dentro de `sitemap.xml`/`robots.txt`.
+
 ## 2. Atualizando conteúdo das demais páginas
 
 Home, Sobre, Suporte e Contato são HTML autoral — editar diretamente os arquivos em `site/`. Ao alterar qualquer um deles, replicar manualmente qualquer mudança de navegação ou rodapé nas demais páginas (não há um sistema de includes/templating para essas 4 páginas, diferente das 2 páginas geradas).
