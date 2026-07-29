@@ -89,6 +89,17 @@ jobs:
           EOF
 
       - name: Build APK/AAB (Producao)
+        # OBS-01A: variaveis de ambiente do SISTEMA (nao --dart-define) -
+        # o plugin io.sentry.android.gradle le com System.getenv() durante
+        # a fase de build nativo (Gradle/Kotlin), um contexto totalmente
+        # separado do que o --dart-define injeta no bytecode Dart. Sem
+        # SENTRY_AUTH_TOKEN, o upload do mapping.txt e pulado
+        # automaticamente (build.gradle.kts ja trata isso) - mesmo
+        # comportamento nao-bloqueante dos demais secrets.
+        env:
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           flutter build apk --release \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_PROD_URL }} \

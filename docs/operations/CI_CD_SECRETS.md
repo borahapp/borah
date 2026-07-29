@@ -72,6 +72,24 @@ Mesma filosofia não-bloqueante do §1 para `SUPABASE_PROD_*`/`SENTRY_DSN_PRODUC
 
 ---
 
+## 2.2 Secrets pendentes (upload do mapping do R8 ao Sentry)
+
+**Novo na OBS-01A.** `android/app/build.gradle.kts` agora aplica o plugin oficial `io.sentry.android.gradle` (versão `6.16.0`, compatibilidade com AGP 9.0.1/Kotlin 2.3.20 confirmada empiricamente via `flutter build appbundle --release` nesta sessão) para automatizar o envio do `mapping.txt` do R8/ProGuard ao Sentry a cada build de Release Android — resolve o achado da BETA-10D (crashes de Produção chegariam com stack traces ofuscados sem isso).
+
+| Secret (futuro) | Finalidade | Onde obter |
+|---|---|---|
+| `SENTRY_ORG` | Slug da organização Sentry | Projeto Sentry de Produção, ainda não provisionado — Settings → General |
+| `SENTRY_PROJECT` | Slug do projeto Sentry de Produção | Mesma página acima |
+| `SENTRY_AUTH_TOKEN` | Token de autenticação para upload (**segredo sensível** — nunca usar um token de escopo maior que "release" no projeto correspondente) | Sentry → Settings → Auth Tokens → criar um token com escopo `project:releases` |
+
+**Diferente dos secrets do `--dart-define` (§2.1), estes 3 são lidos como variáveis de ambiente do sistema operacional** (`System.getenv(...)` dentro do `build.gradle.kts`), passadas via o bloco `env:` do step "Build APK/AAB" em `release.yml` — não são injetadas no bytecode Dart, são consumidas só pelo Gradle/Kotlin durante a fase de build nativo.
+
+**Comportamento sem os secrets**: `autoUploadProguardMapping` é calculado dinamicamente (`!SENTRY_AUTH_TOKEN.isNullOrEmpty()`) — sem o token, o upload é pulado automaticamente (confirmado nesta sessão: a mensagem `> skipping upload.` aparece no log da build, e o `.aab` é gerado normalmente) — mesma filosofia não-bloqueante de todos os demais secrets deste documento.
+
+**Nunca reutilizar** o token de um projeto Sentry de QA/Desenvolvimento aqui, caso um venha a existir no futuro — mesma regra do §1/§2.1.
+
+---
+
 ## 3. Configuração manual recomendada no GitHub (não é código, feito pela UI)
 
 Nenhum destes itens pode ser configurado por arquivo neste repositório — são ajustes de **Settings** do GitHub, cadastrados uma única vez por quem tem acesso administrativo.

@@ -5,6 +5,8 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // OBS-01A: ver bloco `sentry { ... }` abaixo para a configuracao.
+    id("io.sentry.android.gradle")
 }
 
 // RC-04D: keystore de release (android/key.properties, nunca versionado - ver
@@ -69,6 +71,44 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+// OBS-01A: automatiza o upload do mapping.txt do R8/ProGuard ao Sentry a
+// cada build de Release, para que crashes de Producao cheguem com stack
+// traces deobfuscados (achado da BETA-10D - nenhum plugin do Sentry
+// estava configurado ate agora). Le SENTRY_ORG/SENTRY_PROJECT/
+// SENTRY_AUTH_TOKEN de variaveis de ambiente - nunca hardcoded (ver
+// docs/operations/CI_CD_SECRETS.md). Sem o auth token, o upload e
+// desabilitado automaticamente e a build continua funcionando
+// normalmente - mesma filosofia nao-bloqueante ja usada para a keystore
+// e os demais secrets de Producao deste projeto.
+sentry {
+    val hasSentryAuthToken = !System.getenv("SENTRY_AUTH_TOKEN").isNullOrEmpty()
+
+    org.set(System.getenv("SENTRY_ORG"))
+    projectName.set(System.getenv("SENTRY_PROJECT"))
+    authToken.set(System.getenv("SENTRY_AUTH_TOKEN"))
+
+    includeProguardMapping.set(true)
+    autoUploadProguardMapping.set(hasSentryAuthToken)
+
+    // Escopo estrito desta rodada: só o mapping do R8. Nao habilitar
+    // symbols nativos, contexto de codigo-fonte ou instrumentacao de
+    // tracing - nenhum desses fazia parte da arquitetura de
+    // observabilidade ja existente (RC-03A), e nao devem ser
+    // introduzidos como efeito colateral.
+    uploadNativeSymbols.set(false)
+    includeSourceContext.set(false)
+    tracingInstrumentation {
+        enabled.set(false)
+    }
+    // sentry_flutter ja traz e gerencia sua propria versao do SDK nativo
+    // (io.sentry:sentry-android, ver o build.gradle do proprio pacote) -
+    // desabilita a auto-instalacao do plugin para evitar uma segunda
+    // dependencia/versao concorrente do mesmo SDK.
+    autoInstallation {
+        enabled.set(false)
     }
 }
 
