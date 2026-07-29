@@ -30,14 +30,16 @@ Home, Sobre, Suporte e Contato são HTML autoral — editar diretamente os arqui
 
 Quando o BORAH estiver publicado nas lojas e houver screenshots reais, substituir as ilustrações decorativas (`symbol_celebrating.svg` no hero, etc.) por mockups reais do app, seguindo as especificações já documentadas em `docs/design/screenshots_spec.md` e `storyboard.md`.
 
-## 6. Revisando a waitlist do Beta
+## 6. Revisando a waitlist do Beta (BETA-11C)
 
-O mecanismo atual (`mailto:`) não tem persistência nem contagem de inscritos — cada envio chega como um e-mail individual em `Borahh.app@gmail.com`. Se o volume de interessados crescer a ponto de tornar isso impraticável, a migração recomendada (tabela Supabase dedicada ou serviço de formulário de terceiros) está documentada em `architecture.md`, seção 4.
+A lista agora vive na tabela `beta_waitlist` do Supabase — sem painel administrativo no app, a curadoria (marcar `status` como `invited`/`confirmed`/`declined`, preencher `invited_at`/`confirmed_at`) é feita manualmente via Supabase Studio. Ver `docs/website/forms.md`, seção 6, para a semântica completa de cada status.
 
 ## 7. Checklist de revisão antes de qualquer deploy
 
 1. `node scripts/build-legal-pages.mjs` (garante que as páginas jurídicas refletem `docs/legal/` mais recente).
 2. Abrir cada uma das 6 páginas localmente e verificar links do menu/rodapé.
-3. Testar os 2 formulários (`mailto:`) em pelo menos um navegador desktop.
-4. Verificar responsividade (menu mobile, grids colapsando) abaixo de 900px e 760px.
-5. Rodar novamente a checklist de `deploy.md`, seção 4, após qualquer publicação.
+3. Confirmar que `FUNCTIONS_URL` (`site/assets/js/main.js`) e o `data-sitekey` do Turnstile (3 formulários) foram trocados pelos valores reais — ver `docs/website/forms.md`, seção 8.
+4. Testar os 2 formulários (Beta e Contato) em pelo menos um navegador desktop, incluindo o caso de e-mail duplicado.
+5. Verificar responsividade (menu mobile, grids colapsando) abaixo de 900px e 760px.
+6. `supabase secrets list` para confirmar que `TURNSTILE_SECRET_KEY` está configurado antes do deploy da Edge Function.
+7. Rodar novamente a checklist de `deploy.md`, seção 4, após qualquer publicação.

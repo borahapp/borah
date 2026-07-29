@@ -53,11 +53,15 @@ Todos os tokens em `site/assets/css/style.css` vêm diretamente de `app/lib/desi
 
 Os ícones/ilustrações (`bite_shape.svg`, `burst_shape.svg`, `curved_arrow.svg`, `symbol_smiling.svg`, `symbol_celebrating.svg`, `borah_symbol.svg`, logos) são cópias somente-leitura dos assets já existentes em `app/assets/` — usados no lugar de screenshots reais do app, que ainda não existem (o app não está publicado nas lojas).
 
-## 4. Waitlist do Beta Fechado (mecanismo interino)
+## 4. Waitlist do Beta Fechado e formulário de Contato (BETA-11C)
 
-O formulário "Quero participar do Beta" (Home) e os formulários de contato (Suporte/Contato) usam um mecanismo **`mailto:`** — o clique em "Enviar" abre o cliente de e-mail do visitante com uma mensagem pré-preenchida para `Borahh.app@gmail.com`, sem nenhuma chamada de rede ou armazenamento de dados no site.
+**Histórico:** na rodada BETA-11B (site 100% estático, proibida qualquer alteração em Supabase/backend), os dois formulários usavam um mecanismo `mailto:` interino. A rodada **BETA-11C** substituiu isso pela integração real com o Supabase, descrita em detalhe em `docs/website/forms.md`. Resumo:
 
-Essa escolha foi necessária porque a rodada BETA-11B proíbe explicitamente alterar Supabase/backend ou criar novas contas de terceiros. É uma solução **MVP/interina**, documentada aqui com o upgrade recomendado para uma rodada futura: uma tabela dedicada no Supabase (ex.: `beta_waitlist`) com um endpoint público de inserção, ou um serviço de formulário de terceiros (ex.: Formspree/Getform) — ambas as opções exigem uma decisão de arquitetura própria e ficam fora do escopo desta rodada.
+```
+Browser → Cloudflare Turnstile → Edge Function (website-form-submit, service_role) → INSERT
+```
+
+O papel `anon` **não** recebe nenhum privilégio em `beta_waitlist`/`contact_messages` — mantém a invariante já documentada em `supabase/migrations/20260720130000_grant_authenticated_privileges.sql` ("anon não recebe nada"). Todo INSERT passa por uma única Edge Function (`website-form-submit`), que valida o Turnstile, o honeypot e o tempo mínimo de preenchimento antes de gravar usando `service_role`. Ver `docs/website/forms.md` para o desenho completo (schema, RLS, fluxo de erro, secrets necessários).
 
 ## 5. Restrições respeitadas
 

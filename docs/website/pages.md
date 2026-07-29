@@ -16,7 +16,7 @@
 - **Hero**: eyebrow "Beta Fechado em breve", headline (tagline oficial), descrição curta, CTA primário "Quero participar do Beta" (âncora para `#beta`) e CTA secundário "Conhecer o BORAH" (→ `/sobre/`).
 - **Funcionalidades**: 3 cards — avaliações (nota/comentário/fotos), ranking do grupo, gamificação (XP/nível/conquistas).
 - **Como funciona**: 5 passos (criar conta → seguir amigos → avaliar → acompanhar ranking → subir de nível), refletindo exatamente as funcionalidades reais listadas em `docs/store/branding.md` (nenhum passo menciona convites/referral, que não existem no app).
-- **Beta Fechado (`#beta`)**: formulário nome + e-mail, envio via `mailto:` para `Borahh.app@gmail.com`, mensagem de sucesso inline.
+- **Beta Fechado (`#beta`)**: formulário nome (opcional) + e-mail, protegido por Cloudflare Turnstile + honeypot, gravado em `beta_waitlist` via a Edge Function `website-form-submit` (BETA-11C — ver `docs/website/forms.md`), mensagem de sucesso/erro inline.
 - **FAQ**: 4 perguntas mais relevantes para quem ainda não conhece o app, com link para a lista completa em `/suporte/`.
 - **Rodapé completo**: reaproveitado em todas as páginas (ver `renderFooter()` em `scripts/build-legal-pages.mjs` para a versão das páginas geradas, e replicado manualmente nas páginas autorais).
 
@@ -26,11 +26,11 @@ Propósito, missão, visão e 3 valores (grupo em primeiro lugar, avaliações q
 
 ## Suporte (`/suporte/`)
 
-FAQ completo de `docs/legal/support.md` (6 perguntas: recuperação de senha, nota de avaliação, edição/exclusão de avaliação, denúncia, exclusão de conta, cópia de dados) + 2 perguntas gerais (gratuidade, idade mínima) + formulário de contato (nome/e-mail/mensagem, via `mailto:`).
+FAQ completo de `docs/legal/support.md` (6 perguntas: recuperação de senha, nota de avaliação, edição/exclusão de avaliação, denúncia, exclusão de conta, cópia de dados) + 2 perguntas gerais (gratuidade, idade mínima) + formulário de contato (nome/e-mail/mensagem, gravado em `contact_messages` via a mesma Edge Function do Beta).
 
 ## Contato (`/contato/`)
 
-Formulário simples (nome/e-mail/mensagem) + e-mail direto + link de volta para a Central de Ajuda.
+Formulário simples (nome/e-mail/mensagem, mesmo mecanismo do Suporte) + e-mail direto + link de volta para a Central de Ajuda.
 
 ## Privacidade e Termos
 

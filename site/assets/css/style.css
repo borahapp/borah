@@ -459,6 +459,32 @@ input:focus, textarea:focus, .btn:focus-visible, a:focus-visible, button:focus-v
 
 .form-success.visible { display: block; }
 
+.form-error {
+  display: none;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  color: #7f1d1d;
+}
+
+.form-error.visible { display: block; }
+
+/* Honeypot: campo-armadilha para bots, invisível para humanos e para
+   leitores de tela (diferente de .visually-hidden, que é lido por
+   tecnologia assistiva de propósito). */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.cf-turnstile {
+  margin-top: var(--space-sm);
+}
+
 /* ---------- Rodapé ---------- */
 
 .site-footer {

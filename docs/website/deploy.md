@@ -7,6 +7,18 @@
 - Pasta `site/` completa com as 6 páginas, `CNAME`, `robots.txt`, `sitemap.xml` e todos os assets.
 - Conteúdo jurídico gerado a partir da fonte aprovada (`scripts/build-legal-pages.mjs`).
 
+## 1.1. Deploy da Edge Function e migrations (BETA-11C, ação futura)
+
+Antes de publicar o site com os formulários reais, aplicar o backend:
+
+```bash
+supabase db push                          # aplica as 2 migrations novas
+supabase functions deploy website-form-submit
+supabase secrets set TURNSTILE_SECRET_KEY=<valor-real-do-cloudflare>
+```
+
+Depois, substituir os 3 placeholders descritos em `docs/website/forms.md`, seção 8 (`FUNCTIONS_URL` em `main.js`, `data-sitekey` nos 3 formulários) pelos valores reais, antes de publicar `site/`.
+
 ## 2. Passos de publicação (ação futura, fora desta rodada)
 
 1. **Configurar GitHub Pages** no repositório: Settings → Pages → Source → escolher a branch (`main`, após merge do `develop`) e a pasta `/site`.
@@ -28,7 +40,8 @@ Já documentada em `docs/release/hosting.md`, seção 4 — reproduzida aqui por
 - [ ] Todas as 6 páginas acessíveis nos caminhos documentados em `pages.md`.
 - [ ] `sitemap.xml` e `robots.txt` acessíveis nas URLs raiz.
 - [ ] Links do rodapé/nav funcionando em todas as páginas (nenhum 404).
-- [ ] Formulários (`mailto:`) abrindo o cliente de e-mail corretamente em desktop e mobile.
+- [ ] Formulários (Beta e Contato) gravando corretamente em `beta_waitlist`/`contact_messages`, incluindo o caso de e-mail duplicado.
+- [ ] Widget do Turnstile carregando e validando nos 3 formulários (verificar `data-sitekey` real, não o placeholder).
 - [ ] Registrar a propriedade no Google Search Console (ver `seo.md`, seção 5) e submeter o sitemap.
 - [ ] (Opcional, quando decidido) Conectar Google Analytics conforme `seo.md`, seção 6.
 
