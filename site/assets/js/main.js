@@ -11,10 +11,11 @@
 // supabase/functions/website-form-submit/index.ts).
 //
 // IMPORTANTE: os dois valores abaixo são públicos por natureza (o
-// site key do Turnstile e a URL da Edge Function não são segredos),
-// mas ainda são placeholders — substituir pelos valores reais do
-// projeto Supabase/Cloudflare antes do deploy (ver docs/website/forms.md).
-const FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1/website-form-submit";
+// site key do Turnstile e a URL da Edge Function não são segredos).
+// FUNCTIONS_URL já aponta para o projeto Supabase real do BORAH
+// (uscheppbwhuuwkskhfos) — o site não usa nenhuma chave anon/publishable
+// (a função roda com verify_jwt=false, ver supabase/config.toml).
+const FUNCTIONS_URL = "https://uscheppbwhuuwkskhfos.supabase.co/functions/v1/website-form-submit";
 
 (function () {
   "use strict";

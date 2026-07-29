@@ -105,11 +105,9 @@ Não há hoje nenhuma automação que promova o `status` sozinha — é uma deci
 
 ## 8. Configuração necessária antes do deploy (pendências reais)
 
-Nenhum destes 3 itens tem um valor real inserido no código — todos são placeholders claramente marcados, seguindo o mesmo padrão já usado para GA4/Search Console (`docs/website/seo.md`):
-
 1. **`TURNSTILE_SECRET_KEY`** — criar um widget gratuito em https://dash.cloudflare.com/?to=/:account/turnstile (não exige mover DNS/hospedagem para a Cloudflare — Turnstile é um produto standalone). Configurar como secret da Edge Function: `supabase secrets set TURNSTILE_SECRET_KEY=...`.
-2. **Site key do Turnstile** (público, não é segredo) — substituir `data-sitekey="YOUR-TURNSTILE-SITE-KEY"` nos 3 formulários (`site/index.html`, `site/suporte/index.html`, `site/contato/index.html`).
-3. **URL da Edge Function** — substituir `FUNCTIONS_URL` em `site/assets/js/main.js` (hoje `https://YOUR-PROJECT-REF.supabase.co/functions/v1/website-form-submit`) pelo project ref real do BORAH (o mesmo já usado pelo app Flutter, injetado via `--dart-define SUPABASE_URL` em CI — ver `docs/operations/CI_CD_SECRETS.md`).
+2. **Site key do Turnstile** (público, não é segredo) — ainda placeholder (`data-sitekey="YOUR-TURNSTILE-SITE-KEY"`) nos 3 formulários (`site/index.html`, `site/suporte/index.html`, `site/contato/index.html`) — substituir quando o widget do passo 1 existir.
+3. ~~URL da Edge Function~~ — **resolvido**: `FUNCTIONS_URL` em `site/assets/js/main.js` já aponta para o projeto real (`https://uscheppbwhuuwkskhfos.supabase.co/functions/v1/website-form-submit`). O site não usa nenhuma chave anon/publishable — a função roda com `verify_jwt=false` (ver seção 9).
 
 ## 9. Deploy da Edge Function (ação futura, não executada nesta rodada)
 
