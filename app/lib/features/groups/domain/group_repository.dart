@@ -10,12 +10,19 @@ class GroupRepositoryException implements Exception {
 }
 
 /// Contrato do dominio, independente de Flutter e Supabase (AR-02).
-/// Apenas `create` nesta sprint (GROUP-02A) - listar/entrar/detalhar
-/// ficam para as proximas etapas do modulo Groups.
+/// `create`/`listMine` nesta sprint (GROUP-02A/GROUP-02B.0) -
+/// entrar/detalhar ficam para as proximas etapas do modulo Groups.
 abstract interface class GroupRepository {
   Future<Group> create({
     required String name,
     String? description,
     String? photoUrl,
   });
+
+  /// Grupos dos quais o usuário autenticado é membro, ordenados por
+  /// atividade mais recente primeiro. Sem parâmetro de usuário - a RLS
+  /// (`groups_select_members`, GROUP-01) já restringe o `SELECT` aos
+  /// grupos de `auth.uid()`, então nenhuma cláusula adicional é
+  /// necessária no cliente.
+  Future<List<Group>> listMine();
 }

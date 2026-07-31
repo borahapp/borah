@@ -27,6 +27,14 @@ class GroupRepositoryImpl implements GroupRepository {
     });
   }
 
+  @override
+  Future<List<Group>> listMine() {
+    return _guard(() async {
+      final rows = await _datasource.listMine();
+      return rows.map(_mapRow).toList();
+    });
+  }
+
   Group _mapRow(Map<String, dynamic> row) {
     return Group(
       id: row['id'] as String,

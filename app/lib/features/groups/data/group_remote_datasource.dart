@@ -30,4 +30,15 @@ class GroupRemoteDatasource {
     );
     return result as Map<String, dynamic>;
   }
+
+  /// GROUP-02B.0: `SELECT` direto, sem RPC - a policy `groups_select_members`
+  /// (GROUP-01) já restringe as linhas retornadas aos grupos do usuário
+  /// autenticado, então nenhum filtro adicional é necessário aqui.
+  Future<List<Map<String, dynamic>>> listMine() async {
+    final rows = await _client
+        .from('groups')
+        .select('id,name,description,photo_url,invite_code')
+        .order('last_activity_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
 }
