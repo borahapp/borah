@@ -15,6 +15,10 @@ class GroupRemoteDatasource {
 
   final SupabaseClient _client;
 
+  static const _groupsTable = 'groups';
+  static const _membersTable = 'group_members';
+  static const _profilesTable = 'profiles';
+
   Future<Map<String, dynamic>> createGroup({
     required String name,
     String? description,
@@ -36,9 +40,41 @@ class GroupRemoteDatasource {
   /// autenticado, então nenhum filtro adicional é necessário aqui.
   Future<List<Map<String, dynamic>>> listMine() async {
     final rows = await _client
-        .from('groups')
+        .from(_groupsTable)
         .select('id,name,description,photo_url,invite_code')
         .order('last_activity_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// GROUP-02B.1: 3 consultas, sem embed, sem RPC - mesmo padrão de
+  /// `FollowerRemoteDatasource` (`group_members.user_id`/`profiles.id`
+  /// referenciam `auth.users` independentemente; não há FK direta entre
+  /// `group_members` e `profiles` que o PostgREST possa usar num embed).
+  Future<Map<String, dynamic>> fetchGroupById(String id) {
+    return _client
+        .from(_groupsTable)
+        .select('id,name,description,photo_url,invite_code')
+        .eq('id', id)
+        .single();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchMembers(String groupId) async {
+    final rows = await _client
+        .from(_membersTable)
+        .select('user_id,role')
+        .eq('group_id', groupId);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// Mesmo método/assinatura de `FollowerRemoteDatasource.fetchProfilesByIds`.
+  Future<List<Map<String, dynamic>>> fetchProfilesByIds(
+    List<String> ids,
+  ) async {
+    if (ids.isEmpty) return [];
+    final rows = await _client
+        .from(_profilesTable)
+        .select()
+        .inFilter('id', ids);
     return List<Map<String, dynamic>>.from(rows);
   }
 }

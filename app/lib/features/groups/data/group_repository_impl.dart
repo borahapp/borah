@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/group.dart';
+import '../domain/group_details.dart';
+import '../domain/group_member.dart';
 import '../domain/group_repository.dart';
 import 'group_remote_datasource.dart';
 
@@ -32,6 +34,33 @@ class GroupRepositoryImpl implements GroupRepository {
     return _guard(() async {
       final rows = await _datasource.listMine();
       return rows.map(_mapRow).toList();
+    });
+  }
+
+  @override
+  Future<GroupDetails> getById(String id) {
+    return _guard(() async {
+      final groupRow = await _datasource.fetchGroupById(id);
+      final memberRows = await _datasource.fetchMembers(id);
+
+      final userIds = memberRows.map((m) => m['user_id'] as String).toList();
+      final profileRows = await _datasource.fetchProfilesByIds(userIds);
+      final profilesById = {
+        for (final profile in profileRows) profile['id'] as String: profile,
+      };
+
+      final members = memberRows.map((memberRow) {
+        final userId = memberRow['user_id'] as String;
+        final profile = profilesById[userId];
+        return GroupMember(
+          userId: userId,
+          role: memberRow['role'] as String,
+          fullName: profile?['full_name'] as String?,
+          avatarUrl: profile?['avatar_url'] as String?,
+        );
+      }).toList();
+
+      return GroupDetails(group: _mapRow(groupRow), members: members);
     });
   }
 
