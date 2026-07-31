@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../design_system/components/badges/app_badge.dart';
+import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
@@ -54,7 +56,16 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
     final status = ref.watch(groupDetailControllerProvider);
 
     return Scaffold(
-      appBar: const AppTopBar(title: 'Grupo'),
+      appBar: AppTopBar(
+        title: 'Grupo',
+        actions: [
+          AppIconButton(
+            icon: Icons.event_outlined,
+            tooltip: 'Criar rolê',
+            onPressed: () => context.push('/groups/${widget.groupId}/events/new'),
+          ),
+        ],
+      ),
       body: AppAnimatedSwitcher(
         child: switch (status) {
           GroupDetailInitial() ||

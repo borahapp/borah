@@ -1,0 +1,271 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/cards/restaurant_card.dart';
+import '../../../../design_system/components/feedback/error_state.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/inputs/app_search_field.dart';
+import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
+import '../../../restaurants/domain/restaurant.dart';
+import '../../application/create_event_controller.dart';
+import '../../application/event_restaurant_search_controller.dart';
+import '../states/create_event_status.dart';
+import '../states/event_restaurant_search_status.dart';
+
+/// Tela de criação de rolê (ROLÊ-02) - página única, dividida
+/// visualmente em 2 etapas (buscar/selecionar restaurante; escolher
+/// data/hora). Sem confirmação de presença, fotos, lista ou detalhe -
+/// fora do escopo desta sprint. Nenhuma regra de negócio aqui: só
+/// coleta os 3 valores e chama `create_event()` via
+/// `CreateEventController`.
+class CreateEventPage extends ConsumerStatefulWidget {
+  const CreateEventPage({super.key, required this.groupId});
+
+  final String groupId;
+
+  @override
+  ConsumerState<CreateEventPage> createState() => _CreateEventPageState();
+}
+
+class _CreateEventPageState extends ConsumerState<CreateEventPage> {
+  final _searchController = TextEditingController();
+
+  /// 0 = buscar/selecionar restaurante; 1 = data/hora.
+  int _step = 0;
+  Restaurant? _selectedRestaurant;
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _search() {
+    ref
+        .read(eventRestaurantSearchControllerProvider.notifier)
+        .search(_searchController.text);
+  }
+
+  void _selectRestaurant(Restaurant restaurant) {
+    setState(() => _selectedRestaurant = restaurant);
+  }
+
+  void _changeRestaurant() {
+    setState(() => _selectedRestaurant = null);
+  }
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null) return;
+    setState(() {
+      _selectedDate = date;
+      // Fluxo obrigatório data -> hora: trocar a data invalida a hora
+      // já escolhida, para nunca combinar data nova com hora antiga.
+      _selectedTime = null;
+    });
+  }
+
+  Future<void> _pickTime() async {
+    if (_selectedDate == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time == null) return;
+    setState(() => _selectedTime = time);
+  }
+
+  /// Evita repetir os mesmos 5 campos do `Restaurant` nos 3 pontos desta
+  /// tela que exibem um `RestaurantCard` (resultado da busca, resumo na
+  /// etapa 1 após selecionar, resumo na etapa 2).
+  Widget _restaurantCard(Restaurant restaurant, {VoidCallback? onTap}) {
+    return RestaurantCard(
+      name: restaurant.name,
+      category: restaurant.category,
+      city: restaurant.city,
+      rating: restaurant.averageRating,
+      reviewCount: restaurant.totalReviews,
+      onTap: onTap,
+    );
+  }
+
+  void _create() {
+    final restaurant = _selectedRestaurant;
+    final date = _selectedDate;
+    final time = _selectedTime;
+    if (restaurant == null || date == null || time == null) return;
+
+    final scheduledAt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    ref
+        .read(createEventControllerProvider.notifier)
+        .create(
+          groupId: widget.groupId,
+          restaurantId: restaurant.id,
+          scheduledAt: scheduledAt,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final createStatus = ref.watch(createEventControllerProvider);
+    final isCreating = createStatus is CreateEventSaving;
+
+    ref.listen<CreateEventStatus>(createEventControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (next is CreateEventError) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next.message)));
+      } else if (next is CreateEventSaveSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rolê criado com sucesso.')),
+        );
+        context.pop();
+      }
+    });
+
+    return Scaffold(
+      appBar: const AppTopBar(title: 'Criar rolê'),
+      body: SafeArea(
+        child: _step == 0 ? _buildStep1() : _buildStep2(isCreating),
+      ),
+    );
+  }
+
+  Widget _buildStep1() {
+    final searchStatus = ref.watch(eventRestaurantSearchControllerProvider);
+    final selected = _selectedRestaurant;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (selected == null) ...[
+            AppSearchField(
+              controller: _searchController,
+              label: 'Buscar restaurante',
+              onSubmit: (_) => _search(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Expanded(child: _buildSearchResults(searchStatus)),
+          ] else ...[
+            _restaurantCard(selected),
+            const SizedBox(height: AppSpacing.md),
+            AppOutlinedButton(
+              label: 'Trocar restaurante',
+              onPressed: _changeRestaurant,
+            ),
+            const Spacer(),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          AppPrimaryButton(
+            label: 'Continuar',
+            onPressed: selected == null
+                ? null
+                : () => setState(() => _step = 1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(EventRestaurantSearchStatus status) {
+    return switch (status) {
+      EventRestaurantSearchInitial() => const SizedBox.shrink(),
+      EventRestaurantSearchLoading() => const LoadingScreen(
+        key: ValueKey('loading'),
+      ),
+      EventRestaurantSearchError(:final message) => ErrorState(
+        key: const ValueKey('error'),
+        message: message,
+        onRetry: _search,
+      ),
+      EventRestaurantSearchEmpty() => const Center(
+        key: ValueKey('empty'),
+        child: Text('Nenhum restaurante encontrado.'),
+      ),
+      EventRestaurantSearchLoaded(:final restaurants) => ListView.builder(
+        key: const ValueKey('loaded'),
+        itemCount: restaurants.length,
+        itemBuilder: (context, index) {
+          final restaurant = restaurants[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: _restaurantCard(
+              restaurant,
+              onTap: () => _selectRestaurant(restaurant),
+            ),
+          );
+        },
+      ),
+    };
+  }
+
+  Widget _buildStep2(bool isCreating) {
+    final selected = _selectedRestaurant!;
+    final canCreate = _selectedDate != null && _selectedTime != null;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _restaurantCard(selected),
+          const SizedBox(height: AppSpacing.xl),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.calendar_today_outlined),
+            title: const Text('Data'),
+            subtitle: Text(
+              _selectedDate == null
+                  ? 'Selecionar data'
+                  : '${_selectedDate!.day.toString().padLeft(2, '0')}/'
+                        '${_selectedDate!.month.toString().padLeft(2, '0')}/'
+                        '${_selectedDate!.year}',
+            ),
+            onTap: _pickDate,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.access_time_outlined),
+            title: const Text('Hora'),
+            subtitle: Text(
+              _selectedTime == null
+                  ? 'Selecionar hora'
+                  : _selectedTime!.format(context),
+            ),
+            // Fluxo obrigatório: hora só é selecionável depois da data.
+            onTap: _selectedDate == null ? null : _pickTime,
+            enabled: _selectedDate != null,
+          ),
+          const Spacer(),
+          AppPrimaryButton(
+            label: 'Criar rolê',
+            isLoading: isCreating,
+            onPressed: canCreate ? _create : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
