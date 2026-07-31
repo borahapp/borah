@@ -22,6 +22,7 @@ import '../../features/administration/presentation/pages/moderation_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/gamification/presentation/pages/gamification_profile_page.dart';
 import '../../features/gamification/presentation/pages/ranking_users_page.dart';
+import '../../features/groups/presentation/pages/create_group_page.dart';
 import '../../features/notifications/domain/app_notification.dart';
 import '../../features/notifications/presentation/pages/notification_detail_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
@@ -68,6 +69,7 @@ const _protectedRoutePrefixes = [
   '/admin',
   '/notifications',
   '/gamification',
+  '/groups',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -308,6 +310,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/gamification/ranking',
         builder: (context, state) => const RankingUsersPage(),
+      ),
+      GoRoute(
+        path: '/groups/new',
+        builder: (context, state) => const CreateGroupPage(),
       ),
     ],
   );
