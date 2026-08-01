@@ -6,11 +6,18 @@
 /// PostgREST possa usar num embed).
 class GroupMember {
   const GroupMember({
+    required this.id,
     required this.userId,
     required this.role,
     required this.fullName,
     required this.avatarUrl,
   });
+
+  /// `id` de `group_members` (não de `profiles`/`auth.users`) - usado
+  /// para promover/remover (BLOCO 2), sempre por `id` da linha, nunca
+  /// por `user_id`+`group_id` compostos, mesmo padrão de update/delete
+  /// "por id, RLS resolve a permissão" já usado em `event_attendances`.
+  final String id;
 
   final String userId;
 
@@ -28,4 +35,7 @@ class GroupMember {
     'admin' => 'Administrador',
     _ => 'Membro',
   };
+
+  bool get isOwner => role == 'owner';
+  bool get isAdminOrOwner => role == 'owner' || role == 'admin';
 }

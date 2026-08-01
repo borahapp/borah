@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Encapsula a chamada RPC de criacao de grupo (GROUP-02A).
+/// Encapsula todo acesso a `groups`/`group_members` via PostgREST
+/// (GROUP-02A em diante).
 ///
 /// `create_group()` e uma funcao Postgres `SECURITY DEFINER`
 /// (migration `20260731090000_create_groups_and_group_members.sql`) -
@@ -61,7 +62,7 @@ class GroupRemoteDatasource {
   Future<List<Map<String, dynamic>>> fetchMembers(String groupId) async {
     final rows = await _client
         .from(_membersTable)
-        .select('user_id,role')
+        .select('id,user_id,role')
         .eq('group_id', groupId);
     return List<Map<String, dynamic>>.from(rows);
   }
@@ -89,5 +90,45 @@ class GroupRemoteDatasource {
       params: {'p_invite_code': inviteCode},
     );
     return result as Map<String, dynamic>;
+  }
+
+  /// BLOCO 2: `UPDATE` direto, sem RPC - a policy `groups_update_admin`
+  /// (GROUP-01) já restringe isso a admin/owner. Só envia as colunas
+  /// que a tela de edição expõe (nunca `owner_id`/`invite_code`, que
+  /// têm suas próprias funções dedicadas).
+  Future<Map<String, dynamic>> updateGroup({
+    required String id,
+    required String name,
+    String? description,
+    String? photoUrl,
+  }) {
+    return _client
+        .from(_groupsTable)
+        .update({
+          'name': name,
+          'description': description,
+          'photo_url': photoUrl,
+        })
+        .eq('id', id)
+        .select('id,name,description,photo_url,invite_code')
+        .single();
+  }
+
+  /// BLOCO 2: `UPDATE` direto por `id` da linha - a policy
+  /// `group_members_update_owner` (GROUP-01) já restringe isso ao
+  /// owner, e já bloqueia `role = 'owner'` tanto na linha atual quanto
+  /// na nova (não precisa de validação própria aqui).
+  Future<void> updateMemberRole(String memberId, String role) {
+    return _client
+        .from(_membersTable)
+        .update({'role': role})
+        .eq('id', memberId);
+  }
+
+  /// BLOCO 2: mesma operação para "sair do grupo" e "remover membro" -
+  /// a policy `group_members_delete_self_or_admin` (GROUP-01) decide
+  /// pelo `id` da linha quem pode apagar o quê.
+  Future<void> removeMember(String memberId) {
+    return _client.from(_membersTable).delete().eq('id', memberId);
   }
 }

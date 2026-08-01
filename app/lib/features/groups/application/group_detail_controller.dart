@@ -16,9 +16,9 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
       final details = await _repository.getById(id);
       state = GroupDetailLoaded(details);
     } on GroupRepositoryException catch (e) {
-      state = GroupDetailError(e.message);
+      state = GroupDetailError(e.message, null);
     } catch (_) {
-      state = const GroupDetailError('Não foi possível carregar o grupo.');
+      state = const GroupDetailError('Não foi possível carregar o grupo.', null);
     }
   }
 
@@ -34,6 +34,47 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
     final group = current.details.group;
     return 'Entre no meu grupo "${group.name}" no BORAH! '
         'Use o código de convite: ${group.inviteCode}';
+  }
+
+  /// Promove/rebaixa um membro (BLOCO 2). Recarrega do servidor após o
+  /// sucesso - diferente de `EventDetailController.confirm/decline`
+  /// (ROLÊ-03), aqui não há ganho de UX em atualização otimista (ação
+  /// administrativa pontual, não um loop de 1 toque recorrente), então
+  /// o caminho mais simples (recarregar) é o certo.
+  Future<void> promoteToAdmin(String memberId) =>
+      _mutate(() => _repository.updateMemberRole(memberId: memberId, role: 'admin'));
+
+  Future<void> demoteToMember(String memberId) =>
+      _mutate(() => _repository.updateMemberRole(memberId: memberId, role: 'member'));
+
+  /// Remove outro membro do grupo (BLOCO 2, ação de admin/owner).
+  Future<void> removeMember(String memberId) =>
+      _mutate(() => _repository.removeMember(memberId));
+
+  /// Sair do grupo (BLOCO 2) é deliberadamente diferente das ações
+  /// acima: em vez de recarregar (o usuário deixou de ser membro, um
+  /// `load()` subsequente falharia pela RLS), a própria operação é
+  /// exposta para a página decidir - sucesso significa fechar a tela e
+  /// voltar para a lista de grupos, não continuar mostrando este grupo.
+  Future<void> leaveGroup(String memberId) => _repository.removeMember(memberId);
+
+  Future<void> _mutate(Future<void> Function() action) async {
+    final current = state;
+    final details = switch (current) {
+      GroupDetailLoaded(:final details) => details,
+      GroupDetailError(:final details) => details,
+      _ => null,
+    };
+    if (details == null) return;
+
+    try {
+      await action();
+      await load(details.group.id);
+    } on GroupRepositoryException catch (e) {
+      state = GroupDetailError(e.message, details);
+    } catch (_) {
+      state = GroupDetailError('Não foi possível concluir a ação.', details);
+    }
   }
 }
 

@@ -53,6 +53,7 @@ class GroupRepositoryImpl implements GroupRepository {
         final userId = memberRow['user_id'] as String;
         final profile = profilesById[userId];
         return GroupMember(
+          id: memberRow['id'] as String,
           userId: userId,
           role: memberRow['role'] as String,
           fullName: profile?['full_name'] as String?,
@@ -70,6 +71,37 @@ class GroupRepositoryImpl implements GroupRepository {
       final row = await _datasource.joinByInviteCode(inviteCode);
       return _mapRow(row);
     });
+  }
+
+  @override
+  Future<Group> update({
+    required String id,
+    required String name,
+    String? description,
+    String? photoUrl,
+  }) {
+    return _guard(() async {
+      final row = await _datasource.updateGroup(
+        id: id,
+        name: name,
+        description: description,
+        photoUrl: photoUrl,
+      );
+      return _mapRow(row);
+    });
+  }
+
+  @override
+  Future<void> updateMemberRole({
+    required String memberId,
+    required String role,
+  }) {
+    return _guard(() => _datasource.updateMemberRole(memberId, role));
+  }
+
+  @override
+  Future<void> removeMember(String memberId) {
+    return _guard(() => _datasource.removeMember(memberId));
   }
 
   Group _mapRow(Map<String, dynamic> row) {

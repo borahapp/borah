@@ -1,4 +1,5 @@
 export 'application/create_group_controller.dart';
+export 'application/edit_group_controller.dart';
 export 'application/group_detail_controller.dart';
 export 'application/groups_list_controller.dart';
 export 'application/join_group_controller.dart';
@@ -7,6 +8,7 @@ export 'domain/group_details.dart';
 export 'domain/group_member.dart';
 export 'domain/group_repository.dart';
 export 'presentation/states/create_group_status.dart';
+export 'presentation/states/edit_group_status.dart';
 export 'presentation/states/group_detail_status.dart';
 export 'presentation/states/groups_list_status.dart';
 export 'presentation/states/join_group_status.dart';
