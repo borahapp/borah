@@ -23,12 +23,24 @@ String? validateRequired(String? value, String fieldLabel) {
   return null;
 }
 
+/// Aceita vírgula ou ponto como separador decimal (QA, BLOCO 9): o
+/// teclado numérico decimal (`TextInputType.numberWithOptions(decimal:
+/// true)`, usado por todo campo de nota do app) insere vírgula por
+/// padrão em locale pt-BR - `double.parse`/`double.tryParse` só aceitam
+/// ponto, então uma nota como "4,5" digitada normalmente pelo teclado
+/// nativo era rejeitada pela validação. Usado tanto por [validateRating]
+/// quanto pelas telas que fazem o parse final após validar.
+double? parseRating(String? value) {
+  if (value == null) return null;
+  return double.tryParse(value.replaceAll(',', '.'));
+}
+
 /// Promovido de `features/reviews/presentation/validators/
 /// review_validators.dart` para `core/` quando `event_reviews` (BLOCO 4)
 /// passou a precisar da mesma regra (nota `numeric(2,1)`, 1 a 5) - mesmo
 /// motivo de promoção dos três validadores acima.
 String? validateRating(String? value) {
-  final rating = double.tryParse(value ?? '');
+  final rating = parseRating(value);
   if (rating == null || rating < 1 || rating > 5) {
     return 'Informe uma nota entre 1 e 5.';
   }

@@ -45,7 +45,7 @@ class _CreateReviewPageState extends ConsumerState<CreateReviewPage> {
         .create(
           restaurantId: widget.restaurantId,
           userId: userId,
-          rating: double.parse(_ratingController.text),
+          rating: parseRating(_ratingController.text)!,
           comment: _commentController.text.trim(),
         );
   }

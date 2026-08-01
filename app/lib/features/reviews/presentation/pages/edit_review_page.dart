@@ -52,7 +52,7 @@ class _EditReviewPageState extends ConsumerState<EditReviewPage> {
         .read(reviewDetailControllerProvider.notifier)
         .update(
           widget.reviewId,
-          rating: double.parse(_ratingController.text),
+          rating: parseRating(_ratingController.text)!,
           comment: _commentController.text.trim(),
         );
   }

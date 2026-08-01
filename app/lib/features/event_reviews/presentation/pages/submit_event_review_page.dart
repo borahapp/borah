@@ -75,11 +75,11 @@ class _SubmitEventReviewPageState extends ConsumerState<SubmitEventReviewPage> {
         .save(
           eventId: widget.eventId,
           existingReviewId: widget.existingReview?.id,
-          foodScore: double.parse(_foodController.text),
-          serviceScore: double.parse(_serviceController.text),
-          ambienceScore: double.parse(_ambienceController.text),
-          costBenefitScore: double.parse(_costBenefitController.text),
-          overallScore: double.parse(_overallController.text),
+          foodScore: parseRating(_foodController.text)!,
+          serviceScore: parseRating(_serviceController.text)!,
+          ambienceScore: parseRating(_ambienceController.text)!,
+          costBenefitScore: parseRating(_costBenefitController.text)!,
+          overallScore: parseRating(_overallController.text)!,
           comment: _commentController.text.trim().isEmpty
               ? null
               : _commentController.text.trim(),
