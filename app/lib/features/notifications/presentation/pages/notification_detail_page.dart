@@ -8,9 +8,11 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/notifications_controller.dart';
 import '../../domain/app_notification.dart';
 
-/// Tela de Detalhes da Notificação (DV-09 §6) - marca como lida ao abrir
-/// e navega usando os identificadores do `payload` (decisão 6 do DV-09),
-/// reaproveitando as rotas já existentes (`/users/:id`, `/reviews/:id`).
+/// Tela de Detalhes da Notificação (DV-09 §6; tipos de Grupos/Rolês no
+/// BLOCO 8) - marca como lida ao abrir e navega usando os
+/// identificadores do `payload` (decisão 6 do DV-09), reaproveitando as
+/// rotas já existentes (`/users/:id`, `/reviews/:id`, `/groups/:id`,
+/// `/groups/:groupId/events/:eventId`) - nenhuma rota nova.
 class NotificationDetailPage extends ConsumerStatefulWidget {
   const NotificationDetailPage({super.key, required this.notification});
 
@@ -35,18 +37,38 @@ class _NotificationDetailPageState
     }
   }
 
+  // Reescrito de `switch`/`case` para `if` na revisão do BLOCO 8 - mesma
+  // troca já feita em `group_detail_page.dart` (BLOCO 2): cada ramo
+  // aqui tem instruções próprias sem `break`/`return` explícito, o que
+  // arrisca fall-through indevido entre cases num switch statement
+  // comum (diferente dos `switch` *expression* usados nos controllers/
+  // páginas deste projeto, que sempre retornam um valor por `=>`).
   void _navigateToTarget() {
     final payload = widget.notification.payload;
     if (payload == null) return;
 
-    switch (widget.notification.type) {
-      case 'new_follower':
-        final followerId = payload['follower_id'] as String?;
-        if (followerId != null) context.push('/users/$followerId');
-      case 'new_comment':
-      case 'new_like':
-        final reviewId = payload['review_id'] as String?;
-        if (reviewId != null) context.push('/reviews/$reviewId');
+    final type = widget.notification.type;
+
+    if (type == 'new_follower') {
+      final followerId = payload['follower_id'] as String?;
+      if (followerId != null) context.push('/users/$followerId');
+    }
+    if (type == 'new_comment' || type == 'new_like') {
+      final reviewId = payload['review_id'] as String?;
+      if (reviewId != null) context.push('/reviews/$reviewId');
+    }
+    // BLOCO 8: mesmo padrão - reaproveita as rotas de Grupos/Rolês já
+    // existentes, sem nenhuma rota nova para notificações.
+    if (type == 'group_member_joined') {
+      final groupId = payload['group_id'] as String?;
+      if (groupId != null) context.push('/groups/$groupId');
+    }
+    if (type == 'new_event' || type == 'event_attendance_response') {
+      final groupId = payload['group_id'] as String?;
+      final eventId = payload['event_id'] as String?;
+      if (groupId != null && eventId != null) {
+        context.push('/groups/$groupId/events/$eventId');
+      }
     }
   }
 
