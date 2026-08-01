@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/cards/restaurant_card.dart';
@@ -143,10 +144,32 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       }
     });
 
-    return Scaffold(
-      appBar: const AppTopBar(title: 'Criar rolê'),
-      body: SafeArea(
-        child: _step == 0 ? _buildStep1() : _buildStep2(isCreating),
+    // Achado de QA (BLOCO 9): sem isto, o botão de voltar padrão do
+    // `AppBar` (e o gesto/botão de voltar do sistema) saía da tela
+    // inteira a partir da Etapa 2, descartando o restaurante já
+    // selecionado - não havia como voltar para a Etapa 1 para trocar de
+    // restaurante sem recomeçar o fluxo do zero. `_step` é estado local
+    // (não é uma rota própria), então o pop padrão do Navigator não
+    // sabia decrementá-lo.
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) setState(() => _step = 0);
+      },
+      child: Scaffold(
+        appBar: AppTopBar(
+          title: 'Criar rolê',
+          leading: _step == 0
+              ? null
+              : AppIconButton(
+                  icon: Icons.arrow_back,
+                  tooltip: 'Voltar',
+                  onPressed: () => setState(() => _step = 0),
+                ),
+        ),
+        body: SafeArea(
+          child: _step == 0 ? _buildStep1() : _buildStep2(isCreating),
+        ),
       ),
     );
   }
