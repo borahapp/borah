@@ -100,6 +100,21 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
       _ => false,
     };
 
+    // QA (BLOCO 9): só mostra snackbar quando já havia um restaurante
+    // carregado (falha ao trocar a foto de capa) - a falha do `load()`
+    // inicial já vira tela de erro no switch abaixo, mesmo padrão de
+    // `GroupDetailPage`/`EventDetailPage`.
+    ref.listen<RestaurantDetailStatus>(restaurantDetailControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (next is RestaurantDetailError && next.restaurant != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next.message)));
+      }
+    });
+
     return Scaffold(
       appBar: AppTopBar(
         title: 'Restaurante',
@@ -121,7 +136,7 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
           RestaurantDetailSaving() => const LoadingScreen(
             key: ValueKey('loading'),
           ),
-          RestaurantDetailError(:final message) => ErrorState(
+          RestaurantDetailError(:final message, restaurant: null) => ErrorState(
             key: const ValueKey('error'),
             message: message,
             onRetry: () => ref
@@ -130,7 +145,11 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
           ),
           RestaurantDetailLoaded(:final restaurant) ||
           RestaurantDetailSaveSuccess(:final restaurant) ||
-          RestaurantDetailCoverUploading(:final restaurant) => _DetailView(
+          RestaurantDetailCoverUploading(:final restaurant) ||
+          // Mesma `key` de `RestaurantDetailLoaded` de propósito: uma
+          // falha ao trocar a foto de capa não deve re-animar a tela
+          // inteira - o erro chega via snackbar (ver `ref.listen`).
+          RestaurantDetailError(:final restaurant?) => _DetailView(
             key: const ValueKey('loaded'),
             name: restaurant.name,
             category: restaurant.category,

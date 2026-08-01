@@ -41,8 +41,17 @@ final class RestaurantDetailSaveSuccess extends RestaurantDetailStatus {
   final Restaurant restaurant;
 }
 
+/// QA (BLOCO 9): [restaurant] preserva os dados já carregados quando o
+/// erro vem de uma ação sobre uma tela já aberta (ex.: upload de capa
+/// que falhou) - `null` só no caso de falha do `load()` inicial, sem
+/// nada ainda para mostrar. Mesmo padrão de `GroupDetailError`/
+/// `EventDetailError` (evita que uma falha de ação apague a tela
+/// inteira do restaurante, regressão que o comentário de
+/// `RestaurantDetailCoverUploading` já dizia evitar, mas só cobria o
+/// estado de upload, não o de erro).
 final class RestaurantDetailError extends RestaurantDetailStatus {
-  const RestaurantDetailError(this.message);
+  const RestaurantDetailError(this.message, [this.restaurant]);
 
   final String message;
+  final Restaurant? restaurant;
 }

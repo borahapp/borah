@@ -70,14 +70,15 @@ class RestaurantDetailController extends Notifier<RestaurantDetailStatus> {
     // em vez de substituir a tela inteira por um spinner (regressão vs.
     // o padrão já usado para fotos de avaliação, RC-02).
     final previous = state;
-    state = switch (previous) {
+    final previousRestaurant = switch (previous) {
       RestaurantDetailLoaded(:final restaurant) ||
       RestaurantDetailSaveSuccess(:final restaurant) ||
-      RestaurantDetailCoverUploading(
-        :final restaurant,
-      ) => RestaurantDetailCoverUploading(restaurant),
-      _ => const RestaurantDetailSaving(),
+      RestaurantDetailCoverUploading(:final restaurant) => restaurant,
+      _ => null,
     };
+    state = previousRestaurant == null
+        ? const RestaurantDetailSaving()
+        : RestaurantDetailCoverUploading(previousRestaurant);
     try {
       final restaurant = await _repository.updateCoverImage(
         restaurantId,
@@ -86,9 +87,15 @@ class RestaurantDetailController extends Notifier<RestaurantDetailStatus> {
       );
       state = RestaurantDetailSaveSuccess(restaurant);
     } on RestaurantRepositoryException catch (e) {
-      state = RestaurantDetailError(e.message);
+      // QA (BLOCO 9): mantém o restaurante já carregado visível mesmo
+      // quando o upload falha - antes, uma falha aqui apagava a tela
+      // inteira (nome/categoria/descrição/endereço), não só a foto.
+      state = RestaurantDetailError(e.message, previousRestaurant);
     } catch (_) {
-      state = const RestaurantDetailError('Não foi possível atualizar a capa.');
+      state = RestaurantDetailError(
+        'Não foi possível atualizar a capa.',
+        previousRestaurant,
+      );
     }
   }
 }
