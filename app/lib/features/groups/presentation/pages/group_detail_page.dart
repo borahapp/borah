@@ -136,6 +136,11 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
             tooltip: 'Rolês',
             onPressed: () => context.push('/groups/${widget.groupId}/events'),
           ),
+          AppIconButton(
+            icon: Icons.emoji_events_outlined,
+            tooltip: 'Ranking do grupo',
+            onPressed: () => context.push('/groups/${widget.groupId}/ranking'),
+          ),
           // Owner não pode sair sem transferir a propriedade antes (RLS
           // `group_members_delete_self_or_admin`, GROUP-01) - transferência
           // de propriedade fica fora do escopo, então o ícone nem aparece
