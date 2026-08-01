@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
@@ -10,15 +11,17 @@ import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/groups_list_controller.dart';
 import '../../domain/group.dart';
 import '../states/groups_list_status.dart';
 
-/// Tela "Meus Grupos" (GROUP-02B.0) — mesmo padrão de
-/// `restaurants_search_page.dart` (botão "+" no `AppTopBar.actions`
-/// para criar) e `favorites_page.dart` (switch Loading/Error/Empty/
-/// Loaded com `AppAnimatedSwitcher`). Sem membros/ranking/estatísticas/
-/// convite/edição — fora do escopo desta sprint.
+/// Tela "Meus Grupos" (GROUP-02B.0; ação de entrar por código
+/// adicionada no ONBOARDING-01) — mesmo padrão de
+/// `restaurants_search_page.dart` (botões no `AppTopBar.actions` para
+/// criar) e `favorites_page.dart` (switch Loading/Error/Empty/Loaded
+/// com `AppAnimatedSwitcher`). Sem membros/ranking/estatísticas/edição
+/// — fora do escopo desta sprint.
 class GroupsListPage extends ConsumerStatefulWidget {
   const GroupsListPage({super.key});
 
@@ -45,6 +48,14 @@ class _GroupsListPageState extends ConsumerState<GroupsListPage> {
     ref.read(groupsListControllerProvider.notifier).load();
   }
 
+  Future<void> _joinGroup() async {
+    await context.push('/groups/join');
+    // Mesmo padrão de `_createGroup` - join_group_page.dart também só
+    // fecha (`context.pop()`, sem valor de retorno).
+    if (!mounted) return;
+    ref.read(groupsListControllerProvider.notifier).load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(groupsListControllerProvider);
@@ -53,6 +64,14 @@ class _GroupsListPageState extends ConsumerState<GroupsListPage> {
       appBar: AppTopBar(
         title: 'Grupos',
         actions: [
+          // "Entrar" antes de "Criar": para a maioria dos usuários, um
+          // grupo já existe (criado por um amigo) - entrar por código é
+          // a ação mais comum, não criar um grupo novo (ONBOARDING-01).
+          AppIconButton(
+            icon: Icons.group_add_outlined,
+            tooltip: 'Entrar com código',
+            onPressed: _joinGroup,
+          ),
           AppIconButton(
             icon: Icons.add,
             tooltip: 'Criar grupo',
@@ -72,10 +91,20 @@ class _GroupsListPageState extends ConsumerState<GroupsListPage> {
           ),
           GroupsListEmpty() => EmptyState(
             key: const ValueKey('empty'),
-            message: 'Você ainda não tem grupos.',
-            action: AppPrimaryButton(
-              label: 'Criar grupo',
-              onPressed: _createGroup,
+            message: 'Você ainda não participa de nenhum grupo.',
+            action: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppPrimaryButton(
+                  label: 'Entrar com código',
+                  onPressed: _joinGroup,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                AppOutlinedButton(
+                  label: 'Criar grupo',
+                  onPressed: _createGroup,
+                ),
+              ],
             ),
           ),
           GroupsListLoaded(:final groups) => _GroupsList(

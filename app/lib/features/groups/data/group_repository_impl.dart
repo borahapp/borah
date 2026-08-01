@@ -64,6 +64,14 @@ class GroupRepositoryImpl implements GroupRepository {
     });
   }
 
+  @override
+  Future<Group> joinByInviteCode(String inviteCode) {
+    return _guard(() async {
+      final row = await _datasource.joinByInviteCode(inviteCode);
+      return _mapRow(row);
+    });
+  }
+
   Group _mapRow(Map<String, dynamic> row) {
     return Group(
       id: row['id'] as String,

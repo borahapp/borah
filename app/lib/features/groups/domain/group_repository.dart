@@ -11,10 +11,8 @@ class GroupRepositoryException implements Exception {
 }
 
 /// Contrato do dominio, independente de Flutter e Supabase (AR-02).
-/// `create` (GROUP-02A), `listMine` (GROUP-02B.0) e `getById`
-/// (GROUP-02B.1) - entrar em um grupo por convite continua exposto só
-/// via `join_group_by_invite_code()` no backend (GROUP-01); nenhuma
-/// tela chama isso ainda.
+/// `create` (GROUP-02A), `listMine` (GROUP-02B.0), `getById`
+/// (GROUP-02B.1) e `joinByInviteCode` (ONBOARDING-01).
 abstract interface class GroupRepository {
   Future<Group> create({
     required String name,
@@ -33,4 +31,10 @@ abstract interface class GroupRepository {
   /// o grupo não existir ou o usuário não for membro (a RLS de
   /// `groups`/`group_members` filtra antes disso).
   Future<GroupDetails> getById(String id);
+
+  /// Entra em um grupo pelo código de convite (ONBOARDING-01). Se o
+  /// usuário já for membro, `join_group_by_invite_code()` só retorna o
+  /// grupo sem erro (idempotente - `on conflict do nothing`, GROUP-01) -
+  /// não há um caso de "já é membro" para tratar aqui.
+  Future<Group> joinByInviteCode(String inviteCode);
 }

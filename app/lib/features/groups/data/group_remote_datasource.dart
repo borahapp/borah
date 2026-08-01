@@ -77,4 +77,17 @@ class GroupRemoteDatasource {
         .inFilter('id', ids);
     return List<Map<String, dynamic>>.from(rows);
   }
+
+  /// ONBOARDING-01: `join_group_by_invite_code()` é `SECURITY DEFINER`
+  /// (mesma migration do `create_group()`) - resolve o grupo pelo
+  /// código e insere o chamador como `member` na mesma transação
+  /// (`on conflict do nothing` se já for membro). Mesma disciplina de
+  /// nomes exatos do parâmetro (`p_invite_code`).
+  Future<Map<String, dynamic>> joinByInviteCode(String inviteCode) async {
+    final result = await _client.rpc(
+      'join_group_by_invite_code',
+      params: {'p_invite_code': inviteCode},
+    );
+    return result as Map<String, dynamic>;
+  }
 }

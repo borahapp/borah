@@ -28,6 +28,7 @@ import '../../features/events/presentation/pages/events_list_page.dart';
 import '../../features/groups/presentation/pages/create_group_page.dart';
 import '../../features/groups/presentation/pages/group_detail_page.dart';
 import '../../features/groups/presentation/pages/groups_list_page.dart';
+import '../../features/groups/presentation/pages/join_group_page.dart';
 import '../../features/notifications/domain/app_notification.dart';
 import '../../features/notifications/presentation/pages/notification_detail_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
@@ -323,6 +324,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/groups/new',
         builder: (context, state) => const CreateGroupPage(),
+      ),
+      GoRoute(
+        path: '/groups/join',
+        builder: (context, state) => const JoinGroupPage(),
       ),
       GoRoute(
         path: '/groups/:id',

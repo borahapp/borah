@@ -65,6 +65,11 @@ class _CreateGroupPageState extends ConsumerState<CreateGroupPage> {
           context,
         ).showSnackBar(SnackBar(content: Text(next.message)));
       } else if (next is CreateGroupSaveSuccess) {
+        // MVP-INTEGRATION-01: faltava feedback de sucesso aqui (o fluxo
+        // de criar rolê já mostra, ROLÊ-02) - mesmo padrão agora.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Grupo "${next.group.name}" criado.')),
+        );
         context.pop();
       }
     });
