@@ -1,31 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
+import '../../../event_reviews/application/event_reviews_controller.dart';
+import '../../../event_reviews/domain/event_review.dart';
+import '../../../event_reviews/presentation/states/event_reviews_status.dart';
 import '../../../users/presentation/widgets/profile_avatar.dart';
 import '../../application/event_detail_controller.dart';
 import '../../domain/event_attendance.dart';
 import '../../domain/event_details.dart';
 import '../states/event_detail_status.dart';
 
-/// Tela de Detalhe do Rolê (ROLÊ-03; cancelar/reagendar adicionados no
-/// BLOCO 3) - restaurante/data + "X de Y confirmaram" + lista de
-/// participantes. Na própria linha (comparação com
-/// `currentUserIdProvider`), se ainda pendente, mostra os botões de
-/// confirmar/recusar; senão, um `AppBadge` com o status. Cancelar/
-/// reagendar só aparecem para admin/owner do grupo
-/// (`EventDetailStatus.canManage`) e só enquanto o rolê ainda está
-/// `scheduled`. Sem editar restaurante, fotos, avaliação ou alternar
-/// resposta já dada - fora do escopo.
+/// Tela de Detalhe do Rolê (ROLÊ-03; cancelar/reagendar no BLOCO 3;
+/// avaliação coletiva no BLOCO 4) - restaurante/data + "X de Y
+/// confirmaram" + lista de participantes + seção de avaliação coletiva.
+/// Na própria linha (comparação com `currentUserIdProvider`), se ainda
+/// pendente, mostra os botões de confirmar/recusar; senão, um
+/// `AppBadge` com o status. Cancelar/reagendar só aparecem para
+/// admin/owner do grupo (`EventDetailStatus.canManage`) e só enquanto o
+/// rolê ainda está `scheduled`. Avaliar só aparece para quem confirmou
+/// presença, depois que o rolê já aconteceu (`Event.hasHappened`) e não
+/// foi cancelado - a RLS (`can_review_event`) impõe a mesma regra; isto
+/// só evita mostrar um botão que ela rejeitaria.
 class EventDetailPage extends ConsumerStatefulWidget {
   const EventDetailPage({super.key, required this.eventId, required this.groupId});
 
@@ -44,6 +52,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       ref
           .read(eventDetailControllerProvider.notifier)
           .load(widget.eventId, widget.groupId);
+      ref.read(eventReviewsControllerProvider.notifier).load(widget.eventId);
     });
   }
 
@@ -143,6 +152,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
           ),
           EventDetailLoaded(:final details) => _EventDetailContent(
             key: const ValueKey('loaded'),
+            groupId: widget.groupId,
             details: details,
             currentUserId: currentUserId,
           ),
@@ -153,6 +163,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
           // (ver `ref.listen`).
           EventDetailError(:final details) => _EventDetailContent(
             key: const ValueKey('loaded'),
+            groupId: widget.groupId,
             details: details!,
             currentUserId: currentUserId,
           ),
@@ -165,10 +176,12 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
 class _EventDetailContent extends ConsumerWidget {
   const _EventDetailContent({
     super.key,
+    required this.groupId,
     required this.details,
     required this.currentUserId,
   });
 
+  final String groupId;
   final EventDetails details;
   final String? currentUserId;
 
@@ -244,6 +257,20 @@ class _EventDetailContent extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.xl),
+          _ReviewsSection(
+            groupId: groupId,
+            eventId: event.id,
+            averageRating: event.averageRating,
+            totalReviews: event.totalReviews,
+            // Só quem confirmou presença, depois que o rolê já
+            // aconteceu e não foi cancelado (BLOCO 4) - mesma regra de
+            // `can_review_event()` no banco.
+            canReview: event.status == 'scheduled' &&
+                event.hasHappened &&
+                (details.ownAttendance(currentUserId)?.isConfirmed ?? false),
+            currentUserId: currentUserId,
+          ),
         ],
       ),
     );
@@ -292,6 +319,119 @@ class _AttendanceTile extends StatelessWidget {
               label: attendance.statusLabel,
               earned: attendance.isConfirmed,
             ),
+    );
+  }
+}
+
+/// Seção de Avaliação Coletiva (BLOCO 4) - controller próprio
+/// (`eventReviewsControllerProvider`), independente de
+/// `EventDetailController`, mesmo padrão de `FavoriteToggleController`
+/// coexistir com o controller de detalhe do restaurante na mesma tela.
+class _ReviewsSection extends ConsumerWidget {
+  const _ReviewsSection({
+    required this.groupId,
+    required this.eventId,
+    required this.averageRating,
+    required this.totalReviews,
+    required this.canReview,
+    required this.currentUserId,
+  });
+
+  final String groupId;
+  final String eventId;
+
+  /// Direto de `Event.averageRating`/`totalReviews` - agregado já
+  /// calculado no banco (trigger), sem recomputar aqui a partir de
+  /// `reviews` (evitaria divergir do valor oficial em caso de paginação
+  /// futura da lista).
+  final double? averageRating;
+  final int totalReviews;
+  final bool canReview;
+  final String? currentUserId;
+
+  Future<void> _openReviewForm(
+    BuildContext context,
+    WidgetRef ref,
+    EventReview? existing,
+  ) async {
+    await context.push(
+      '/groups/$groupId/events/$eventId/review',
+      extra: existing,
+    );
+    // submit_event_review_page.dart só fecha (`context.pop()`, sem
+    // valor de retorno) - recarrega os dois controllers ao voltar: a
+    // lista de avaliações (nova/editada) e o detalhe do rolê (a média
+    // agregada em `Event.averageRating`/`totalReviews` mudou).
+    ref.read(eventReviewsControllerProvider.notifier).load(eventId);
+    ref.read(eventDetailControllerProvider.notifier).load(eventId, groupId);
+  }
+
+  /// Mesmo padrão manual de `GroupDetails.ownRole`/`EventDetails.
+  /// ownAttendance` - sem `package:collection` (não é dependência deste
+  /// projeto), então sem `firstOrNull`.
+  EventReview? _findOwnReview(List<EventReview> reviews, String? userId) {
+    if (userId == null) return null;
+    for (final review in reviews) {
+      if (review.userId == userId) return review;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(eventReviewsControllerProvider);
+    if (status is! EventReviewsLoaded) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final reviews = status.reviews;
+    final ownReview = _findOwnReview(reviews, currentUserId);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Avaliação coletiva'),
+        const SizedBox(height: AppSpacing.sm),
+        // "Nota final" (pedido do produto): média simples dos 5
+        // critérios entre todos os participantes - "média" e "média
+        // ponderada" colapsam no mesmo número aqui, decisão registrada
+        // na migration (sem esquema de pesos por critério especificado).
+        if (averageRating != null)
+          Text(
+            '${averageRating!.toStringAsFixed(1)} ⭐ · baseada em '
+            '$totalReviews ${totalReviews == 1 ? "avaliação" : "avaliações"}',
+            style: theme.textTheme.titleMedium,
+          ),
+        const SizedBox(height: AppSpacing.sm),
+        if (reviews.isEmpty)
+          Text(
+            'Ninguém avaliou este rolê ainda.',
+            style: theme.textTheme.bodyMedium,
+          )
+        else
+          ...reviews.indexed.map(
+            (entry) => AppStaggeredListItem(
+              index: entry.$1,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: ProfileAvatar(avatarPath: entry.$2.avatarUrl, radius: 20),
+                title: Text(entry.$2.fullName ?? ''),
+                subtitle: entry.$2.comment != null && entry.$2.comment!.isNotEmpty
+                    ? Text(entry.$2.comment!)
+                    : null,
+                trailing: AppBadge(
+                  label: entry.$2.averageScore.toStringAsFixed(1),
+                ),
+              ),
+            ),
+          ),
+        if (canReview) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppOutlinedButton(
+            label: ownReview == null ? 'Avaliar rolê' : 'Editar avaliação',
+            onPressed: () => _openReviewForm(context, ref, ownReview),
+          ),
+        ],
+      ],
     );
   }
 }

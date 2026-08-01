@@ -22,6 +22,8 @@ import '../../features/administration/presentation/pages/moderation_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/gamification/presentation/pages/gamification_profile_page.dart';
 import '../../features/gamification/presentation/pages/ranking_users_page.dart';
+import '../../features/event_reviews/domain/event_review.dart';
+import '../../features/event_reviews/presentation/pages/submit_event_review_page.dart';
 import '../../features/events/presentation/pages/create_event_page.dart';
 import '../../features/events/presentation/pages/event_detail_page.dart';
 import '../../features/events/presentation/pages/events_list_page.dart';
@@ -356,6 +358,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => EventDetailPage(
           eventId: state.pathParameters['eventId']!,
           groupId: state.pathParameters['groupId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/groups/:groupId/events/:eventId/review',
+        builder: (context, state) => SubmitEventReviewPage(
+          eventId: state.pathParameters['eventId']!,
+          existingReview: state.extra as EventReview?,
         ),
       ),
     ],

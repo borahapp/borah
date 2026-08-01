@@ -12,6 +12,8 @@ class Event {
     this.restaurantName,
     this.restaurantCategory,
     this.restaurantCity,
+    this.averageRating,
+    this.totalReviews = 0,
   });
 
   final String id;
@@ -32,6 +34,14 @@ class Event {
   final String? restaurantCategory;
   final String? restaurantCity;
 
+  /// Agregado denormalizado de `event_reviews` (BLOCO 4), mantido por
+  /// trigger (`recalculate_event_rating`) - nunca calculado no cliente.
+  /// `null`/`0` até a primeira avaliação coletiva. Mesmo papel de
+  /// `Restaurant.averageRating`/`totalReviews` (DV-03), mas escopado ao
+  /// rolê, não ao restaurante - os dois nunca se misturam.
+  final double? averageRating;
+  final int totalReviews;
+
   String get statusLabel => switch (status) {
     'cancelled' => 'Cancelado',
     'completed' => 'Realizado',
@@ -44,4 +54,10 @@ class Event {
   /// automaticamente ainda), então um rolê `scheduled` cuja data já
   /// passou também conta como já realizado.
   bool get isUpcoming => status == 'scheduled' && scheduledAt.isAfter(DateTime.now());
+
+  /// Usado por `EventDetailPage` (BLOCO 4) para decidir se a avaliação
+  /// coletiva já pode ser enviada - espelha exatamente a checagem de
+  /// data que `can_review_event()` faz no banco (RLS é quem de fato
+  /// impede o envio; isto só evita mostrar um botão que a RLS rejeitaria).
+  bool get hasHappened => DateTime.now().isAfter(scheduledAt);
 }

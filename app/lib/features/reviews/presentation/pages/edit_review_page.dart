@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/validators/app_validators.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/review_detail_controller.dart';
 import '../states/review_detail_status.dart';
-import '../validators/review_validators.dart';
 import '../widgets/review_detail_error_listener.dart';
 
 /// Tela de Edição de avaliação (DV-04). Reaproveita o estado já carregado

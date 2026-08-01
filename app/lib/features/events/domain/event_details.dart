@@ -14,4 +14,16 @@ class EventDetails {
   /// presenças já carregadas - nenhuma consulta extra ao banco (ROLÊ-03
   /// GAP 7: contagem só no detalhe, nunca na lista).
   int get confirmedCount => attendances.where((a) => a.isConfirmed).length;
+
+  /// Presença do usuário [userId] neste rolê, ou `null` se não for
+  /// participante (defensivo - mesmo papel de `GroupDetails.ownRole`).
+  /// Usado pelo BLOCO 4 para decidir se a avaliação coletiva pode ser
+  /// enviada (só quem confirmou presença).
+  EventAttendance? ownAttendance(String? userId) {
+    if (userId == null) return null;
+    for (final attendance in attendances) {
+      if (attendance.userId == userId) return attendance;
+    }
+    return null;
+  }
 }

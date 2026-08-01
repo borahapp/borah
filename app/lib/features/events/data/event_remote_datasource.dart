@@ -21,7 +21,7 @@ class EventRemoteDatasource {
   static const _profilesTable = 'profiles';
 
   static const _eventColumns =
-      'id,group_id,restaurant_id,scheduled_at,status,'
+      'id,group_id,restaurant_id,scheduled_at,status,average_rating,total_reviews,'
       'restaurants(name,category,city)';
 
   Future<Map<String, dynamic>> createEvent({
