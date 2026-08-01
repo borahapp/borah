@@ -4,11 +4,15 @@ import 'package:app/features/events/presentation/states/event_restaurant_search_
 import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
 import 'package:app/features/restaurants/domain/restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant_repository.dart';
+import 'package:app/features/restaurants/domain/restaurant_search_filters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockRestaurantRepository extends Mock implements RestaurantRepository {}
+
+class FakeRestaurantSearchFilters extends Fake
+    implements RestaurantSearchFilters {}
 
 Restaurant _restaurant({String name = 'Bar do Zé'}) {
   return Restaurant(
@@ -26,6 +30,10 @@ Restaurant _restaurant({String name = 'Bar do Zé'}) {
 void main() {
   late MockRestaurantRepository repository;
   late ProviderContainer container;
+
+  setUpAll(() {
+    registerFallbackValue(FakeRestaurantSearchFilters());
+  });
 
   setUp(() {
     repository = MockRestaurantRepository();

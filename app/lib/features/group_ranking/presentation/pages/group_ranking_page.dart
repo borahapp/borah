@@ -81,9 +81,7 @@ class _GroupRankingPageState extends ConsumerState<GroupRankingPage> {
                     position: index + 1,
                     name: entry.fullName ?? '',
                     subtitle: '$eventsLabel · $reviewsLabel',
-                    trailingLabel: entry.averageScore == null
-                        ? null
-                        : entry.averageScore!.toStringAsFixed(1),
+                    trailingLabel: entry.averageScore?.toStringAsFixed(1),
                   ),
                 ),
               );

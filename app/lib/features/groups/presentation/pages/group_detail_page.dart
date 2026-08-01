@@ -267,8 +267,8 @@ class _GroupDetailContent extends ConsumerWidget {
             // própria linha por este menu (sair é a ação dedicada no
             // topbar) - só sobra "outro membro, não-owner".
             final canManage = !isSelf && !member.isOwner && own != null;
-            final canChangeRole = canManage && own!.isOwner;
-            final canRemove = canManage && own!.isAdminOrOwner;
+            final canChangeRole = canManage && own.isOwner;
+            final canRemove = canManage && own.isAdminOrOwner;
 
             return AppStaggeredListItem(
               index: entry.$1,
