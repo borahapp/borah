@@ -32,6 +32,5 @@ export 'tokens/app_colors.dart';
 export 'tokens/app_elevation.dart';
 export 'tokens/app_gradients.dart';
 export 'tokens/app_radius.dart';
-export 'tokens/app_shadows.dart';
 export 'tokens/app_spacing.dart';
 export 'typography/app_typography.dart';
