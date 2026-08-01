@@ -9,7 +9,8 @@ class SubmitEventReviewController extends Notifier<SubmitEventReviewStatus> {
   @override
   SubmitEventReviewStatus build() => const SubmitEventReviewInitial();
 
-  EventReviewRepository get _repository => ref.read(eventReviewRepositoryProvider);
+  EventReviewRepository get _repository =>
+      ref.read(eventReviewRepositoryProvider);
 
   /// [existingReviewId] presente -> edita a avaliação já enviada;
   /// ausente -> envia uma nova. Uma página só (`SubmitEventReviewPage`)
@@ -53,7 +54,9 @@ class SubmitEventReviewController extends Notifier<SubmitEventReviewStatus> {
     } on EventReviewRepositoryException catch (e) {
       state = SubmitEventReviewError(e.message);
     } catch (_) {
-      state = const SubmitEventReviewError('Não foi possível salvar sua avaliação.');
+      state = const SubmitEventReviewError(
+        'Não foi possível salvar sua avaliação.',
+      );
     }
   }
 

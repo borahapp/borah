@@ -91,40 +91,45 @@ void main() {
       );
     });
 
-    test('falha com EventReviewRepositoryException -> SubmitEventReviewError com a mensagem original', () async {
-      when(
-        () => repository.submit(
-          eventId: any(named: 'eventId'),
-          userId: any(named: 'userId'),
-          foodScore: any(named: 'foodScore'),
-          serviceScore: any(named: 'serviceScore'),
-          ambienceScore: any(named: 'ambienceScore'),
-          costBenefitScore: any(named: 'costBenefitScore'),
-          overallScore: any(named: 'overallScore'),
-          comment: any(named: 'comment'),
-        ),
-      ).thenThrow(
-        const EventReviewRepositoryException('Você ainda não pode avaliar este rolê.'),
-      );
+    test(
+      'falha com EventReviewRepositoryException -> SubmitEventReviewError com a mensagem original',
+      () async {
+        when(
+          () => repository.submit(
+            eventId: any(named: 'eventId'),
+            userId: any(named: 'userId'),
+            foodScore: any(named: 'foodScore'),
+            serviceScore: any(named: 'serviceScore'),
+            ambienceScore: any(named: 'ambienceScore'),
+            costBenefitScore: any(named: 'costBenefitScore'),
+            overallScore: any(named: 'overallScore'),
+            comment: any(named: 'comment'),
+          ),
+        ).thenThrow(
+          const EventReviewRepositoryException(
+            'Você ainda não pode avaliar este rolê.',
+          ),
+        );
 
-      await container
-          .read(submitEventReviewControllerProvider.notifier)
-          .save(
-            eventId: 'e-1',
-            foodScore: 5,
-            serviceScore: 4,
-            ambienceScore: 5,
-            costBenefitScore: 4,
-            overallScore: 5,
-          );
+        await container
+            .read(submitEventReviewControllerProvider.notifier)
+            .save(
+              eventId: 'e-1',
+              foodScore: 5,
+              serviceScore: 4,
+              ambienceScore: 5,
+              costBenefitScore: 4,
+              overallScore: 5,
+            );
 
-      final status = container.read(submitEventReviewControllerProvider);
-      expect(status, isA<SubmitEventReviewError>());
-      expect(
-        (status as SubmitEventReviewError).message,
-        'Você ainda não pode avaliar este rolê.',
-      );
-    });
+        final status = container.read(submitEventReviewControllerProvider);
+        expect(status, isA<SubmitEventReviewError>());
+        expect(
+          (status as SubmitEventReviewError).message,
+          'Você ainda não pode avaliar este rolê.',
+        );
+      },
+    );
   });
 
   group('save (com existingReviewId -> update)', () {

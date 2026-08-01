@@ -12,7 +12,8 @@ class EventReviewsController extends Notifier<EventReviewsStatus> {
   @override
   EventReviewsStatus build() => const EventReviewsInitial();
 
-  EventReviewRepository get _repository => ref.read(eventReviewRepositoryProvider);
+  EventReviewRepository get _repository =>
+      ref.read(eventReviewRepositoryProvider);
 
   Future<void> load(String eventId) async {
     state = const EventReviewsLoading();
@@ -27,7 +28,9 @@ class EventReviewsController extends Notifier<EventReviewsStatus> {
     } on EventReviewRepositoryException catch (e) {
       state = EventReviewsError(e.message);
     } catch (_) {
-      state = const EventReviewsError('Não foi possível carregar as avaliações.');
+      state = const EventReviewsError(
+        'Não foi possível carregar as avaliações.',
+      );
     }
   }
 }

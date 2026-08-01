@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockGroupRankingRepository extends Mock implements GroupRankingRepository {}
+class MockGroupRankingRepository extends Mock
+    implements GroupRankingRepository {}
 
 GroupRankingEntry _entry({String userId = 'u-1', int eventsCount = 3}) {
   return GroupRankingEntry(
@@ -43,7 +44,10 @@ void main() {
   group('load', () {
     test('sucesso -> GroupRankingLoaded', () async {
       when(() => repository.listByGroup('g-1')).thenAnswer(
-        (_) async => [_entry(userId: 'u-1', eventsCount: 3), _entry(userId: 'u-2', eventsCount: 1)],
+        (_) async => [
+          _entry(userId: 'u-1', eventsCount: 3),
+          _entry(userId: 'u-2', eventsCount: 1),
+        ],
       );
 
       await container.read(groupRankingControllerProvider.notifier).load('g-1');
@@ -64,32 +68,46 @@ void main() {
       );
     });
 
-    test('falha com GroupRankingRepositoryException -> GroupRankingError com a mensagem original', () async {
-      when(() => repository.listByGroup('g-1')).thenThrow(
-        const GroupRankingRepositoryException('Você não é membro deste grupo.'),
-      );
+    test(
+      'falha com GroupRankingRepositoryException -> GroupRankingError com a mensagem original',
+      () async {
+        when(() => repository.listByGroup('g-1')).thenThrow(
+          const GroupRankingRepositoryException(
+            'Você não é membro deste grupo.',
+          ),
+        );
 
-      await container.read(groupRankingControllerProvider.notifier).load('g-1');
+        await container
+            .read(groupRankingControllerProvider.notifier)
+            .load('g-1');
 
-      final status = container.read(groupRankingControllerProvider);
-      expect(status, isA<GroupRankingError>());
-      expect(
-        (status as GroupRankingError).message,
-        'Você não é membro deste grupo.',
-      );
-    });
+        final status = container.read(groupRankingControllerProvider);
+        expect(status, isA<GroupRankingError>());
+        expect(
+          (status as GroupRankingError).message,
+          'Você não é membro deste grupo.',
+        );
+      },
+    );
 
-    test('falha inesperada -> GroupRankingError com mensagem genérica', () async {
-      when(() => repository.listByGroup('g-1')).thenThrow(Exception('erro de rede'));
+    test(
+      'falha inesperada -> GroupRankingError com mensagem genérica',
+      () async {
+        when(
+          () => repository.listByGroup('g-1'),
+        ).thenThrow(Exception('erro de rede'));
 
-      await container.read(groupRankingControllerProvider.notifier).load('g-1');
+        await container
+            .read(groupRankingControllerProvider.notifier)
+            .load('g-1');
 
-      final status = container.read(groupRankingControllerProvider);
-      expect(status, isA<GroupRankingError>());
-      expect(
-        (status as GroupRankingError).message,
-        'Não foi possível carregar o ranking.',
-      );
-    });
+        final status = container.read(groupRankingControllerProvider);
+        expect(status, isA<GroupRankingError>());
+        expect(
+          (status as GroupRankingError).message,
+          'Não foi possível carregar o ranking.',
+        );
+      },
+    );
   });
 }

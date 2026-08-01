@@ -69,30 +69,42 @@ void main() {
       expect((status as GroupDetailLoaded).details.members, hasLength(2));
     });
 
-    test('falha com GroupRepositoryException -> GroupDetailError com a mensagem original', () async {
-      when(
-        () => repository.getById('g-1'),
-      ).thenThrow(const GroupRepositoryException('Grupo não encontrado.'));
+    test(
+      'falha com GroupRepositoryException -> GroupDetailError com a mensagem original',
+      () async {
+        when(
+          () => repository.getById('g-1'),
+        ).thenThrow(const GroupRepositoryException('Grupo não encontrado.'));
 
-      await container.read(groupDetailControllerProvider.notifier).load('g-1');
+        await container
+            .read(groupDetailControllerProvider.notifier)
+            .load('g-1');
 
-      final status = container.read(groupDetailControllerProvider);
-      expect(status, isA<GroupDetailError>());
-      expect((status as GroupDetailError).message, 'Grupo não encontrado.');
-    });
+        final status = container.read(groupDetailControllerProvider);
+        expect(status, isA<GroupDetailError>());
+        expect((status as GroupDetailError).message, 'Grupo não encontrado.');
+      },
+    );
 
-    test('falha inesperada -> GroupDetailError com mensagem genérica', () async {
-      when(() => repository.getById('g-1')).thenThrow(Exception('erro de rede'));
+    test(
+      'falha inesperada -> GroupDetailError com mensagem genérica',
+      () async {
+        when(
+          () => repository.getById('g-1'),
+        ).thenThrow(Exception('erro de rede'));
 
-      await container.read(groupDetailControllerProvider.notifier).load('g-1');
+        await container
+            .read(groupDetailControllerProvider.notifier)
+            .load('g-1');
 
-      final status = container.read(groupDetailControllerProvider);
-      expect(status, isA<GroupDetailError>());
-      expect(
-        (status as GroupDetailError).message,
-        'Não foi possível carregar o grupo.',
-      );
-    });
+        final status = container.read(groupDetailControllerProvider);
+        expect(status, isA<GroupDetailError>());
+        expect(
+          (status as GroupDetailError).message,
+          'Não foi possível carregar o grupo.',
+        );
+      },
+    );
   });
 
   group('buildInviteShareMessage', () {
@@ -103,18 +115,25 @@ void main() {
       expect(message, isNull);
     });
 
-    test('com grupo carregado -> mensagem contém nome e código do convite', () async {
-      when(() => repository.getById('g-1')).thenAnswer((_) async => _details());
-      await container.read(groupDetailControllerProvider.notifier).load('g-1');
+    test(
+      'com grupo carregado -> mensagem contém nome e código do convite',
+      () async {
+        when(
+          () => repository.getById('g-1'),
+        ).thenAnswer((_) async => _details());
+        await container
+            .read(groupDetailControllerProvider.notifier)
+            .load('g-1');
 
-      final message = container
-          .read(groupDetailControllerProvider.notifier)
-          .buildInviteShareMessage();
+        final message = container
+            .read(groupDetailControllerProvider.notifier)
+            .buildInviteShareMessage();
 
-      expect(message, isNotNull);
-      expect(message, contains('Turma do João'));
-      expect(message, contains('FS575HP5'));
-    });
+        expect(message, isNotNull);
+        expect(message, contains('Turma do João'));
+        expect(message, contains('FS575HP5'));
+      },
+    );
   });
 
   group('promoteToAdmin/demoteToMember/removeMember', () {
@@ -135,25 +154,32 @@ void main() {
       );
     });
 
-    test('removeMember falha -> GroupDetailError com o grupo ainda carregado', () async {
-      when(() => repository.getById('g-1')).thenAnswer((_) async => _details());
-      when(() => repository.removeMember('m-2')).thenThrow(
-        const GroupRepositoryException('Apenas admin/owner pode remover membros.'),
-      );
+    test(
+      'removeMember falha -> GroupDetailError com o grupo ainda carregado',
+      () async {
+        when(
+          () => repository.getById('g-1'),
+        ).thenAnswer((_) async => _details());
+        when(() => repository.removeMember('m-2')).thenThrow(
+          const GroupRepositoryException(
+            'Apenas admin/owner pode remover membros.',
+          ),
+        );
 
-      final notifier = container.read(groupDetailControllerProvider.notifier);
-      await notifier.load('g-1');
-      await notifier.removeMember('m-2');
+        final notifier = container.read(groupDetailControllerProvider.notifier);
+        await notifier.load('g-1');
+        await notifier.removeMember('m-2');
 
-      final status = container.read(groupDetailControllerProvider);
-      expect(status, isA<GroupDetailError>());
-      expect(
-        (status as GroupDetailError).message,
-        'Apenas admin/owner pode remover membros.',
-      );
-      expect(status.details, isNotNull);
-      expect(status.details!.members, hasLength(2));
-    });
+        final status = container.read(groupDetailControllerProvider);
+        expect(status, isA<GroupDetailError>());
+        expect(
+          (status as GroupDetailError).message,
+          'Apenas admin/owner pode remover membros.',
+        );
+        expect(status.details, isNotNull);
+        expect(status.details!.members, hasLength(2));
+      },
+    );
 
     test('sem grupo carregado -> não chama o repository', () async {
       await container

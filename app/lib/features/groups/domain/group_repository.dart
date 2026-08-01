@@ -54,7 +54,10 @@ abstract interface class GroupRepository {
   /// permissão pelo `id`). [role] deve ser `'admin'` ou `'member'` - a
   /// RLS (`group_members_update_owner`) já bloqueia tentativas de
   /// definir `'owner'` ou de alterar a própria linha do owner.
-  Future<void> updateMemberRole({required String memberId, required String role});
+  Future<void> updateMemberRole({
+    required String memberId,
+    required String role,
+  });
 
   /// Remove um membro do grupo, ou o próprio usuário saindo (BLOCO 2) -
   /// mesma operação para os dois casos; a RLS

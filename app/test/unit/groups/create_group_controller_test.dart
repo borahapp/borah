@@ -58,43 +58,49 @@ void main() {
       );
     });
 
-    test('falha com GroupRepositoryException -> CreateGroupError com a mensagem original', () async {
-      when(
-        () => repository.create(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          photoUrl: any(named: 'photoUrl'),
-        ),
-      ).thenThrow(const GroupRepositoryException('Nome inválido.'));
+    test(
+      'falha com GroupRepositoryException -> CreateGroupError com a mensagem original',
+      () async {
+        when(
+          () => repository.create(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            photoUrl: any(named: 'photoUrl'),
+          ),
+        ).thenThrow(const GroupRepositoryException('Nome inválido.'));
 
-      await container
-          .read(createGroupControllerProvider.notifier)
-          .create(name: '   ');
+        await container
+            .read(createGroupControllerProvider.notifier)
+            .create(name: '   ');
 
-      final status = container.read(createGroupControllerProvider);
-      expect(status, isA<CreateGroupError>());
-      expect((status as CreateGroupError).message, 'Nome inválido.');
-    });
+        final status = container.read(createGroupControllerProvider);
+        expect(status, isA<CreateGroupError>());
+        expect((status as CreateGroupError).message, 'Nome inválido.');
+      },
+    );
 
-    test('falha inesperada -> CreateGroupError com mensagem genérica', () async {
-      when(
-        () => repository.create(
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          photoUrl: any(named: 'photoUrl'),
-        ),
-      ).thenThrow(Exception('erro de rede'));
+    test(
+      'falha inesperada -> CreateGroupError com mensagem genérica',
+      () async {
+        when(
+          () => repository.create(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            photoUrl: any(named: 'photoUrl'),
+          ),
+        ).thenThrow(Exception('erro de rede'));
 
-      await container
-          .read(createGroupControllerProvider.notifier)
-          .create(name: 'Turma do João');
+        await container
+            .read(createGroupControllerProvider.notifier)
+            .create(name: 'Turma do João');
 
-      final status = container.read(createGroupControllerProvider);
-      expect(status, isA<CreateGroupError>());
-      expect(
-        (status as CreateGroupError).message,
-        'Não foi possível criar o grupo.',
-      );
-    });
+        final status = container.read(createGroupControllerProvider);
+        expect(status, isA<CreateGroupError>());
+        expect(
+          (status as CreateGroupError).message,
+          'Não foi possível criar o grupo.',
+        );
+      },
+    );
   });
 }

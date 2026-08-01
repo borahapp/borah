@@ -36,7 +36,11 @@ import '../states/event_detail_status.dart';
 /// foi cancelado - a RLS (`can_review_event`) impõe a mesma regra; isto
 /// só evita mostrar um botão que ela rejeitaria.
 class EventDetailPage extends ConsumerStatefulWidget {
-  const EventDetailPage({super.key, required this.eventId, required this.groupId});
+  const EventDetailPage({
+    super.key,
+    required this.eventId,
+    required this.groupId,
+  });
 
   final String eventId;
   final String groupId;
@@ -84,7 +88,13 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
     );
     if (time == null) return;
 
-    final scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final scheduledAt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
     ref
         .read(eventDetailControllerProvider.notifier)
         .reschedule(widget.eventId, scheduledAt);
@@ -141,9 +151,8 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       ),
       body: AppAnimatedSwitcher(
         child: switch (status) {
-          EventDetailInitial() || EventDetailLoading() => const LoadingScreen(
-            key: ValueKey('loading'),
-          ),
+          EventDetailInitial() ||
+          EventDetailLoading() => const LoadingScreen(key: ValueKey('loading')),
           EventDetailError(:final message, details: null) => ErrorState(
             key: const ValueKey('error'),
             message: message,
@@ -252,7 +261,9 @@ class _EventDetailContent extends ConsumerWidget {
                 // Responder só faz sentido enquanto o rolê ainda pode
                 // acontecer - um rolê cancelado não aceita mais
                 // confirmação/recusa (BLOCO 3).
-                isOwn: entry.$2.userId == currentUserId && event.status == 'scheduled',
+                isOwn:
+                    entry.$2.userId == currentUserId &&
+                    event.status == 'scheduled',
                 onConfirm: () => _confirm(ref, entry.$2.id),
                 onDecline: () => _decline(ref, entry.$2.id),
               ),
@@ -267,7 +278,8 @@ class _EventDetailContent extends ConsumerWidget {
             // Só quem confirmou presença, depois que o rolê já
             // aconteceu e não foi cancelado (BLOCO 4) - mesma regra de
             // `can_review_event()` no banco.
-            canReview: event.status == 'scheduled' &&
+            canReview:
+                event.status == 'scheduled' &&
                 event.hasHappened &&
                 (details.ownAttendance(currentUserId)?.isConfirmed ?? false),
             currentUserId: currentUserId,
@@ -376,7 +388,9 @@ class _ReviewsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(eventReviewsControllerProvider);
     final theme = Theme.of(context);
-    final reviews = status is EventReviewsLoaded ? status.reviews : const <EventReview>[];
+    final reviews = status is EventReviewsLoaded
+        ? status.reviews
+        : const <EventReview>[];
     final ownReview = _findOwnReview(reviews, currentUserId);
 
     return Column(
@@ -432,9 +446,10 @@ class _ReviewsSection extends ConsumerWidget {
                         ),
                         title: Text(entry.$2.fullName ?? ''),
                         subtitle:
-                            entry.$2.comment != null && entry.$2.comment!.isNotEmpty
-                                ? Text(entry.$2.comment!)
-                                : null,
+                            entry.$2.comment != null &&
+                                entry.$2.comment!.isNotEmpty
+                            ? Text(entry.$2.comment!)
+                            : null,
                         trailing: AppBadge(
                           label: entry.$2.averageScore.toStringAsFixed(1),
                         ),

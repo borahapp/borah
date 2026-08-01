@@ -57,5 +57,8 @@ abstract interface class EventRepository {
   /// Reagenda o rolê para uma nova data/hora (BLOCO 3, ação de
   /// admin/owner). Só `scheduled_at` - trocar o restaurante fica fora
   /// do escopo (mudaria o contexto de quem já confirmou presença).
-  Future<Event> reschedule({required String eventId, required DateTime scheduledAt});
+  Future<Event> reschedule({
+    required String eventId,
+    required DateTime scheduledAt,
+  });
 }

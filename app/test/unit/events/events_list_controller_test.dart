@@ -44,7 +44,10 @@ void main() {
   group('load', () {
     test('lista não vazia -> EventsListLoaded', () async {
       when(() => repository.listByGroup('g-1')).thenAnswer(
-        (_) async => [_event(id: 'e-1'), _event(id: 'e-2', restaurantName: 'Cantina da Vila')],
+        (_) async => [
+          _event(id: 'e-1'),
+          _event(id: 'e-2', restaurantName: 'Cantina da Vila'),
+        ],
       );
 
       await container.read(eventsListControllerProvider.notifier).load('g-1');
@@ -65,20 +68,23 @@ void main() {
       );
     });
 
-    test('falha com EventRepositoryException -> EventsListError com a mensagem original', () async {
-      when(() => repository.listByGroup('g-1')).thenThrow(
-        const EventRepositoryException('Você não é membro deste grupo.'),
-      );
+    test(
+      'falha com EventRepositoryException -> EventsListError com a mensagem original',
+      () async {
+        when(() => repository.listByGroup('g-1')).thenThrow(
+          const EventRepositoryException('Você não é membro deste grupo.'),
+        );
 
-      await container.read(eventsListControllerProvider.notifier).load('g-1');
+        await container.read(eventsListControllerProvider.notifier).load('g-1');
 
-      final status = container.read(eventsListControllerProvider);
-      expect(status, isA<EventsListError>());
-      expect(
-        (status as EventsListError).message,
-        'Você não é membro deste grupo.',
-      );
-    });
+        final status = container.read(eventsListControllerProvider);
+        expect(status, isA<EventsListError>());
+        expect(
+          (status as EventsListError).message,
+          'Você não é membro deste grupo.',
+        );
+      },
+    );
 
     test('falha inesperada -> EventsListError com mensagem genérica', () async {
       when(

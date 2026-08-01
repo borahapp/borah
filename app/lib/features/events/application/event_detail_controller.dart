@@ -110,7 +110,8 @@ class EventDetailController extends Notifier<EventDetailStatus> {
   /// servidor após o sucesso - mesma decisão de simplicidade do
   /// `GroupDetailController` (BLOCO 2): ação administrativa pontual,
   /// não um loop de 1 toque recorrente, então otimista não compensa.
-  Future<void> cancel(String eventId) => _mutate(() => _repository.cancel(eventId));
+  Future<void> cancel(String eventId) =>
+      _mutate(() => _repository.cancel(eventId));
 
   /// Reagenda o rolê (BLOCO 3, ação de admin/owner).
   Future<void> reschedule(String eventId, DateTime scheduledAt) => _mutate(

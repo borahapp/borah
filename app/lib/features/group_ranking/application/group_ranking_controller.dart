@@ -8,7 +8,8 @@ class GroupRankingController extends Notifier<GroupRankingStatus> {
   @override
   GroupRankingStatus build() => const GroupRankingInitial();
 
-  GroupRankingRepository get _repository => ref.read(groupRankingRepositoryProvider);
+  GroupRankingRepository get _repository =>
+      ref.read(groupRankingRepositoryProvider);
 
   Future<void> load(String groupId) async {
     state = const GroupRankingLoading();
@@ -19,7 +20,9 @@ class GroupRankingController extends Notifier<GroupRankingStatus> {
       // permite à `GroupRankingPage` mostrar o `EmptyState` do design
       // system (mesmo componente de `RankingsPage`) em vez de uma
       // `ListView` em branco.
-      state = entries.isEmpty ? const GroupRankingEmpty() : GroupRankingLoaded(entries);
+      state = entries.isEmpty
+          ? const GroupRankingEmpty()
+          : GroupRankingLoaded(entries);
     } on GroupRankingRepositoryException catch (e) {
       state = GroupRankingError(e.message);
     } catch (_) {

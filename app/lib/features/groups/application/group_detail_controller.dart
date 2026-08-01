@@ -18,7 +18,10 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
     } on GroupRepositoryException catch (e) {
       state = GroupDetailError(e.message, null);
     } catch (_) {
-      state = const GroupDetailError('Não foi possível carregar o grupo.', null);
+      state = const GroupDetailError(
+        'Não foi possível carregar o grupo.',
+        null,
+      );
     }
   }
 
@@ -41,11 +44,13 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
   /// (ROLÊ-03), aqui não há ganho de UX em atualização otimista (ação
   /// administrativa pontual, não um loop de 1 toque recorrente), então
   /// o caminho mais simples (recarregar) é o certo.
-  Future<void> promoteToAdmin(String memberId) =>
-      _mutate(() => _repository.updateMemberRole(memberId: memberId, role: 'admin'));
+  Future<void> promoteToAdmin(String memberId) => _mutate(
+    () => _repository.updateMemberRole(memberId: memberId, role: 'admin'),
+  );
 
-  Future<void> demoteToMember(String memberId) =>
-      _mutate(() => _repository.updateMemberRole(memberId: memberId, role: 'member'));
+  Future<void> demoteToMember(String memberId) => _mutate(
+    () => _repository.updateMemberRole(memberId: memberId, role: 'member'),
+  );
 
   /// Remove outro membro do grupo (BLOCO 2, ação de admin/owner).
   Future<void> removeMember(String memberId) =>
@@ -56,7 +61,8 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
   /// `load()` subsequente falharia pela RLS), a própria operação é
   /// exposta para a página decidir - sucesso significa fechar a tela e
   /// voltar para a lista de grupos, não continuar mostrando este grupo.
-  Future<void> leaveGroup(String memberId) => _repository.removeMember(memberId);
+  Future<void> leaveGroup(String memberId) =>
+      _repository.removeMember(memberId);
 
   Future<void> _mutate(Future<void> Function() action) async {
     final current = state;

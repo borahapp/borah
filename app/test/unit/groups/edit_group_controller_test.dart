@@ -58,27 +58,34 @@ void main() {
       expect((status as EditGroupSaveSuccess).group.name, 'Turma Renovada');
     });
 
-    test('falha com GroupRepositoryException -> EditGroupError com a mensagem original', () async {
-      when(
-        () => repository.update(
-          id: any(named: 'id'),
-          name: any(named: 'name'),
-          description: any(named: 'description'),
-          photoUrl: any(named: 'photoUrl'),
-        ),
-      ).thenThrow(const GroupRepositoryException('Apenas admin/owner pode editar o grupo.'));
+    test(
+      'falha com GroupRepositoryException -> EditGroupError com a mensagem original',
+      () async {
+        when(
+          () => repository.update(
+            id: any(named: 'id'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            photoUrl: any(named: 'photoUrl'),
+          ),
+        ).thenThrow(
+          const GroupRepositoryException(
+            'Apenas admin/owner pode editar o grupo.',
+          ),
+        );
 
-      await container
-          .read(editGroupControllerProvider.notifier)
-          .update(id: 'g-1', name: 'Turma Renovada');
+        await container
+            .read(editGroupControllerProvider.notifier)
+            .update(id: 'g-1', name: 'Turma Renovada');
 
-      final status = container.read(editGroupControllerProvider);
-      expect(status, isA<EditGroupError>());
-      expect(
-        (status as EditGroupError).message,
-        'Apenas admin/owner pode editar o grupo.',
-      );
-    });
+        final status = container.read(editGroupControllerProvider);
+        expect(status, isA<EditGroupError>());
+        expect(
+          (status as EditGroupError).message,
+          'Apenas admin/owner pode editar o grupo.',
+        );
+      },
+    );
 
     test('falha inesperada -> EditGroupError com mensagem genérica', () async {
       when(

@@ -53,22 +53,25 @@ void main() {
       expect((status as JoinGroupSaveSuccess).group.name, 'Turma do João');
     });
 
-    test('falha com GroupRepositoryException -> JoinGroupError com a mensagem original', () async {
-      when(() => repository.joinByInviteCode('XXXXXXXX')).thenThrow(
-        const GroupRepositoryException('Código de convite inválido.'),
-      );
+    test(
+      'falha com GroupRepositoryException -> JoinGroupError com a mensagem original',
+      () async {
+        when(() => repository.joinByInviteCode('XXXXXXXX')).thenThrow(
+          const GroupRepositoryException('Código de convite inválido.'),
+        );
 
-      await container
-          .read(joinGroupControllerProvider.notifier)
-          .join('XXXXXXXX');
+        await container
+            .read(joinGroupControllerProvider.notifier)
+            .join('XXXXXXXX');
 
-      final status = container.read(joinGroupControllerProvider);
-      expect(status, isA<JoinGroupError>());
-      expect(
-        (status as JoinGroupError).message,
-        'Código de convite inválido.',
-      );
-    });
+        final status = container.read(joinGroupControllerProvider);
+        expect(status, isA<JoinGroupError>());
+        expect(
+          (status as JoinGroupError).message,
+          'Código de convite inválido.',
+        );
+      },
+    );
 
     test('falha inesperada -> JoinGroupError com mensagem genérica', () async {
       when(

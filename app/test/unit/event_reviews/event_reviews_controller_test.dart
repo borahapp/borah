@@ -46,7 +46,9 @@ void main() {
 
   group('load', () {
     test('sucesso -> EventReviewsLoaded', () async {
-      when(() => repository.listByEvent('e-1')).thenAnswer((_) async => [_review()]);
+      when(
+        () => repository.listByEvent('e-1'),
+      ).thenAnswer((_) async => [_review()]);
 
       await container.read(eventReviewsControllerProvider.notifier).load('e-1');
 
@@ -55,40 +57,60 @@ void main() {
       expect((status as EventReviewsLoaded).reviews, hasLength(1));
     });
 
-    test('lista vazia -> EventReviewsEmpty (mesmo padrão de UserReviewsController)', () async {
-      when(() => repository.listByEvent('e-1')).thenAnswer((_) async => []);
+    test(
+      'lista vazia -> EventReviewsEmpty (mesmo padrão de UserReviewsController)',
+      () async {
+        when(() => repository.listByEvent('e-1')).thenAnswer((_) async => []);
 
-      await container.read(eventReviewsControllerProvider.notifier).load('e-1');
+        await container
+            .read(eventReviewsControllerProvider.notifier)
+            .load('e-1');
 
-      expect(
-        container.read(eventReviewsControllerProvider),
-        isA<EventReviewsEmpty>(),
-      );
-    });
+        expect(
+          container.read(eventReviewsControllerProvider),
+          isA<EventReviewsEmpty>(),
+        );
+      },
+    );
 
-    test('falha com EventReviewRepositoryException -> EventReviewsError com a mensagem original', () async {
-      when(() => repository.listByEvent('e-1')).thenThrow(
-        const EventReviewRepositoryException('Não foi possível carregar.'),
-      );
+    test(
+      'falha com EventReviewRepositoryException -> EventReviewsError com a mensagem original',
+      () async {
+        when(() => repository.listByEvent('e-1')).thenThrow(
+          const EventReviewRepositoryException('Não foi possível carregar.'),
+        );
 
-      await container.read(eventReviewsControllerProvider.notifier).load('e-1');
+        await container
+            .read(eventReviewsControllerProvider.notifier)
+            .load('e-1');
 
-      final status = container.read(eventReviewsControllerProvider);
-      expect(status, isA<EventReviewsError>());
-      expect((status as EventReviewsError).message, 'Não foi possível carregar.');
-    });
+        final status = container.read(eventReviewsControllerProvider);
+        expect(status, isA<EventReviewsError>());
+        expect(
+          (status as EventReviewsError).message,
+          'Não foi possível carregar.',
+        );
+      },
+    );
 
-    test('falha inesperada -> EventReviewsError com mensagem genérica', () async {
-      when(() => repository.listByEvent('e-1')).thenThrow(Exception('erro de rede'));
+    test(
+      'falha inesperada -> EventReviewsError com mensagem genérica',
+      () async {
+        when(
+          () => repository.listByEvent('e-1'),
+        ).thenThrow(Exception('erro de rede'));
 
-      await container.read(eventReviewsControllerProvider.notifier).load('e-1');
+        await container
+            .read(eventReviewsControllerProvider.notifier)
+            .load('e-1');
 
-      final status = container.read(eventReviewsControllerProvider);
-      expect(status, isA<EventReviewsError>());
-      expect(
-        (status as EventReviewsError).message,
-        'Não foi possível carregar as avaliações.',
-      );
-    });
+        final status = container.read(eventReviewsControllerProvider);
+        expect(status, isA<EventReviewsError>());
+        expect(
+          (status as EventReviewsError).message,
+          'Não foi possível carregar as avaliações.',
+        );
+      },
+    );
   });
 }

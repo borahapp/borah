@@ -72,17 +72,21 @@ class _GroupStatsPageState extends ConsumerState<GroupStatsPage> {
           ? ErrorState(
               message: errorMessage,
               onRetry: () {
-                ref.read(eventsListControllerProvider.notifier).load(widget.groupId);
-                ref.read(groupRankingControllerProvider.notifier).load(widget.groupId);
+                ref
+                    .read(eventsListControllerProvider.notifier)
+                    .load(widget.groupId);
+                ref
+                    .read(groupRankingControllerProvider.notifier)
+                    .load(widget.groupId);
               },
             )
           : (events == null || entries == null)
-              ? const LoadingScreen()
-              : _GroupStatsContent(
-                  events: events,
-                  entries: entries,
-                  currentUserId: currentUserId,
-                ),
+          ? const LoadingScreen()
+          : _GroupStatsContent(
+              events: events,
+              entries: entries,
+              currentUserId: currentUserId,
+            ),
     );
   }
 }
@@ -110,10 +114,14 @@ class _GroupStatsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final realized = events.where((e) => e.status != 'cancelled' && !e.isUpcoming).toList();
+    final realized = events
+        .where((e) => e.status != 'cancelled' && !e.isUpcoming)
+        .toList();
     final own = _findOwn(entries, currentUserId);
 
-    final distinctRestaurants = <String>{for (final e in realized) e.restaurantId}.length;
+    final distinctRestaurants = <String>{
+      for (final e in realized) e.restaurantId,
+    }.length;
 
     final weekdayCounts = <int, int>{};
     final hourCounts = <int, int>{};
@@ -136,7 +144,10 @@ class _GroupStatsContent extends StatelessWidget {
     // média entre as notas dos rolês já avaliados nele, não a nota de
     // um rolê qualquer escolhido arbitrariamente.
     final visitsByRestaurant =
-        <String, ({String name, int count, double ratingSum, int ratingCount})>{};
+        <
+          String,
+          ({String name, int count, double ratingSum, int ratingCount})
+        >{};
     for (final event in realized) {
       final current = visitsByRestaurant[event.restaurantId];
       final rating = event.averageRating;
@@ -169,7 +180,9 @@ class _GroupStatsContent extends StatelessWidget {
                 ),
                 _statRow(
                   'Horário preferido',
-                  commonHour == null ? '—' : '${commonHour.toString().padLeft(2, '0')}h',
+                  commonHour == null
+                      ? '—'
+                      : '${commonHour.toString().padLeft(2, '0')}h',
                 ),
               ],
             ),
@@ -186,7 +199,9 @@ class _GroupStatsContent extends StatelessWidget {
                 _statRow('Avaliações enviadas', '${own?.reviewsCount ?? 0}'),
                 _statRow(
                   'Nota média dada',
-                  own?.averageScore == null ? '—' : own!.averageScore!.toStringAsFixed(1),
+                  own?.averageScore == null
+                      ? '—'
+                      : own!.averageScore!.toStringAsFixed(1),
                 ),
               ],
             ),

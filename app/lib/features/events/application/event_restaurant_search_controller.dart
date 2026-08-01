@@ -44,6 +44,7 @@ class EventRestaurantSearchController
 }
 
 final eventRestaurantSearchControllerProvider =
-    NotifierProvider<EventRestaurantSearchController, EventRestaurantSearchStatus>(
-      EventRestaurantSearchController.new,
-    );
+    NotifierProvider<
+      EventRestaurantSearchController,
+      EventRestaurantSearchStatus
+    >(EventRestaurantSearchController.new);

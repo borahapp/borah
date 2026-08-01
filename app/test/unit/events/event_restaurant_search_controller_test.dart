@@ -51,17 +51,20 @@ void main() {
   });
 
   group('search', () {
-    test('query vazia -> permanece/retorna a Initial, sem chamar o repository', () async {
-      await container
-          .read(eventRestaurantSearchControllerProvider.notifier)
-          .search('   ');
+    test(
+      'query vazia -> permanece/retorna a Initial, sem chamar o repository',
+      () async {
+        await container
+            .read(eventRestaurantSearchControllerProvider.notifier)
+            .search('   ');
 
-      expect(
-        container.read(eventRestaurantSearchControllerProvider),
-        isA<EventRestaurantSearchInitial>(),
-      );
-      verifyNever(() => repository.search(any()));
-    });
+        expect(
+          container.read(eventRestaurantSearchControllerProvider),
+          isA<EventRestaurantSearchInitial>(),
+        );
+        verifyNever(() => repository.search(any()));
+      },
+    );
 
     test('resultado não vazio -> EventRestaurantSearchLoaded', () async {
       when(() => repository.search(any())).thenAnswer(
@@ -79,10 +82,7 @@ void main() {
 
       final status = container.read(eventRestaurantSearchControllerProvider);
       expect(status, isA<EventRestaurantSearchLoaded>());
-      expect(
-        (status as EventRestaurantSearchLoaded).restaurants,
-        hasLength(1),
-      );
+      expect((status as EventRestaurantSearchLoaded).restaurants, hasLength(1));
     });
 
     test('resultado vazio -> EventRestaurantSearchEmpty', () async {
@@ -105,21 +105,24 @@ void main() {
       );
     });
 
-    test('falha com RestaurantRepositoryException -> EventRestaurantSearchError com a mensagem original', () async {
-      when(() => repository.search(any())).thenThrow(
-        const RestaurantRepositoryException('Falha ao buscar.'),
-      );
+    test(
+      'falha com RestaurantRepositoryException -> EventRestaurantSearchError com a mensagem original',
+      () async {
+        when(
+          () => repository.search(any()),
+        ).thenThrow(const RestaurantRepositoryException('Falha ao buscar.'));
 
-      await container
-          .read(eventRestaurantSearchControllerProvider.notifier)
-          .search('bar');
+        await container
+            .read(eventRestaurantSearchControllerProvider.notifier)
+            .search('bar');
 
-      final status = container.read(eventRestaurantSearchControllerProvider);
-      expect(status, isA<EventRestaurantSearchError>());
-      expect(
-        (status as EventRestaurantSearchError).message,
-        'Falha ao buscar.',
-      );
-    });
+        final status = container.read(eventRestaurantSearchControllerProvider);
+        expect(status, isA<EventRestaurantSearchError>());
+        expect(
+          (status as EventRestaurantSearchError).message,
+          'Falha ao buscar.',
+        );
+      },
+    );
   });
 }

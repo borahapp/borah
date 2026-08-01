@@ -62,17 +62,20 @@ void main() {
       );
     });
 
-    test('falha com GroupRepositoryException -> GroupsListError com a mensagem original', () async {
-      when(
-        () => repository.listMine(),
-      ).thenThrow(const GroupRepositoryException('Falha ao carregar.'));
+    test(
+      'falha com GroupRepositoryException -> GroupsListError com a mensagem original',
+      () async {
+        when(
+          () => repository.listMine(),
+        ).thenThrow(const GroupRepositoryException('Falha ao carregar.'));
 
-      await container.read(groupsListControllerProvider.notifier).load();
+        await container.read(groupsListControllerProvider.notifier).load();
 
-      final status = container.read(groupsListControllerProvider);
-      expect(status, isA<GroupsListError>());
-      expect((status as GroupsListError).message, 'Falha ao carregar.');
-    });
+        final status = container.read(groupsListControllerProvider);
+        expect(status, isA<GroupsListError>());
+        expect((status as GroupsListError).message, 'Falha ao carregar.');
+      },
+    );
 
     test('falha inesperada -> GroupsListError com mensagem genérica', () async {
       when(() => repository.listMine()).thenThrow(Exception('erro de rede'));

@@ -36,5 +36,10 @@ class EventReview {
   /// (`Event.averageRating`) é a média disto entre todos os
   /// participantes, calculada no banco (trigger), nunca aqui.
   double get averageScore =>
-      (foodScore + serviceScore + ambienceScore + costBenefitScore + overallScore) / 5;
+      (foodScore +
+          serviceScore +
+          ambienceScore +
+          costBenefitScore +
+          overallScore) /
+      5;
 }

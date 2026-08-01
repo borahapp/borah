@@ -118,7 +118,10 @@ class EventRemoteDatasource {
   /// BLOCO 3: `UPDATE` direto, sem RPC - a policy `events_update_admin`
   /// (ROLÊ-01) já restringe isso a admin/owner do grupo.
   Future<void> updateStatus(String eventId, String status) {
-    return _client.from(_eventsTable).update({'status': status}).eq('id', eventId);
+    return _client
+        .from(_eventsTable)
+        .update({'status': status})
+        .eq('id', eventId);
   }
 
   /// BLOCO 3: mesma policy de [updateStatus] - reagendar é só outra

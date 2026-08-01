@@ -53,7 +53,8 @@ class Event {
   /// basta (nada no projeto transiciona `scheduled` -> `completed`
   /// automaticamente ainda), então um rolê `scheduled` cuja data já
   /// passou também conta como já realizado.
-  bool get isUpcoming => status == 'scheduled' && scheduledAt.isAfter(DateTime.now());
+  bool get isUpcoming =>
+      status == 'scheduled' && scheduledAt.isAfter(DateTime.now());
 
   /// Usado por `EventDetailPage` (BLOCO 4) para decidir se a avaliação
   /// coletiva já pode ser enviada - espelha exatamente a checagem de

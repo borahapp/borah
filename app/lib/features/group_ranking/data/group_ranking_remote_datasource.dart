@@ -17,7 +17,9 @@ class GroupRankingRemoteDatasource {
   Future<List<Map<String, dynamic>>> listByGroup(String groupId) async {
     final rows = await _client
         .from(_membersTable)
-        .select('user_id,events_count,reviews_count,average_score,declined_count')
+        .select(
+          'user_id,events_count,reviews_count,average_score,declined_count',
+        )
         .eq('group_id', groupId)
         .order('events_count', ascending: false)
         .order('reviews_count', ascending: false);

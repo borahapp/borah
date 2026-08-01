@@ -76,7 +76,10 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
     });
   }
 
-  EventReview _mapRow(Map<String, dynamic> row, Map<String, dynamic> profilesById) {
+  EventReview _mapRow(
+    Map<String, dynamic> row,
+    Map<String, dynamic> profilesById,
+  ) {
     final userId = row['user_id'] as String;
     final profile = profilesById[userId];
     return EventReview(

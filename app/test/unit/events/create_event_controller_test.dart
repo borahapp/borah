@@ -62,54 +62,62 @@ void main() {
       );
     });
 
-    test('falha com EventRepositoryException -> CreateEventError com a mensagem original', () async {
-      when(
-        () => repository.create(
-          groupId: any(named: 'groupId'),
-          restaurantId: any(named: 'restaurantId'),
-          scheduledAt: any(named: 'scheduledAt'),
-        ),
-      ).thenThrow(const EventRepositoryException('Você não é membro deste grupo.'));
+    test(
+      'falha com EventRepositoryException -> CreateEventError com a mensagem original',
+      () async {
+        when(
+          () => repository.create(
+            groupId: any(named: 'groupId'),
+            restaurantId: any(named: 'restaurantId'),
+            scheduledAt: any(named: 'scheduledAt'),
+          ),
+        ).thenThrow(
+          const EventRepositoryException('Você não é membro deste grupo.'),
+        );
 
-      await container
-          .read(createEventControllerProvider.notifier)
-          .create(
-            groupId: 'g-1',
-            restaurantId: 'r-1',
-            scheduledAt: DateTime(2026, 8, 20, 20, 0),
-          );
+        await container
+            .read(createEventControllerProvider.notifier)
+            .create(
+              groupId: 'g-1',
+              restaurantId: 'r-1',
+              scheduledAt: DateTime(2026, 8, 20, 20, 0),
+            );
 
-      final status = container.read(createEventControllerProvider);
-      expect(status, isA<CreateEventError>());
-      expect(
-        (status as CreateEventError).message,
-        'Você não é membro deste grupo.',
-      );
-    });
+        final status = container.read(createEventControllerProvider);
+        expect(status, isA<CreateEventError>());
+        expect(
+          (status as CreateEventError).message,
+          'Você não é membro deste grupo.',
+        );
+      },
+    );
 
-    test('falha inesperada -> CreateEventError com mensagem genérica', () async {
-      when(
-        () => repository.create(
-          groupId: any(named: 'groupId'),
-          restaurantId: any(named: 'restaurantId'),
-          scheduledAt: any(named: 'scheduledAt'),
-        ),
-      ).thenThrow(Exception('erro de rede'));
+    test(
+      'falha inesperada -> CreateEventError com mensagem genérica',
+      () async {
+        when(
+          () => repository.create(
+            groupId: any(named: 'groupId'),
+            restaurantId: any(named: 'restaurantId'),
+            scheduledAt: any(named: 'scheduledAt'),
+          ),
+        ).thenThrow(Exception('erro de rede'));
 
-      await container
-          .read(createEventControllerProvider.notifier)
-          .create(
-            groupId: 'g-1',
-            restaurantId: 'r-1',
-            scheduledAt: DateTime(2026, 8, 20, 20, 0),
-          );
+        await container
+            .read(createEventControllerProvider.notifier)
+            .create(
+              groupId: 'g-1',
+              restaurantId: 'r-1',
+              scheduledAt: DateTime(2026, 8, 20, 20, 0),
+            );
 
-      final status = container.read(createEventControllerProvider);
-      expect(status, isA<CreateEventError>());
-      expect(
-        (status as CreateEventError).message,
-        'Não foi possível criar o rolê.',
-      );
-    });
+        final status = container.read(createEventControllerProvider);
+        expect(status, isA<CreateEventError>());
+        expect(
+          (status as CreateEventError).message,
+          'Não foi possível criar o rolê.',
+        );
+      },
+    );
   });
 }

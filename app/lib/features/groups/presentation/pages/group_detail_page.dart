@@ -86,7 +86,9 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
       context.pop();
     } on GroupRepositoryException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -143,20 +145,34 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
                 if (value == 'ranking') {
                   context.push('/groups/${widget.groupId}/ranking');
                 }
-                if (value == 'stats') context.push('/groups/${widget.groupId}/stats');
+                if (value == 'stats') {
+                  context.push('/groups/${widget.groupId}/stats');
+                }
                 if (value == 'leave') _leaveGroup(own);
               },
               itemBuilder: (context) => [
                 if (own.isAdminOrOwner)
-                  const PopupMenuItem(value: 'edit', child: Text('Editar grupo')),
-                const PopupMenuItem(value: 'ranking', child: Text('Ranking do grupo')),
-                const PopupMenuItem(value: 'stats', child: Text('Estatísticas')),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Editar grupo'),
+                  ),
+                const PopupMenuItem(
+                  value: 'ranking',
+                  child: Text('Ranking do grupo'),
+                ),
+                const PopupMenuItem(
+                  value: 'stats',
+                  child: Text('Estatísticas'),
+                ),
                 // Owner não pode sair sem transferir a propriedade antes
                 // (RLS `group_members_delete_self_or_admin`, GROUP-01) -
                 // transferência de propriedade fica fora do escopo,
                 // então a opção nem aparece para o owner.
                 if (!own.isOwner)
-                  const PopupMenuItem(value: 'leave', child: Text('Sair do grupo')),
+                  const PopupMenuItem(
+                    value: 'leave',
+                    child: Text('Sair do grupo'),
+                  ),
               ],
             ),
         ],
@@ -164,9 +180,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
       body: AppAnimatedSwitcher(
         child: switch (status) {
           GroupDetailInitial() ||
-          GroupDetailLoading() => const LoadingScreen(
-            key: ValueKey('loading'),
-          ),
+          GroupDetailLoading() => const LoadingScreen(key: ValueKey('loading')),
           GroupDetailError(:final message, details: null) => ErrorState(
             key: const ValueKey('error'),
             message: message,
@@ -219,16 +233,23 @@ class _GroupDetailContent extends ConsumerWidget {
         .demoteToMember(member.id);
   }
 
-  Future<void> _remove(BuildContext context, WidgetRef ref, GroupMember member) async {
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    GroupMember member,
+  ) async {
     final confirmed = await ConfirmationDialog.show(
       context,
       title: 'Remover membro',
-      message: '${member.fullName ?? 'Este membro'} vai deixar de ver os rolês deste grupo. Deseja continuar?',
+      message:
+          '${member.fullName ?? 'Este membro'} vai deixar de ver os rolês deste grupo. Deseja continuar?',
       confirmLabel: 'Remover',
       isDestructive: true,
     );
     if (!confirmed) return;
-    await ref.read(groupDetailControllerProvider.notifier).removeMember(member.id);
+    await ref
+        .read(groupDetailControllerProvider.notifier)
+        .removeMember(member.id);
   }
 
   @override
@@ -273,7 +294,10 @@ class _GroupDetailContent extends ConsumerWidget {
             return AppStaggeredListItem(
               index: entry.$1,
               child: ListTile(
-                leading: ProfileAvatar(avatarPath: member.avatarUrl, radius: 20),
+                leading: ProfileAvatar(
+                  avatarPath: member.avatarUrl,
+                  radius: 20,
+                ),
                 title: Text(member.fullName ?? ''),
                 trailing: !canChangeRole && !canRemove
                     ? AppBadge(label: member.roleLabel)

@@ -132,7 +132,9 @@ class _EventsList extends StatelessWidget {
             ),
             child: SectionHeader(title: 'Próximos'),
           ),
-          ...upcoming.indexed.map((entry) => _tile(context, entry.$1, entry.$2)),
+          ...upcoming.indexed.map(
+            (entry) => _tile(context, entry.$1, entry.$2),
+          ),
         ],
         if (past.isNotEmpty) ...[
           Padding(
@@ -206,14 +208,19 @@ class _EventsList extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Mais visitado', style: Theme.of(context).textTheme.labelMedium),
+                    Text(
+                      'Mais visitado',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       nameByRestaurant[mostVisitedId] ?? '',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
-                      mostVisitedCount == 1 ? '1 rolê' : '$mostVisitedCount rolês',
+                      mostVisitedCount == 1
+                          ? '1 rolê'
+                          : '$mostVisitedCount rolês',
                     ),
                   ],
                 ),
@@ -226,7 +233,10 @@ class _EventsList extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Campeão', style: Theme.of(context).textTheme.labelMedium),
+                      Text(
+                        'Campeão',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         championName,

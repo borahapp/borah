@@ -25,7 +25,10 @@ Event _event({String status = 'scheduled'}) {
   );
 }
 
-EventDetails _details({String ownStatus = 'pending', String eventStatus = 'scheduled'}) {
+EventDetails _details({
+  String ownStatus = 'pending',
+  String eventStatus = 'scheduled',
+}) {
   return EventDetails(
     event: _event(status: eventStatus),
     attendances: [
@@ -61,7 +64,10 @@ void main() {
     );
     addTearDown(container.dispose);
     when(
-      () => repository.isGroupAdmin(groupId: any(named: 'groupId'), userId: any(named: 'userId')),
+      () => repository.isGroupAdmin(
+        groupId: any(named: 'groupId'),
+        userId: any(named: 'userId'),
+      ),
     ).thenAnswer((_) async => false);
   });
 
@@ -99,35 +105,43 @@ void main() {
       expect((status as EventDetailLoaded).canManage, isTrue);
     });
 
-    test('falha com EventRepositoryException -> EventDetailError sem details', () async {
-      when(
-        () => repository.getById('e-1'),
-      ).thenThrow(const EventRepositoryException('Rolê não encontrado.'));
+    test(
+      'falha com EventRepositoryException -> EventDetailError sem details',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenThrow(const EventRepositoryException('Rolê não encontrado.'));
 
-      await container
-          .read(eventDetailControllerProvider.notifier)
-          .load('e-1', 'g-1');
+        await container
+            .read(eventDetailControllerProvider.notifier)
+            .load('e-1', 'g-1');
 
-      final status = container.read(eventDetailControllerProvider);
-      expect(status, isA<EventDetailError>());
-      expect((status as EventDetailError).message, 'Rolê não encontrado.');
-      expect(status.details, isNull);
-    });
+        final status = container.read(eventDetailControllerProvider);
+        expect(status, isA<EventDetailError>());
+        expect((status as EventDetailError).message, 'Rolê não encontrado.');
+        expect(status.details, isNull);
+      },
+    );
 
-    test('falha inesperada -> EventDetailError com mensagem genérica', () async {
-      when(() => repository.getById('e-1')).thenThrow(Exception('erro de rede'));
+    test(
+      'falha inesperada -> EventDetailError com mensagem genérica',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenThrow(Exception('erro de rede'));
 
-      await container
-          .read(eventDetailControllerProvider.notifier)
-          .load('e-1', 'g-1');
+        await container
+            .read(eventDetailControllerProvider.notifier)
+            .load('e-1', 'g-1');
 
-      final status = container.read(eventDetailControllerProvider);
-      expect(status, isA<EventDetailError>());
-      expect(
-        (status as EventDetailError).message,
-        'Não foi possível carregar o rolê.',
-      );
-    });
+        final status = container.read(eventDetailControllerProvider);
+        expect(status, isA<EventDetailError>());
+        expect(
+          (status as EventDetailError).message,
+          'Não foi possível carregar o rolê.',
+        );
+      },
+    );
   });
 
   group('confirm', () {
@@ -145,25 +159,35 @@ void main() {
       expect(own.status, 'confirmed');
     });
 
-    test('falha -> reverte para o status anterior e emite EventDetailError com details', () async {
-      when(() => repository.getById('e-1')).thenAnswer((_) async => _details());
-      when(() => repository.confirmAttendance('a-1')).thenThrow(
-        const EventRepositoryException('Não foi possível confirmar.'),
-      );
+    test(
+      'falha -> reverte para o status anterior e emite EventDetailError com details',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        when(() => repository.confirmAttendance('a-1')).thenThrow(
+          const EventRepositoryException('Não foi possível confirmar.'),
+        );
 
-      final notifier = container.read(eventDetailControllerProvider.notifier);
-      await notifier.load('e-1', 'g-1');
-      await notifier.confirm('a-1');
+        final notifier = container.read(eventDetailControllerProvider.notifier);
+        await notifier.load('e-1', 'g-1');
+        await notifier.confirm('a-1');
 
-      final status = container.read(eventDetailControllerProvider);
-      expect(status, isA<EventDetailError>());
-      expect((status as EventDetailError).message, 'Não foi possível confirmar.');
-      expect(status.details, isNotNull);
-      expect(status.details!.attendances.first.status, 'pending');
-    });
+        final status = container.read(eventDetailControllerProvider);
+        expect(status, isA<EventDetailError>());
+        expect(
+          (status as EventDetailError).message,
+          'Não foi possível confirmar.',
+        );
+        expect(status.details, isNotNull);
+        expect(status.details!.attendances.first.status, 'pending');
+      },
+    );
 
     test('sem rolê carregado -> não chama o repository', () async {
-      await container.read(eventDetailControllerProvider.notifier).confirm('a-1');
+      await container
+          .read(eventDetailControllerProvider.notifier)
+          .confirm('a-1');
 
       verifyNever(() => repository.confirmAttendance(any()));
       expect(

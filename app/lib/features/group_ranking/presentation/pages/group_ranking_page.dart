@@ -45,8 +45,9 @@ class _GroupRankingPageState extends ConsumerState<GroupRankingPage> {
       appBar: const AppTopBar(title: 'Ranking do grupo'),
       body: AppAnimatedSwitcher(
         child: switch (status) {
-          GroupRankingInitial() ||
-          GroupRankingLoading() => const LoadingScreen(key: ValueKey('loading')),
+          GroupRankingInitial() || GroupRankingLoading() => const LoadingScreen(
+            key: ValueKey('loading'),
+          ),
           GroupRankingError(:final message) => ErrorState(
             key: const ValueKey('error'),
             message: message,

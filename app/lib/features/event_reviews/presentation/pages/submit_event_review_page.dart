@@ -32,7 +32,8 @@ class SubmitEventReviewPage extends ConsumerStatefulWidget {
   final EventReview? existingReview;
 
   @override
-  ConsumerState<SubmitEventReviewPage> createState() => _SubmitEventReviewPageState();
+  ConsumerState<SubmitEventReviewPage> createState() =>
+      _SubmitEventReviewPageState();
 }
 
 class _SubmitEventReviewPageState extends ConsumerState<SubmitEventReviewPage> {
