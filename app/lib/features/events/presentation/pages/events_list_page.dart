@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
@@ -17,11 +18,19 @@ import '../../application/events_list_controller.dart';
 import '../../domain/event.dart';
 import '../states/events_list_status.dart';
 
-/// Tela "Rolês do grupo" (ROLÊ-03; separação Próximos/Realizados
-/// adicionada no BLOCO 3 - resolve o débito registrado no relatório do
-/// ROLÊ-03) — mesmo padrão de `groups_list_page.dart` (botão "+" no
-/// `AppTopBar.actions` para criar, switch Loading/Error/Empty/Loaded
-/// com `AppAnimatedSwitcher`).
+/// Tela "Rolês do grupo" (ROLÊ-03; separação Próximos/Realizados no
+/// BLOCO 3; resumo de "memórias" no BLOCO 6) — mesmo padrão de
+/// `groups_list_page.dart` (botão "+" no `AppTopBar.actions` para
+/// criar, switch Loading/Error/Empty/Loaded com `AppAnimatedSwitcher`).
+///
+/// BLOCO 6 ("Memórias"): "mais visitado"/"restaurante campeão" viraram
+/// 2 cards no topo desta mesma tela, não uma tela nova - são derivados
+/// da MESMA lista que `listByGroup` já traz (zero consulta extra); a
+/// "timeline" pedida já É a seção "Realizados" (BLOCO 3). "Fotos" e
+/// "resumo anual" ficam registrados como próximos passos - fotos
+/// precisa de uma decisão própria de infraestrutura de Storage (bucket/
+/// path/upload), e resumo anual não tem dado histórico suficiente para
+/// ser útil num produto recém-lançado.
 class EventsListPage extends ConsumerStatefulWidget {
   const EventsListPage({super.key, required this.groupId});
 
@@ -107,10 +116,14 @@ class _EventsList extends StatelessWidget {
     // `listByGroup`, só a apresentação separa os dois grupos.
     final upcoming = events.where((e) => e.isUpcoming).toList();
     final past = events.where((e) => !e.isUpcoming).toList();
+    // BLOCO 6: cancelados não contam como "memória" (não aconteceram de
+    // fato) - só rolês que realmente ocorreram entram nas superlativas.
+    final realized = past.where((e) => e.status != 'cancelled').toList();
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
+        if (realized.isNotEmpty) ..._memoryCards(context, realized),
         if (upcoming.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.symmetric(
@@ -133,6 +146,79 @@ class _EventsList extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  /// BLOCO 6 ("Memórias") - "mais visitado" e "restaurante campeão",
+  /// derivados de [realized] em memória, sem nenhuma consulta nova.
+  List<Widget> _memoryCards(BuildContext context, List<Event> realized) {
+    final visitCounts = <String, int>{};
+    final nameByRestaurant = <String, String>{};
+    for (final event in realized) {
+      visitCounts.update(event.restaurantId, (v) => v + 1, ifAbsent: () => 1);
+      nameByRestaurant[event.restaurantId] = event.restaurantName ?? '';
+    }
+    final mostVisitedId = visitCounts.entries
+        .reduce((a, b) => b.value > a.value ? b : a)
+        .key;
+    final mostVisitedCount = visitCounts[mostVisitedId]!;
+
+    final rated = realized.where((e) => e.averageRating != null).toList();
+    Event? champion;
+    for (final event in rated) {
+      if (champion == null || event.averageRating! > champion.averageRating!) {
+        champion = event;
+      }
+    }
+
+    return [
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Mais visitado', style: Theme.of(context).textTheme.labelMedium),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      nameByRestaurant[mostVisitedId] ?? '',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      mostVisitedCount == 1 ? '1 rolê' : '$mostVisitedCount rolês',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (champion != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Campeão', style: Theme.of(context).textTheme.labelMedium),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        champion.restaurantName ?? '',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Text('${champion.averageRating!.toStringAsFixed(1)} ⭐'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
   }
 
   Widget _tile(BuildContext context, int index, Event event) {
