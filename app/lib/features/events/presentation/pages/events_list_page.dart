@@ -162,11 +162,34 @@ class _EventsList extends StatelessWidget {
         .key;
     final mostVisitedCount = visitCounts[mostVisitedId]!;
 
-    final rated = realized.where((e) => e.averageRating != null).toList();
-    Event? champion;
-    for (final event in rated) {
-      if (champion == null || event.averageRating! > champion.averageRating!) {
-        champion = event;
+    // QA-13 (RC): "Campeão" é o RESTAURANTE com a melhor nota - não o
+    // rolê individual mais bem avaliado. Mesmo bug já corrigido em
+    // `group_stats_page.dart` (BLOCO 7): pegar `event.averageRating` de
+    // um único evento escolhido arbitrariamente distorcia o resultado
+    // quando o mesmo restaurante tinha rolês com notas diferentes (ex.:
+    // restaurante visitado 3x com notas [3, 3, 5] "vencia" um visitado
+    // 1x com nota 4.5, mesmo tendo a média pior). Agrega por
+    // restaurante antes de decidir o campeão - mesmo padrão de
+    // `visitsByRestaurant` do `group_stats_page.dart`.
+    final ratingByRestaurant =
+        <String, ({String name, double ratingSum, int ratingCount})>{};
+    for (final event in realized) {
+      final rating = event.averageRating;
+      if (rating == null) continue;
+      final current = ratingByRestaurant[event.restaurantId];
+      ratingByRestaurant[event.restaurantId] = (
+        name: event.restaurantName ?? '',
+        ratingSum: (current?.ratingSum ?? 0) + rating,
+        ratingCount: (current?.ratingCount ?? 0) + 1,
+      );
+    }
+    String? championName;
+    double? championAverage;
+    for (final entry in ratingByRestaurant.values) {
+      final average = entry.ratingSum / entry.ratingCount;
+      if (championAverage == null || average > championAverage) {
+        championName = entry.name;
+        championAverage = average;
       }
     }
 
@@ -196,7 +219,7 @@ class _EventsList extends StatelessWidget {
                 ),
               ),
             ),
-            if (champion != null) ...[
+            if (championName != null) ...[
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: AppCard(
@@ -206,10 +229,10 @@ class _EventsList extends StatelessWidget {
                       Text('Campeão', style: Theme.of(context).textTheme.labelMedium),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        champion.restaurantName ?? '',
+                        championName,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      Text('${champion.averageRating!.toStringAsFixed(1)} ⭐'),
+                      Text('${championAverage!.toStringAsFixed(1)} ⭐'),
                     ],
                   ),
                 ),
