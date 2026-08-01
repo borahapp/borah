@@ -23,6 +23,8 @@ import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/gamification/presentation/pages/gamification_profile_page.dart';
 import '../../features/gamification/presentation/pages/ranking_users_page.dart';
 import '../../features/events/presentation/pages/create_event_page.dart';
+import '../../features/events/presentation/pages/event_detail_page.dart';
+import '../../features/events/presentation/pages/events_list_page.dart';
 import '../../features/groups/presentation/pages/create_group_page.dart';
 import '../../features/groups/presentation/pages/group_detail_page.dart';
 import '../../features/groups/presentation/pages/groups_list_page.dart';
@@ -328,9 +330,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             GroupDetailPage(groupId: state.pathParameters['id']!),
       ),
       GoRoute(
+        path: '/groups/:groupId/events',
+        builder: (context, state) =>
+            EventsListPage(groupId: state.pathParameters['groupId']!),
+      ),
+      GoRoute(
         path: '/groups/:groupId/events/new',
         builder: (context, state) =>
             CreateEventPage(groupId: state.pathParameters['groupId']!),
+      ),
+      GoRoute(
+        path: '/groups/:groupId/events/:eventId',
+        builder: (context, state) =>
+            EventDetailPage(eventId: state.pathParameters['eventId']!),
       ),
     ],
   );

@@ -61,8 +61,12 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
         actions: [
           AppIconButton(
             icon: Icons.event_outlined,
-            tooltip: 'Criar rolê',
-            onPressed: () => context.push('/groups/${widget.groupId}/events/new'),
+            tooltip: 'Rolês',
+            // ROLÊ-03: passa a abrir a lista de rolês do grupo (não mais
+            // a criação direto) - a lista é o ponto central da
+            // funcionalidade, com seu próprio "+" para criar
+            // (`EventsListPage`, decisão de produto aprovada).
+            onPressed: () => context.push('/groups/${widget.groupId}/events'),
           ),
         ],
       ),

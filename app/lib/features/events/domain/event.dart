@@ -1,7 +1,7 @@
-/// Entidade de Rolê (ROLÊ-02) - só os campos necessários nesta sprint
-/// (criação). `organizerId`/`createdAt`/`updatedAt` existem na tabela
-/// (ROLÊ-01) mas nenhuma tela usa ainda - ficam para quando a tela de
-/// Detalhe do Rolê existir.
+/// Entidade de Rolê (ROLÊ-02, campos de restaurante adicionados no
+/// ROLÊ-03) - só os campos necessários até agora (criação, lista,
+/// detalhe). `organizerId`/`createdAt`/`updatedAt` existem na tabela
+/// (ROLÊ-01) mas nenhuma tela usa ainda.
 class Event {
   const Event({
     required this.id,
@@ -9,6 +9,9 @@ class Event {
     required this.restaurantId,
     required this.scheduledAt,
     required this.status,
+    this.restaurantName,
+    this.restaurantCategory,
+    this.restaurantCity,
   });
 
   final String id;
@@ -18,4 +21,14 @@ class Event {
 
   /// Valor real do banco (`scheduled`/`completed`/`cancelled` - ROLÊ-01).
   final String status;
+
+  /// Dados do restaurante via embed do PostgREST (ROLÊ-03,
+  /// `listByGroup`/`getById` - FK real `events.restaurant_id ->
+  /// restaurants.id`, mesmo padrão de `FavoriteRemoteDatasource`). Nulos
+  /// quando o `Event` vem de `create_event()` (ROLÊ-02), que não faz
+  /// join - a tela de criação já conhece o restaurante pela seleção do
+  /// próprio usuário, então não precisa desses campos.
+  final String? restaurantName;
+  final String? restaurantCategory;
+  final String? restaurantCity;
 }

@@ -10,6 +10,12 @@ class CreateEventController extends Notifier<CreateEventStatus> {
 
   EventRepository get _repository => ref.read(eventRepositoryProvider);
 
+  /// Analytics (ROLÊ-03, não implementado - só documentado por decisão
+  /// desta rodada): `AppAnalytics.trackEventCreated()` seria disparado
+  /// aqui, só no `CreateEventSaveSuccess`, mesmo padrão de
+  /// `trackReviewCreated`/`trackSignup` (RC-03C) - método ainda não
+  /// existe em `AppAnalytics`, fica para quando o wiring de Analytics
+  /// desta feature for decidido como rodada própria.
   Future<void> create({
     required String groupId,
     required String restaurantId,
