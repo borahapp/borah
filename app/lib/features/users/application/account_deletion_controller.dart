@@ -92,10 +92,18 @@ class AccountDeletionController extends Notifier<AccountDeletionStatus> {
 
     try {
       await ref.read(authControllerProvider.notifier).signOut();
-    } catch (_) {
+    } catch (e, stackTrace) {
       // Best-effort - a conta já foi excluída no servidor; uma falha ao
       // encerrar a sessão local não deve impedir o usuário de ver a
-      // confirmação de sucesso e ser levado ao Login.
+      // confirmação de sucesso e ser levado ao Login. Mesmo padrão de
+      // log do bloco de limpeza do Storage acima: best-effort não é
+      // sinônimo de silencioso.
+      AppLogger.warning(
+        'Falha ao encerrar sessão local após exclusão de conta.',
+        tag: 'users/AccountDeletionController.deleteAccount',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
 
     state = const AccountDeletionSuccess();
