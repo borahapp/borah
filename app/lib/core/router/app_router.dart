@@ -6,6 +6,13 @@ import '../../design_system/animations/app_motion.dart';
 import '../../design_system/components/feedback/error_state.dart';
 import '../observability/crash_reporting.dart';
 import '../../features/authentication/application/auth_controller.dart';
+import '../../features/favorites/application/favorites_controller.dart';
+import '../../features/gamification/application/gamification_profile_controller.dart';
+import '../../features/groups/application/groups_list_controller.dart';
+import '../../features/notifications/application/notification_preferences_controller.dart';
+import '../../features/notifications/application/notifications_controller.dart';
+import '../../features/social/application/feed_controller.dart';
+import '../../features/users/application/user_profile_controller.dart';
 import '../../features/authentication/presentation/pages/email_verification_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/new_password_page.dart';
@@ -94,7 +101,29 @@ bool _isProtectedRoute(String location) {
 /// inteiro (evita reset da pilha de navegação a cada mudança de estado).
 class _GoRouterRefreshNotifier extends ChangeNotifier {
   _GoRouterRefreshNotifier(Ref ref) {
-    ref.listen(authControllerProvider, (_, _) => notifyListeners());
+    ref.listen(authControllerProvider, (previous, next) {
+      notifyListeners();
+      // QA-14 (RC): esses providers não são `autoDispose` - trocar de
+      // conta no mesmo processo do app (Sair -> Entrar com outra conta,
+      // sem matar o app) sem isto deixava dados do usuário anterior
+      // (grupos, favoritos, perfil, notificações) visíveis por um
+      // instante na tela seguinte, até o próprio `load()` de cada
+      // página sobrescrever - risco real de vazamento entre contas em
+      // dispositivo compartilhado. Restrito aos providers que aparecem
+      // imediatamente ao entrar (abas da Home + Perfil), sem depender
+      // de nenhum id específico; providers "de detalhe" (grupo/rolê/
+      // avaliação específicos) não têm esse risco prático, pois exigem
+      // navegar até um item que só existiria na sessão anterior.
+      if (previous is Authenticated && next is Unauthenticated) {
+        ref.invalidate(groupsListControllerProvider);
+        ref.invalidate(favoritesControllerProvider);
+        ref.invalidate(userProfileControllerProvider);
+        ref.invalidate(notificationsControllerProvider);
+        ref.invalidate(notificationPreferencesControllerProvider);
+        ref.invalidate(gamificationProfileControllerProvider);
+        ref.invalidate(feedControllerProvider);
+      }
+    });
   }
 }
 
