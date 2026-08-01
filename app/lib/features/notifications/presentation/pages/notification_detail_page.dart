@@ -12,7 +12,10 @@ import '../../domain/app_notification.dart';
 /// BLOCO 8) - marca como lida ao abrir e navega usando os
 /// identificadores do `payload` (decisão 6 do DV-09), reaproveitando as
 /// rotas já existentes (`/users/:id`, `/reviews/:id`, `/groups/:id`,
-/// `/groups/:groupId/events/:eventId`) - nenhuma rota nova.
+/// `/groups/:groupId/events/:eventId`, `/gamification`) - nenhuma rota
+/// nova. `level_up`/`badge_earned` (DV-10) para `/gamification` foi um
+/// achado de QA (BLOCO 9): o botão "Ver" não tinha destino para esses
+/// 2 tipos até então.
 class NotificationDetailPage extends ConsumerStatefulWidget {
   const NotificationDetailPage({super.key, required this.notification});
 
@@ -69,6 +72,15 @@ class _NotificationDetailPageState
       if (groupId != null && eventId != null) {
         context.push('/groups/$groupId/events/$eventId');
       }
+    }
+    // Achado de QA (BLOCO 9): 'level_up'/'badge_earned' (DV-10) não
+    // tinham nenhum destino aqui - o botão "Ver" não fazia nada ao
+    // tocar. Nenhum id específico no payload aponta para uma tela
+    // própria (level_up só tem `level`; badge_earned tem `badge_id`,
+    // mas não existe tela de detalhe de badge) - `/gamification` (perfil
+    // de gamificação, já existente) é o destino natural dos dois.
+    if (type == 'level_up' || type == 'badge_earned') {
+      context.push('/gamification');
     }
   }
 
