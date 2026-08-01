@@ -20,6 +20,9 @@ class GroupRankingEntry {
     /// nota dos restaurantes que organizou) - `null` até a primeira
     /// avaliação.
     required this.averageScore,
+
+    /// "Faltas" (BLOCO 7) - presenças recusadas, dentro deste grupo.
+    required this.declinedCount,
   });
 
   final String userId;
@@ -28,4 +31,5 @@ class GroupRankingEntry {
   final int eventsCount;
   final int reviewsCount;
   final double? averageScore;
+  final int declinedCount;
 }

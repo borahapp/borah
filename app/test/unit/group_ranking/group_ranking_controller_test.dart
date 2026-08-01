@@ -17,6 +17,7 @@ GroupRankingEntry _entry({String userId = 'u-1', int eventsCount = 3}) {
     eventsCount: eventsCount,
     reviewsCount: 2,
     averageScore: 4.5,
+    declinedCount: 0,
   );
 }
 

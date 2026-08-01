@@ -124,32 +124,40 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
     return Scaffold(
       appBar: AppTopBar(
         title: 'Grupo',
+        // BLOCO 7: "Rolês" é a ação mais frequente, continua direta; as
+        // demais (editar/ranking/estatísticas/sair) foram para um menu
+        // (mesmo padrão de `PopupMenuButton` já usado nas linhas de
+        // membro, BLOCO 2) - débito de UX registrado no relatório do
+        // BLOCO 5 ("topbar sobrecarregada" com 4 ícones condicionais),
+        // resolvido proativamente aqui em vez de esperar o BLOCO 9.
         actions: [
-          if (own != null && own.isAdminOrOwner)
-            AppIconButton(
-              icon: Icons.edit_outlined,
-              tooltip: 'Editar grupo',
-              onPressed: () => _editGroup(detailsForActions!.group),
-            ),
           AppIconButton(
             icon: Icons.event_outlined,
             tooltip: 'Rolês',
             onPressed: () => context.push('/groups/${widget.groupId}/events'),
           ),
-          AppIconButton(
-            icon: Icons.emoji_events_outlined,
-            tooltip: 'Ranking do grupo',
-            onPressed: () => context.push('/groups/${widget.groupId}/ranking'),
-          ),
-          // Owner não pode sair sem transferir a propriedade antes (RLS
-          // `group_members_delete_self_or_admin`, GROUP-01) - transferência
-          // de propriedade fica fora do escopo, então o ícone nem aparece
-          // para o owner (evita um toque que a RLS só rejeitaria depois).
-          if (own != null && !own.isOwner)
-            AppIconButton(
-              icon: Icons.logout,
-              tooltip: 'Sair do grupo',
-              onPressed: () => _leaveGroup(own),
+          if (own != null)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'edit') _editGroup(detailsForActions!.group);
+                if (value == 'ranking') {
+                  context.push('/groups/${widget.groupId}/ranking');
+                }
+                if (value == 'stats') context.push('/groups/${widget.groupId}/stats');
+                if (value == 'leave') _leaveGroup(own);
+              },
+              itemBuilder: (context) => [
+                if (own.isAdminOrOwner)
+                  const PopupMenuItem(value: 'edit', child: Text('Editar grupo')),
+                const PopupMenuItem(value: 'ranking', child: Text('Ranking do grupo')),
+                const PopupMenuItem(value: 'stats', child: Text('Estatísticas')),
+                // Owner não pode sair sem transferir a propriedade antes
+                // (RLS `group_members_delete_self_or_admin`, GROUP-01) -
+                // transferência de propriedade fica fora do escopo,
+                // então a opção nem aparece para o owner.
+                if (!own.isOwner)
+                  const PopupMenuItem(value: 'leave', child: Text('Sair do grupo')),
+              ],
             ),
         ],
       ),

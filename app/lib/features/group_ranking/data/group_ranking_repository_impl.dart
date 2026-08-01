@@ -32,6 +32,7 @@ class GroupRankingRepositoryImpl implements GroupRankingRepository {
           eventsCount: row['events_count'] as int,
           reviewsCount: row['reviews_count'] as int,
           averageScore: (row['average_score'] as num?)?.toDouble(),
+          declinedCount: row['declined_count'] as int,
         );
       }).toList();
     });
