@@ -81,6 +81,30 @@ class EventRepositoryImpl implements EventRepository {
     );
   }
 
+  @override
+  Future<bool> isGroupAdmin({required String groupId, required String userId}) {
+    return _guard(() async {
+      final role = await _datasource.fetchOwnGroupRole(groupId, userId);
+      return role == 'owner' || role == 'admin';
+    });
+  }
+
+  @override
+  Future<void> cancel(String eventId) {
+    return _guard(() => _datasource.updateStatus(eventId, 'cancelled'));
+  }
+
+  @override
+  Future<Event> reschedule({
+    required String eventId,
+    required DateTime scheduledAt,
+  }) {
+    return _guard(() async {
+      final row = await _datasource.updateScheduledAt(eventId, scheduledAt);
+      return _mapRow(row);
+    });
+  }
+
   Event _mapRow(Map<String, dynamic> row) {
     final restaurant = row['restaurants'] as Map<String, dynamic>?;
     return Event(

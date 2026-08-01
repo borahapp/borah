@@ -99,4 +99,39 @@ class EventRemoteDatasource {
         .update({'status': status})
         .eq('id', attendanceId);
   }
+
+  /// BLOCO 3: consulta `group_members` direto (mesma tabela, sem passar
+  /// por `GroupRemoteDatasource`) filtrando já pelo `user_id` - só
+  /// precisamos saber o papel do próprio usuário, não o de todo mundo.
+  /// `maybeSingle()` retorna `null` sem lançar se o usuário não for
+  /// membro (não deveria acontecer aqui, mas é mais seguro que `single()`).
+  Future<String?> fetchOwnGroupRole(String groupId, String userId) async {
+    final row = await _client
+        .from('group_members')
+        .select('role')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    return row?['role'] as String?;
+  }
+
+  /// BLOCO 3: `UPDATE` direto, sem RPC - a policy `events_update_admin`
+  /// (ROLÊ-01) já restringe isso a admin/owner do grupo.
+  Future<void> updateStatus(String eventId, String status) {
+    return _client.from(_eventsTable).update({'status': status}).eq('id', eventId);
+  }
+
+  /// BLOCO 3: mesma policy de [updateStatus] - reagendar é só outra
+  /// coluna da mesma tabela, mesma permissão.
+  Future<Map<String, dynamic>> updateScheduledAt(
+    String eventId,
+    DateTime scheduledAt,
+  ) {
+    return _client
+        .from(_eventsTable)
+        .update({'scheduled_at': scheduledAt.toIso8601String()})
+        .eq('id', eventId)
+        .select(_eventColumns)
+        .single();
+  }
 }

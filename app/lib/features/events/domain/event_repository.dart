@@ -12,8 +12,8 @@ class EventRepositoryException implements Exception {
 
 /// Contrato do domínio, independente de Flutter e Supabase (AR-02).
 /// `create` (ROLÊ-02); `listByGroup`/`getById`/`confirmAttendance`/
-/// `declineAttendance` (ROLÊ-03) - fotos, avaliação, edição e
-/// cancelamento ficam para as próximas etapas do módulo Events.
+/// `declineAttendance` (ROLÊ-03); `isGroupAdmin`/`cancel`/`reschedule`
+/// (BLOCO 3) - fotos e avaliação ficam para as próximas etapas.
 abstract interface class EventRepository {
   Future<Event> create({
     required String groupId,
@@ -21,9 +21,10 @@ abstract interface class EventRepository {
     required DateTime scheduledAt,
   });
 
-  /// Rolês do grupo, ordenados por data agendada mais próxima primeiro
-  /// (ROLÊ-03). Sem distinção visual entre "próximos" e "realizados"
-  /// nesta sprint - registrado como melhoria futura (relatório final).
+  /// Rolês do grupo, ordenados por data agendada mais próxima primeiro.
+  /// A separação visual "Próximos"/"Realizados" (BLOCO 3) usa
+  /// `Event.isUpcoming` sobre esta mesma lista - sem parâmetro nem
+  /// consulta adicional aqui.
   Future<List<Event>> listByGroup(String groupId);
 
   /// Rolê + presença de cada membro do grupo (ROLÊ-03). Lança
@@ -40,4 +41,21 @@ abstract interface class EventRepository {
 
   /// Recusa a própria presença. Mesma garantia de [confirmAttendance].
   Future<void> declineAttendance(String attendanceId);
+
+  /// Se o usuário [userId] é admin/owner do grupo [groupId] (BLOCO 3) -
+  /// usado só para decidir se a UI mostra cancelar/reagendar. Consulta
+  /// `group_members` diretamente, sem depender de `GroupRepository`
+  /// (mesma decisão já tomada para o embed de `restaurants` em
+  /// `Event` - cada feature acessa as tabelas compartilhadas de que
+  /// precisa, sem acoplar a classes de outra feature).
+  Future<bool> isGroupAdmin({required String groupId, required String userId});
+
+  /// Cancela o rolê (BLOCO 3, ação de admin/owner do grupo). Ação
+  /// definitiva - não há "reabrir" nesta sprint.
+  Future<void> cancel(String eventId);
+
+  /// Reagenda o rolê para uma nova data/hora (BLOCO 3, ação de
+  /// admin/owner). Só `scheduled_at` - trocar o restaurante fica fora
+  /// do escopo (mudaria o contexto de quem já confirmou presença).
+  Future<Event> reschedule({required String eventId, required DateTime scheduledAt});
 }

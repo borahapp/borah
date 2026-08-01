@@ -15,9 +15,15 @@ final class EventDetailLoading extends EventDetailStatus {
 }
 
 final class EventDetailLoaded extends EventDetailStatus {
-  const EventDetailLoaded(this.details);
+  const EventDetailLoaded(this.details, this.canManage);
 
   final EventDetails details;
+
+  /// Se o usuário atual é admin/owner do grupo deste rolê (BLOCO 3) -
+  /// controla a exibição de cancelar/reagendar. Calculado uma vez no
+  /// `load()` (`EventRepository.isGroupAdmin`), não muda durante a
+  /// sessão da tela.
+  final bool canManage;
 }
 
 /// Confirmar/recusar presença é uma atualização otimista (mesmo padrão
@@ -33,8 +39,13 @@ final class EventDetailLoaded extends EventDetailStatus {
 /// (nenhum rolê jamais foi carregado) - nesse caso a tela mostra o
 /// estado de erro de página inteira, mesmo padrão de `GroupDetailError`.
 final class EventDetailError extends EventDetailStatus {
-  const EventDetailError(this.message, this.details);
+  const EventDetailError(this.message, this.details, this.canManage);
 
   final String message;
   final EventDetails? details;
+
+  /// Mesmo significado de `EventDetailLoaded.canManage` - `false` quando
+  /// `details` também é `null` (falha do `load()` inicial, onde isso
+  /// nunca chegou a ser calculado).
+  final bool canManage;
 }

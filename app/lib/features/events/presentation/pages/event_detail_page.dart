@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
@@ -16,18 +17,20 @@ import '../../domain/event_attendance.dart';
 import '../../domain/event_details.dart';
 import '../states/event_detail_status.dart';
 
-/// Tela de Detalhe do Rolê (ROLÊ-03) - restaurante/data + "X de Y
-/// confirmaram" + lista de participantes. Na própria linha (comparação
-/// com `currentUserIdProvider`, mesmo padrão de `comments_page.dart`),
-/// se ainda pendente, mostra os botões de confirmar/recusar; senão, um
-/// `AppBadge` com o status - mesmo padrão de exibição condicional de
-/// `GroupDetailPage`/`comments_page.dart`. Sem editar, cancelar,
-/// fotos, avaliação ou alternar resposta já dada - fora do escopo desta
-/// sprint (decisão de produto aprovada: resposta única).
+/// Tela de Detalhe do Rolê (ROLÊ-03; cancelar/reagendar adicionados no
+/// BLOCO 3) - restaurante/data + "X de Y confirmaram" + lista de
+/// participantes. Na própria linha (comparação com
+/// `currentUserIdProvider`), se ainda pendente, mostra os botões de
+/// confirmar/recusar; senão, um `AppBadge` com o status. Cancelar/
+/// reagendar só aparecem para admin/owner do grupo
+/// (`EventDetailStatus.canManage`) e só enquanto o rolê ainda está
+/// `scheduled`. Sem editar restaurante, fotos, avaliação ou alternar
+/// resposta já dada - fora do escopo.
 class EventDetailPage extends ConsumerStatefulWidget {
-  const EventDetailPage({super.key, required this.eventId});
+  const EventDetailPage({super.key, required this.eventId, required this.groupId});
 
   final String eventId;
+  final String groupId;
 
   @override
   ConsumerState<EventDetailPage> createState() => _EventDetailPageState();
@@ -38,8 +41,43 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(eventDetailControllerProvider.notifier).load(widget.eventId);
+      ref
+          .read(eventDetailControllerProvider.notifier)
+          .load(widget.eventId, widget.groupId);
     });
+  }
+
+  Future<void> _cancelEvent() async {
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Cancelar rolê',
+      message: 'Ninguém poderá mais confirmar presença. Deseja continuar?',
+      confirmLabel: 'Cancelar rolê',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+    ref.read(eventDetailControllerProvider.notifier).cancel(widget.eventId);
+  }
+
+  Future<void> _rescheduleEvent(DateTime currentScheduledAt) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: currentScheduledAt,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(currentScheduledAt),
+    );
+    if (time == null) return;
+
+    final scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    ref
+        .read(eventDetailControllerProvider.notifier)
+        .reschedule(widget.eventId, scheduledAt);
   }
 
   @override
@@ -52,8 +90,8 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       next,
     ) {
       // Só mostra snackbar quando já havia um rolê carregado (falha de
-      // confirmar/recusar) - a falha do `load()` inicial já vira tela de
-      // erro no switch abaixo, sem precisar de feedback duplicado.
+      // confirmar/recusar/cancelar/reagendar) - a falha do `load()`
+      // inicial já vira tela de erro no switch abaixo.
       if (next is EventDetailError && next.details != null) {
         ScaffoldMessenger.of(
           context,
@@ -61,8 +99,36 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       }
     });
 
+    final canManage = switch (status) {
+      EventDetailLoaded(:final canManage) => canManage,
+      EventDetailError(:final canManage) => canManage,
+      _ => false,
+    };
+    final event = switch (status) {
+      EventDetailLoaded(:final details) => details.event,
+      EventDetailError(:final details) => details?.event,
+      _ => null,
+    };
+    final canCancelOrReschedule = canManage && event?.status == 'scheduled';
+
     return Scaffold(
-      appBar: const AppTopBar(title: 'Rolê'),
+      appBar: AppTopBar(
+        title: 'Rolê',
+        actions: [
+          if (canCancelOrReschedule) ...[
+            AppIconButton(
+              icon: Icons.schedule_outlined,
+              tooltip: 'Reagendar',
+              onPressed: () => _rescheduleEvent(event!.scheduledAt),
+            ),
+            AppIconButton(
+              icon: Icons.event_busy_outlined,
+              tooltip: 'Cancelar rolê',
+              onPressed: _cancelEvent,
+            ),
+          ],
+        ],
+      ),
       body: AppAnimatedSwitcher(
         child: switch (status) {
           EventDetailInitial() || EventDetailLoading() => const LoadingScreen(
@@ -73,7 +139,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
             message: message,
             onRetry: () => ref
                 .read(eventDetailControllerProvider.notifier)
-                .load(widget.eventId),
+                .load(widget.eventId, widget.groupId),
           ),
           EventDetailLoaded(:final details) => _EventDetailContent(
             key: const ValueKey('loaded'),
@@ -81,10 +147,10 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
             currentUserId: currentUserId,
           ),
           // Mesma `key` de `EventDetailLoaded` de propósito: uma falha em
-          // confirmar/recusar não deve re-animar a tela inteira (o
-          // `AppAnimatedSwitcher` trataria uma key diferente como um
-          // widget novo) - só a linha revertida muda, o resto permanece
-          // estável, com o erro chegando via snackbar (ver `ref.listen`).
+          // confirmar/recusar/cancelar/reagendar não deve re-animar a
+          // tela inteira (o `AppAnimatedSwitcher` trataria uma key
+          // diferente como um widget novo) - o erro chega via snackbar
+          // (ver `ref.listen`).
           EventDetailError(:final details) => _EventDetailContent(
             key: const ValueKey('loaded'),
             details: details!,
@@ -137,9 +203,17 @@ class _EventDetailContent extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            event.restaurantName ?? '',
-            style: theme.textTheme.headlineSmall,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  event.restaurantName ?? '',
+                  style: theme.textTheme.headlineSmall,
+                ),
+              ),
+              if (event.status != 'scheduled')
+                AppBadge(label: event.statusLabel, earned: false),
+            ],
           ),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
@@ -161,7 +235,10 @@ class _EventDetailContent extends ConsumerWidget {
               index: entry.$1,
               child: _AttendanceTile(
                 attendance: entry.$2,
-                isOwn: entry.$2.userId == currentUserId,
+                // Responder só faz sentido enquanto o rolê ainda pode
+                // acontecer - um rolê cancelado não aceita mais
+                // confirmação/recusa (BLOCO 3).
+                isOwn: entry.$2.userId == currentUserId && event.status == 'scheduled',
                 onConfirm: () => _confirm(ref, entry.$2.id),
                 onDecline: () => _decline(ref, entry.$2.id),
               ),

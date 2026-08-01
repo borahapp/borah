@@ -1,3 +1,4 @@
+import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/events/application/event_detail_controller.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event.dart';
@@ -11,22 +12,22 @@ import 'package:mocktail/mocktail.dart';
 
 class MockEventRepository extends Mock implements EventRepository {}
 
-Event _event() {
+Event _event({String status = 'scheduled'}) {
   return Event(
     id: 'e-1',
     groupId: 'g-1',
     restaurantId: 'r-1',
     scheduledAt: DateTime(2026, 8, 20, 20, 0),
-    status: 'scheduled',
+    status: status,
     restaurantName: 'Bar do Zé',
     restaurantCategory: 'Bar',
     restaurantCity: 'São Paulo',
   );
 }
 
-EventDetails _details({String ownStatus = 'pending'}) {
+EventDetails _details({String ownStatus = 'pending', String eventStatus = 'scheduled'}) {
   return EventDetails(
-    event: _event(),
+    event: _event(status: eventStatus),
     attendances: [
       EventAttendance(
         id: 'a-1',
@@ -53,9 +54,15 @@ void main() {
   setUp(() {
     repository = MockEventRepository();
     container = ProviderContainer(
-      overrides: [eventRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        eventRepositoryProvider.overrideWithValue(repository),
+        currentUserIdProvider.overrideWithValue('user-1'),
+      ],
     );
     addTearDown(container.dispose);
+    when(
+      () => repository.isGroupAdmin(groupId: any(named: 'groupId'), userId: any(named: 'userId')),
+    ).thenAnswer((_) async => false);
   });
 
   test('estado inicial é EventDetailInitial', () {
@@ -69,11 +76,27 @@ void main() {
     test('sucesso -> EventDetailLoaded', () async {
       when(() => repository.getById('e-1')).thenAnswer((_) async => _details());
 
-      await container.read(eventDetailControllerProvider.notifier).load('e-1');
+      await container
+          .read(eventDetailControllerProvider.notifier)
+          .load('e-1', 'g-1');
 
       final status = container.read(eventDetailControllerProvider);
       expect(status, isA<EventDetailLoaded>());
       expect((status as EventDetailLoaded).details.attendances, hasLength(2));
+    });
+
+    test('admin/owner do grupo -> canManage true', () async {
+      when(() => repository.getById('e-1')).thenAnswer((_) async => _details());
+      when(
+        () => repository.isGroupAdmin(groupId: 'g-1', userId: 'user-1'),
+      ).thenAnswer((_) async => true);
+
+      await container
+          .read(eventDetailControllerProvider.notifier)
+          .load('e-1', 'g-1');
+
+      final status = container.read(eventDetailControllerProvider);
+      expect((status as EventDetailLoaded).canManage, isTrue);
     });
 
     test('falha com EventRepositoryException -> EventDetailError sem details', () async {
@@ -81,7 +104,9 @@ void main() {
         () => repository.getById('e-1'),
       ).thenThrow(const EventRepositoryException('Rolê não encontrado.'));
 
-      await container.read(eventDetailControllerProvider.notifier).load('e-1');
+      await container
+          .read(eventDetailControllerProvider.notifier)
+          .load('e-1', 'g-1');
 
       final status = container.read(eventDetailControllerProvider);
       expect(status, isA<EventDetailError>());
@@ -92,7 +117,9 @@ void main() {
     test('falha inesperada -> EventDetailError com mensagem genérica', () async {
       when(() => repository.getById('e-1')).thenThrow(Exception('erro de rede'));
 
-      await container.read(eventDetailControllerProvider.notifier).load('e-1');
+      await container
+          .read(eventDetailControllerProvider.notifier)
+          .load('e-1', 'g-1');
 
       final status = container.read(eventDetailControllerProvider);
       expect(status, isA<EventDetailError>());
@@ -109,7 +136,7 @@ void main() {
       when(() => repository.confirmAttendance('a-1')).thenAnswer((_) async {});
 
       final notifier = container.read(eventDetailControllerProvider.notifier);
-      await notifier.load('e-1');
+      await notifier.load('e-1', 'g-1');
       await notifier.confirm('a-1');
 
       final status = container.read(eventDetailControllerProvider);
@@ -125,7 +152,7 @@ void main() {
       );
 
       final notifier = container.read(eventDetailControllerProvider.notifier);
-      await notifier.load('e-1');
+      await notifier.load('e-1', 'g-1');
       await notifier.confirm('a-1');
 
       final status = container.read(eventDetailControllerProvider);
@@ -152,7 +179,7 @@ void main() {
       when(() => repository.declineAttendance('a-1')).thenAnswer((_) async {});
 
       final notifier = container.read(eventDetailControllerProvider.notifier);
-      await notifier.load('e-1');
+      await notifier.load('e-1', 'g-1');
       await notifier.decline('a-1');
 
       final status = container.read(eventDetailControllerProvider);
@@ -168,7 +195,7 @@ void main() {
       ).thenThrow(Exception('erro de rede'));
 
       final notifier = container.read(eventDetailControllerProvider.notifier);
-      await notifier.load('e-1');
+      await notifier.load('e-1', 'g-1');
       await notifier.decline('a-1');
 
       final status = container.read(eventDetailControllerProvider);
@@ -178,6 +205,62 @@ void main() {
         'Não foi possível registrar sua resposta.',
       );
       expect(status.details!.attendances.first.status, 'pending');
+    });
+  });
+
+  group('cancel', () {
+    test('sucesso -> chama o repository e recarrega o rolê', () async {
+      when(() => repository.getById('e-1')).thenAnswer((_) async => _details());
+      when(() => repository.cancel('e-1')).thenAnswer((_) async {});
+
+      final notifier = container.read(eventDetailControllerProvider.notifier);
+      await notifier.load('e-1', 'g-1');
+      await notifier.cancel('e-1');
+
+      verify(() => repository.cancel('e-1')).called(1);
+      verify(() => repository.getById('e-1')).called(2);
+      expect(
+        container.read(eventDetailControllerProvider),
+        isA<EventDetailLoaded>(),
+      );
+    });
+
+    test('falha -> EventDetailError preservando details e canManage', () async {
+      when(() => repository.getById('e-1')).thenAnswer((_) async => _details());
+      when(
+        () => repository.isGroupAdmin(groupId: 'g-1', userId: 'user-1'),
+      ).thenAnswer((_) async => true);
+      when(() => repository.cancel('e-1')).thenThrow(
+        const EventRepositoryException('Apenas admin/owner pode cancelar.'),
+      );
+
+      final notifier = container.read(eventDetailControllerProvider.notifier);
+      await notifier.load('e-1', 'g-1');
+      await notifier.cancel('e-1');
+
+      final status = container.read(eventDetailControllerProvider);
+      expect(status, isA<EventDetailError>());
+      expect(
+        (status as EventDetailError).message,
+        'Apenas admin/owner pode cancelar.',
+      );
+      expect(status.details, isNotNull);
+      expect(status.canManage, isTrue);
+    });
+  });
+
+  group('reschedule', () {
+    test('sem rolê carregado -> não chama o repository', () async {
+      await container
+          .read(eventDetailControllerProvider.notifier)
+          .reschedule('e-1', DateTime(2026, 9, 1, 20, 0));
+
+      verifyNever(
+        () => repository.reschedule(
+          eventId: any(named: 'eventId'),
+          scheduledAt: any(named: 'scheduledAt'),
+        ),
+      );
     });
   });
 }

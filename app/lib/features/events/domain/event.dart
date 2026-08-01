@@ -31,4 +31,17 @@ class Event {
   final String? restaurantName;
   final String? restaurantCategory;
   final String? restaurantCity;
+
+  String get statusLabel => switch (status) {
+    'cancelled' => 'Cancelado',
+    'completed' => 'Realizado',
+    _ => 'Agendado',
+  };
+
+  /// Usado por `EventsListPage` (BLOCO 3) para separar "Próximos" de
+  /// "Realizados" sem nenhuma consulta nova - `status` sozinho não
+  /// basta (nada no projeto transiciona `scheduled` -> `completed`
+  /// automaticamente ainda), então um rolê `scheduled` cuja data já
+  /// passou também conta como já realizado.
+  bool get isUpcoming => status == 'scheduled' && scheduledAt.isAfter(DateTime.now());
 }

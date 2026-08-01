@@ -353,8 +353,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/groups/:groupId/events/:eventId',
-        builder: (context, state) =>
-            EventDetailPage(eventId: state.pathParameters['eventId']!),
+        builder: (context, state) => EventDetailPage(
+          eventId: state.pathParameters['eventId']!,
+          groupId: state.pathParameters['groupId']!,
+        ),
       ),
     ],
   );

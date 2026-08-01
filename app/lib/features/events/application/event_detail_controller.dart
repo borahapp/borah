@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../authentication/application/auth_controller.dart';
 import '../data/event_repository_impl.dart';
 import '../domain/event_attendance.dart';
 import '../domain/event_details.dart';
@@ -18,15 +19,33 @@ class EventDetailController extends Notifier<EventDetailStatus> {
   /// `trackRestaurantViewed`/`trackFeedOpened` (RC-03C) - método ainda
   /// não existe em `AppAnalytics`, fica para quando o wiring de
   /// Analytics desta feature for decidido como rodada própria.
-  Future<void> load(String eventId) async {
+  ///
+  /// [groupId] vem da própria rota (`/groups/:groupId/events/:eventId`,
+  /// já disponível sem consulta nenhuma) - permite calcular
+  /// `getById(eventId)` e `isGroupAdmin(groupId, ...)` em paralelo
+  /// (`Future.wait`, BLOCO 3), já que um não depende do resultado do
+  /// outro (diferente de group_id vir de dentro do próprio `Event`,
+  /// o que forçaria as duas chamadas a serem sequenciais).
+  Future<void> load(String eventId, String groupId) async {
     state = const EventDetailLoading();
+    final userId = ref.read(currentUserIdProvider);
     try {
-      final details = await _repository.getById(eventId);
-      state = EventDetailLoaded(details);
+      final results = await Future.wait([
+        _repository.getById(eventId),
+        if (userId != null)
+          _repository.isGroupAdmin(groupId: groupId, userId: userId),
+      ]);
+      final details = results[0] as EventDetails;
+      final canManage = userId != null && results[1] as bool;
+      state = EventDetailLoaded(details, canManage);
     } on EventRepositoryException catch (e) {
-      state = EventDetailError(e.message, null);
+      state = EventDetailError(e.message, null, false);
     } catch (_) {
-      state = const EventDetailError('Não foi possível carregar o rolê.', null);
+      state = const EventDetailError(
+        'Não foi possível carregar o rolê.',
+        null,
+        false,
+      );
     }
   }
 
@@ -68,7 +87,7 @@ class EventDetailController extends Notifier<EventDetailStatus> {
             attendance,
       ],
     );
-    state = EventDetailLoaded(optimistic);
+    state = EventDetailLoaded(optimistic, current.canManage);
 
     try {
       if (status == 'confirmed') {
@@ -77,11 +96,52 @@ class EventDetailController extends Notifier<EventDetailStatus> {
         await _repository.declineAttendance(attendanceId);
       }
     } on EventRepositoryException catch (e) {
-      state = EventDetailError(e.message, previous);
+      state = EventDetailError(e.message, previous, current.canManage);
     } catch (_) {
       state = EventDetailError(
         'Não foi possível registrar sua resposta.',
         previous,
+        current.canManage,
+      );
+    }
+  }
+
+  /// Cancela o rolê (BLOCO 3, ação de admin/owner). Recarrega do
+  /// servidor após o sucesso - mesma decisão de simplicidade do
+  /// `GroupDetailController` (BLOCO 2): ação administrativa pontual,
+  /// não um loop de 1 toque recorrente, então otimista não compensa.
+  Future<void> cancel(String eventId) => _mutate(() => _repository.cancel(eventId));
+
+  /// Reagenda o rolê (BLOCO 3, ação de admin/owner).
+  Future<void> reschedule(String eventId, DateTime scheduledAt) => _mutate(
+    () => _repository.reschedule(eventId: eventId, scheduledAt: scheduledAt),
+  );
+
+  Future<void> _mutate(Future<void> Function() action) async {
+    final current = state;
+    final EventDetails? details;
+    final bool canManage;
+    if (current is EventDetailLoaded) {
+      details = current.details;
+      canManage = current.canManage;
+    } else if (current is EventDetailError) {
+      details = current.details;
+      canManage = current.canManage;
+    } else {
+      return;
+    }
+    if (details == null) return;
+
+    try {
+      await action();
+      await load(details.event.id, details.event.groupId);
+    } on EventRepositoryException catch (e) {
+      state = EventDetailError(e.message, details, canManage);
+    } catch (_) {
+      state = EventDetailError(
+        'Não foi possível concluir a ação.',
+        details,
+        canManage,
       );
     }
   }
