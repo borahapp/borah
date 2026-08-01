@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/dialogs/app_dialog.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/inputs/app_password_field.dart';
 import '../../application/account_deletion_controller.dart';
 import '../states/account_deletion_status.dart';
@@ -151,11 +152,7 @@ class _AccountDeletionDialogState extends ConsumerState<AccountDeletionDialog> {
         if (isDeleting)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            child: LoadingIndicator(size: 20),
           )
         else
           AppTextButton(

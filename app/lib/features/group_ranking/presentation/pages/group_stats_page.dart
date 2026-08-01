@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/collection_utils.dart';
 import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
@@ -53,6 +54,7 @@ class _GroupStatsPageState extends ConsumerState<GroupStatsPage> {
     };
     final entries = switch (rankingStatus) {
       GroupRankingLoaded(:final entries) => entries,
+      GroupRankingEmpty() => const <GroupRankingEntry>[],
       _ => null,
     };
 
@@ -241,15 +243,9 @@ class _GroupStatsContent extends StatelessWidget {
     );
   }
 
-  /// Mesmo padrão manual de `GroupDetails.ownRole`/`EventDetails.
-  /// ownAttendance`/`EventDetailPage._findOwnReview` - sem
-  /// `package:collection`, então sem `firstWhereOrNull`.
   GroupRankingEntry? _findOwn(List<GroupRankingEntry> entries, String? userId) {
     if (userId == null) return null;
-    for (final entry in entries) {
-      if (entry.userId == userId) return entry;
-    }
-    return null;
+    return firstWhereOrNull(entries, (entry) => entry.userId == userId);
   }
 
   int? _mostCommonKey(Map<int, int> counts) {

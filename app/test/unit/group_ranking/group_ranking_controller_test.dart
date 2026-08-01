@@ -53,6 +53,17 @@ void main() {
       expect((status as GroupRankingLoaded).entries, hasLength(2));
     });
 
+    test('lista vazia -> GroupRankingEmpty', () async {
+      when(() => repository.listByGroup('g-1')).thenAnswer((_) async => []);
+
+      await container.read(groupRankingControllerProvider.notifier).load('g-1');
+
+      expect(
+        container.read(groupRankingControllerProvider),
+        isA<GroupRankingEmpty>(),
+      );
+    });
+
     test('falha com GroupRankingRepositoryException -> GroupRankingError com a mensagem original', () async {
       when(() => repository.listByGroup('g-1')).thenThrow(
         const GroupRankingRepositoryException('Você não é membro deste grupo.'),

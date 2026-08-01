@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/feedback/feedback_dialog.dart';
 import '../../../../design_system/components/dialogs/confirmation_dialog.dart';
+import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../authentication/domain/auth_repository.dart';
@@ -114,11 +115,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           ListTile(
             leading: _isSigningOut
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const LoadingIndicator()
                 : const Icon(Icons.logout),
             title: const Text('Sair'),
             onTap: _isSigningOut ? null : _signOut,

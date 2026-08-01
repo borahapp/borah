@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/utils/collection_utils.dart';
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
@@ -366,24 +367,16 @@ class _ReviewsSection extends ConsumerWidget {
     ref.read(eventDetailControllerProvider.notifier).load(eventId, groupId);
   }
 
-  /// Mesmo padrão manual de `GroupDetails.ownRole`/`EventDetails.
-  /// ownAttendance` - sem `package:collection` (não é dependência deste
-  /// projeto), então sem `firstOrNull`.
   EventReview? _findOwnReview(List<EventReview> reviews, String? userId) {
     if (userId == null) return null;
-    for (final review in reviews) {
-      if (review.userId == userId) return review;
-    }
-    return null;
+    return firstWhereOrNull(reviews, (review) => review.userId == userId);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(eventReviewsControllerProvider);
-    if (status is! EventReviewsLoaded) return const SizedBox.shrink();
-
     final theme = Theme.of(context);
-    final reviews = status.reviews;
+    final reviews = status is EventReviewsLoaded ? status.reviews : const <EventReview>[];
     final ownReview = _findOwnReview(reviews, currentUserId);
 
     return Column(
@@ -402,28 +395,56 @@ class _ReviewsSection extends ConsumerWidget {
             style: theme.textTheme.titleMedium,
           ),
         const SizedBox(height: AppSpacing.sm),
-        if (reviews.isEmpty)
-          Text(
-            'Ninguém avaliou este rolê ainda.',
-            style: theme.textTheme.bodyMedium,
-          )
-        else
-          ...reviews.indexed.map(
-            (entry) => AppStaggeredListItem(
-              index: entry.$1,
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: ProfileAvatar(avatarPath: entry.$2.avatarUrl, radius: 20),
-                title: Text(entry.$2.fullName ?? ''),
-                subtitle: entry.$2.comment != null && entry.$2.comment!.isNotEmpty
-                    ? Text(entry.$2.comment!)
-                    : null,
-                trailing: AppBadge(
-                  label: entry.$2.averageScore.toStringAsFixed(1),
-                ),
-              ),
+        // Mesmo padrão de seção embutida de `public_profile_page.dart`
+        // ("Avaliações" do perfil): `AppAnimatedSwitcher` com um estado
+        // por `ValueKey`, `LoadingIndicator` inline (não `LoadingScreen`,
+        // que é para a tela cheia) - substitui o antigo `SizedBox.
+        // shrink()` que escondia a seção inteira (título incluso)
+        // enquanto `EventReviewsController` ainda carregava.
+        AppAnimatedSwitcher(
+          child: switch (status) {
+            EventReviewsInitial() ||
+            EventReviewsLoading() => const LoadingIndicator(
+              key: ValueKey('reviews-loading'),
+              size: 36,
             ),
-          ),
+            EventReviewsError(:final message) => Text(
+              message,
+              key: const ValueKey('reviews-error'),
+              style: theme.textTheme.bodyMedium,
+            ),
+            EventReviewsEmpty() => Text(
+              'Ninguém avaliou este rolê ainda.',
+              key: const ValueKey('reviews-empty'),
+              style: theme.textTheme.bodyMedium,
+            ),
+            EventReviewsLoaded(:final reviews) => Column(
+              key: const ValueKey('reviews-loaded'),
+              children: reviews.indexed
+                  .map(
+                    (entry) => AppStaggeredListItem(
+                      index: entry.$1,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: ProfileAvatar(
+                          avatarPath: entry.$2.avatarUrl,
+                          radius: 20,
+                        ),
+                        title: Text(entry.$2.fullName ?? ''),
+                        subtitle:
+                            entry.$2.comment != null && entry.$2.comment!.isNotEmpty
+                                ? Text(entry.$2.comment!)
+                                : null,
+                        trailing: AppBadge(
+                          label: entry.$2.averageScore.toStringAsFixed(1),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          },
+        ),
         if (canReview) ...[
           const SizedBox(height: AppSpacing.md),
           AppOutlinedButton(

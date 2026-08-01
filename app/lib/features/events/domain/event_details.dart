@@ -1,3 +1,4 @@
+import '../../../core/utils/collection_utils.dart';
 import 'event.dart';
 import 'event_attendance.dart';
 
@@ -21,9 +22,6 @@ class EventDetails {
   /// enviada (só quem confirmou presença).
   EventAttendance? ownAttendance(String? userId) {
     if (userId == null) return null;
-    for (final attendance in attendances) {
-      if (attendance.userId == userId) return attendance;
-    }
-    return null;
+    return firstWhereOrNull(attendances, (a) => a.userId == userId);
   }
 }

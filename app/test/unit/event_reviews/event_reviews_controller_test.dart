@@ -55,14 +55,15 @@ void main() {
       expect((status as EventReviewsLoaded).reviews, hasLength(1));
     });
 
-    test('lista vazia -> EventReviewsLoaded com lista vazia (sem estado Empty próprio)', () async {
+    test('lista vazia -> EventReviewsEmpty (mesmo padrão de UserReviewsController)', () async {
       when(() => repository.listByEvent('e-1')).thenAnswer((_) async => []);
 
       await container.read(eventReviewsControllerProvider.notifier).load('e-1');
 
-      final status = container.read(eventReviewsControllerProvider);
-      expect(status, isA<EventReviewsLoaded>());
-      expect((status as EventReviewsLoaded).reviews, isEmpty);
+      expect(
+        container.read(eventReviewsControllerProvider),
+        isA<EventReviewsEmpty>(),
+      );
     });
 
     test('falha com EventReviewRepositoryException -> EventReviewsError com a mensagem original', () async {

@@ -20,6 +20,10 @@ final class GroupRankingLoaded extends GroupRankingStatus {
   final List<GroupRankingEntry> entries;
 }
 
+final class GroupRankingEmpty extends GroupRankingStatus {
+  const GroupRankingEmpty();
+}
+
 final class GroupRankingError extends GroupRankingStatus {
   const GroupRankingError(this.message);
 

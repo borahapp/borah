@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/cards/ranking_card.dart';
+import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
+import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -40,39 +43,54 @@ class _GroupRankingPageState extends ConsumerState<GroupRankingPage> {
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Ranking do grupo'),
-      body: switch (status) {
-        GroupRankingInitial() || GroupRankingLoading() => const LoadingScreen(),
-        GroupRankingError(:final message) => ErrorState(
-          message: message,
-          onRetry: () => ref
-              .read(groupRankingControllerProvider.notifier)
-              .load(widget.groupId),
-        ),
-        GroupRankingLoaded(:final entries) => ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: entries.length,
-          itemBuilder: (context, index) {
-            final entry = entries[index];
-            final reviewsLabel = entry.reviewsCount == 1
-                ? '1 avaliação'
-                : '${entry.reviewsCount} avaliações';
-            final eventsLabel = entry.eventsCount == 1
-                ? '1 rolê'
-                : '${entry.eventsCount} rolês';
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: RankingCard(
-                position: index + 1,
-                name: entry.fullName ?? '',
-                subtitle: '$eventsLabel · $reviewsLabel',
-                trailingLabel: entry.averageScore == null
-                    ? null
-                    : entry.averageScore!.toStringAsFixed(1),
-              ),
-            );
-          },
-        ),
-      },
+      body: AppAnimatedSwitcher(
+        child: switch (status) {
+          GroupRankingInitial() ||
+          GroupRankingLoading() => const LoadingScreen(key: ValueKey('loading')),
+          GroupRankingError(:final message) => ErrorState(
+            key: const ValueKey('error'),
+            message: message,
+            onRetry: () => ref
+                .read(groupRankingControllerProvider.notifier)
+                .load(widget.groupId),
+          ),
+          // Mesmo padrão de `RankingsPage` (ranking global): sem ação
+          // própria de criar - o ranking é derivado dos rolês do grupo,
+          // não de algo que se cria a partir desta tela.
+          GroupRankingEmpty() => const EmptyState(
+            key: ValueKey('empty'),
+            message: 'Este grupo ainda não tem rolês avaliados.',
+          ),
+          GroupRankingLoaded(:final entries) => ListView.builder(
+            key: const ValueKey('loaded'),
+            padding: const EdgeInsets.all(16),
+            itemCount: entries.length,
+            itemBuilder: (context, index) {
+              final entry = entries[index];
+              final reviewsLabel = entry.reviewsCount == 1
+                  ? '1 avaliação'
+                  : '${entry.reviewsCount} avaliações';
+              final eventsLabel = entry.eventsCount == 1
+                  ? '1 rolê'
+                  : '${entry.eventsCount} rolês';
+              return AppStaggeredListItem(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: RankingCard(
+                    position: index + 1,
+                    name: entry.fullName ?? '',
+                    subtitle: '$eventsLabel · $reviewsLabel',
+                    trailingLabel: entry.averageScore == null
+                        ? null
+                        : entry.averageScore!.toStringAsFixed(1),
+                  ),
+                ),
+              );
+            },
+          ),
+        },
+      ),
     );
   }
 }

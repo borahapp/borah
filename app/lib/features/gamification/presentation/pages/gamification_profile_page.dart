@@ -7,6 +7,7 @@ import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/feedback/app_animated_fraction.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -179,20 +180,24 @@ class _ProfileView extends StatelessWidget {
         const SizedBox(height: AppSpacing.xl),
         Text('Conquistas', style: theme.textTheme.titleMedium),
         const SizedBox(height: AppSpacing.sm),
-        ...allBadges.map((badge) {
+        ...allBadges.indexed.map((entry) {
+          final badge = entry.$2;
           final earned = earnedBadgeIds.contains(badge.id);
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              earned ? Icons.emoji_events : Icons.emoji_events_outlined,
-            ),
-            title: Text(badge.name),
-            subtitle: Text(badge.description ?? ''),
-            trailing: AppPulseIcon(
-              trigger: earned,
-              child: AppBadge(
-                label: earned ? 'Conquistado' : 'Bloqueado',
-                earned: earned,
+          return AppStaggeredListItem(
+            index: entry.$1,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                earned ? Icons.emoji_events : Icons.emoji_events_outlined,
+              ),
+              title: Text(badge.name),
+              subtitle: Text(badge.description ?? ''),
+              trailing: AppPulseIcon(
+                trigger: earned,
+                child: AppBadge(
+                  label: earned ? 'Conquistado' : 'Bloqueado',
+                  earned: earned,
+                ),
               ),
             ),
           );

@@ -20,6 +20,10 @@ final class EventReviewsLoaded extends EventReviewsStatus {
   final List<EventReview> reviews;
 }
 
+final class EventReviewsEmpty extends EventReviewsStatus {
+  const EventReviewsEmpty();
+}
+
 final class EventReviewsError extends EventReviewsStatus {
   const EventReviewsError(this.message);
 

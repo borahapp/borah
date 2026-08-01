@@ -1,3 +1,4 @@
+import '../../../core/utils/collection_utils.dart';
 import 'group.dart';
 import 'group_member.dart';
 
@@ -18,9 +19,6 @@ class GroupDetails {
   /// administração (BLOCO 2) mostra a cada usuário.
   GroupMember? ownRole(String? userId) {
     if (userId == null) return null;
-    for (final member in members) {
-      if (member.userId == userId) return member;
-    }
-    return null;
+    return firstWhereOrNull(members, (member) => member.userId == userId);
   }
 }

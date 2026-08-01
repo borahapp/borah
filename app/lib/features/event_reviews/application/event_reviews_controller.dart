@@ -18,7 +18,12 @@ class EventReviewsController extends Notifier<EventReviewsStatus> {
     state = const EventReviewsLoading();
     try {
       final reviews = await _repository.listByEvent(eventId);
-      state = EventReviewsLoaded(reviews);
+      // Mesmo padrão de `UserReviewsController`: estado `Empty` dedicado
+      // (não só `Loaded` com lista vazia) - permite à UI diferenciar
+      // "ainda carregando" de "carregado, mas sem nenhuma avaliação".
+      state = reviews.isEmpty
+          ? const EventReviewsEmpty()
+          : EventReviewsLoaded(reviews);
     } on EventReviewRepositoryException catch (e) {
       state = EventReviewsError(e.message);
     } catch (_) {
