@@ -28,9 +28,9 @@
 |---|---|---|---|
 | 0:00–0:04 | **Abertura** | Logo/símbolo do BORAH em animação (usar a assinatura oficial de marca, `borah_signature_*`, já preparada na identidade visual) + tagline aparecendo | Splash/logo |
 | 0:04–0:09 | **Problema** | Texto/narração: *"Todo grupo já teve aquela discussão sem fim sobre onde ir."* — tom leve, reconhecível | Tela de decisão (pode ser uma ilustração ou tela de busca de restaurantes) |
-| 0:09–0:14 | **Solução** | *"O BORAH transforma isso em ranking."* — corte para o Ranking de Restaurantes já populado | Ranking de Restaurantes |
-| 0:14–0:22 | **Funcionalidades** | Sequência rápida (2s cada): criar avaliação (nota+foto) → feed do grupo → perfil com XP/nível/conquista → ranking de usuários | Criação de avaliação → Feed → Perfil/Gamificação → Ranking de Usuários |
-| 0:22–0:27 | **Reforço social** | *"Siga seu grupo, curta, comente, suba no ranking."* — tela de interação social (curtida/comentário) | Detalhe de avaliação com curtidas/comentários |
+| 0:09–0:14 | **Solução** | *"Crie o grupo, organizem o rolê, avaliem juntos."* — corte para o Ranking do Grupo já populado | Ranking do Grupo |
+| 0:14–0:22 | **Funcionalidades** | Sequência rápida (2s cada): criar rolê → confirmar presença → avaliação coletiva (nota+foto) → memórias do grupo | Criar rolê → Confirmar presença → Avaliação Coletiva → Memórias |
+| 0:22–0:27 | **Reforço social** | *"Suba de nível, dispute o ranking de usuários."* — tela de gamificação | Perfil/Gamificação com XP, nível, conquistas |
 | 0:27–0:30 | **Encerramento** | Logo + tagline final: *"Todo grupo tem seus rolês. Agora eles têm um ranking."* + ícone do app | Tela de encerramento com CTA implícito (baixar) |
 
 ## Diretrizes de tom (herdadas da identidade de marca já oficial)

@@ -40,6 +40,13 @@ dependencies:
   go_router: ^14.6.2
   supabase_flutter: ^2.8.0
 
+  # AUTH-02 - Login com Google (fluxo nativo signInWithIdToken, sem
+  # Firebase). Versao ^7.2.0 e a major atual do pacote - a partir da 7.0.0
+  # a API mudou (instancia singleton `GoogleSignIn.instance`, autenticacao
+  # e autorizacao em etapas separadas); nao usar exemplos baseados na API
+  # anterior (`GoogleSignIn(clientId: ...).signIn()`, removida).
+  google_sign_in: ^7.2.0
+
   # DV-02 - selecao de imagem para o avatar (DV-02 SS11)
   image_picker: ^1.1.2
 

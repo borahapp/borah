@@ -150,5 +150,38 @@ void main() {
         isA<RestaurantDetailSaveSuccess>(),
       );
     });
+
+    // QA (BLOCO 9): antes desta correção, uma falha aqui apagava o
+    // restaurante já carregado do estado (RestaurantDetailError não
+    // guardava nada) - a tela inteira desaparecia por causa de uma
+    // falha ao trocar só a foto de capa.
+    test(
+      'falha após load bem-sucedido -> RestaurantDetailError preserva o restaurante já carregado',
+      () async {
+        when(
+          () => repository.getById('r-1'),
+        ).thenAnswer((_) async => _restaurant());
+        await container
+            .read(restaurantDetailControllerProvider.notifier)
+            .load('r-1');
+
+        when(
+          () => repository.updateCoverImage(
+            'r-1',
+            bytes: any(named: 'bytes'),
+            fileExtension: any(named: 'fileExtension'),
+          ),
+        ).thenThrow(const RestaurantRepositoryException('Falha no upload.'));
+
+        await container
+            .read(restaurantDetailControllerProvider.notifier)
+            .updateCoverImage('r-1', bytes: Uint8List(0), fileExtension: 'jpg');
+
+        final status = container.read(restaurantDetailControllerProvider);
+        expect(status, isA<RestaurantDetailError>());
+        expect((status as RestaurantDetailError).restaurant, isNotNull);
+        expect(status.restaurant!.id, 'r-1');
+      },
+    );
   });
 }

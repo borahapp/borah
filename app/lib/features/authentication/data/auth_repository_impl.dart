@@ -46,6 +46,18 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guard(() => _datasource.resendVerificationEmail(email));
   }
 
+  @override
+  Future<void> signInWithGoogle() => _guard(_datasource.signInWithGoogle);
+
+  @override
+  Future<void> signInWithApple() => _guard(_datasource.signInWithApple);
+
+  @override
+  Future<void> signInWithFacebook() => _guard(_datasource.signInWithFacebook);
+
+  @override
+  Future<void> signInAnonymously() => _guard(_datasource.signInAnonymously);
+
   /// Traduz `AuthException` (supabase_flutter) para `AuthRepositoryException`,
   /// para que nenhuma camada acima de `data/` precise conhecer o Supabase.
   /// Mensagem já traduzida para português (RC-04E) nos fluxos cobertos por

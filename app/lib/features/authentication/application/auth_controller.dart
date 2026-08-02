@@ -188,6 +188,43 @@ class AuthController extends Notifier<AuthStatus> {
 
   String? _passwordRecoveryError;
 
+  /// AUTH-01: fluxo compartilhado por todos os provedores de login social/
+  /// anônimo (Loading -> chamada ao repositório -> Authenticated/Error) —
+  /// mesmo padrão de `signIn`/`signUp`, extraído aqui para não repetir o
+  /// bloco 4 vezes. Decisão de manter métodos nomeados no `AuthRepository`
+  /// em vez de um dispatcher único: ver
+  /// `docs/knowledge-base/adr/ADR-0002-estrategia-autenticacao-multi-provedor.md`.
+  Future<void> _signInWithProvider(Future<void> Function() action) async {
+    state = const AuthLoading();
+    try {
+      await action();
+      final current = _repository.currentUser;
+      if (current != null) unawaited(AppAnalytics.identify(current.userId));
+      unawaited(AppAnalytics.trackLoginSuccess());
+      state = current == null
+          ? const Unauthenticated()
+          : Authenticated(userId: current.userId, email: current.email);
+    } on AuthRepositoryException catch (e) {
+      unawaited(AppAnalytics.trackLoginFailed(reason: e.message));
+      state = AuthError(e.message);
+    } catch (_) {
+      unawaited(AppAnalytics.trackLoginFailed());
+      state = const AuthError('Não foi possível entrar. Tente novamente.');
+    }
+  }
+
+  Future<void> signInWithGoogle() =>
+      _signInWithProvider(_repository.signInWithGoogle);
+
+  Future<void> signInWithApple() =>
+      _signInWithProvider(_repository.signInWithApple);
+
+  Future<void> signInWithFacebook() =>
+      _signInWithProvider(_repository.signInWithFacebook);
+
+  Future<void> signInAnonymously() =>
+      _signInWithProvider(_repository.signInAnonymously);
+
   /// Reenvia o e-mail de confirmação (RC-02) sem alterar `state`: o
   /// usuário continua em `EmailVerificationPending` durante a chamada -
   /// reenviar não é uma transição de status de autenticação.

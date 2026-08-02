@@ -46,6 +46,19 @@ abstract interface class AuthRepository {
   /// fecha o dead-end de conta reportado na RC-01).
   Future<void> resendVerificationEmail(String email);
 
+  /// AUTH-01: infraestrutura preparada para os provedores sociais/anônimo,
+  /// ainda sem conexão real ao SDK de cada um (ver `AuthRemoteDatasource`).
+  /// Um método por provedor, não um dispatcher genérico — ver
+  /// `docs/knowledge-base/adr/ADR-0002-estrategia-autenticacao-multi-provedor.md`
+  /// para a decisão e o critério objetivo de quando revisitá-la.
+  Future<void> signInWithGoogle();
+
+  Future<void> signInWithApple();
+
+  Future<void> signInWithFacebook();
+
+  Future<void> signInAnonymously();
+
   AuthUserData? get currentUser;
 
   Stream<AuthSessionUpdate> get onAuthStateChange;

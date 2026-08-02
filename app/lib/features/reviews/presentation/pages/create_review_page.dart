@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/validators/app_validators.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
@@ -9,7 +10,6 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/review_detail_controller.dart';
 import '../states/review_detail_status.dart';
-import '../validators/review_validators.dart';
 import '../widgets/review_detail_error_listener.dart';
 
 /// Tela de Criação de avaliação (DV-04). Uma avaliação por usuário por
@@ -45,7 +45,7 @@ class _CreateReviewPageState extends ConsumerState<CreateReviewPage> {
         .create(
           restaurantId: widget.restaurantId,
           userId: userId,
-          rating: double.parse(_ratingController.text),
+          rating: parseRating(_ratingController.text)!,
           comment: _commentController.text.trim(),
         );
   }

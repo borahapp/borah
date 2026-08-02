@@ -23,7 +23,7 @@
 | Projeto | 🔴 Nunca criado — `SENTRY_DSN` vazio localmente, SDK no-opa graciosamente | 🔴 Nunca criado |
 | Variáveis obrigatórias | `SENTRY_DSN` (vazio = desabilitado, comportamento intencional) | `SENTRY_DSN`, `APP_ENVIRONMENT=production` |
 | Secrets do GitHub | N/A | `SENTRY_DSN_PRODUCTION` — 🔴 não cadastrado |
-| Upload de símbolos (R8 mapping/dSYM) | N/A | 🔴 Não configurado — nenhum plugin `io.sentry.android.gradle` (achado da BETA-10D) — crashes de Produção chegariam ofuscados até isso ser resolvido |
+| Upload de símbolos (R8 mapping/dSYM) | N/A | 🟡 Android: plugin `io.sentry.android.gradle` configurado desde a OBS-01A (corrigido o achado da BETA-10D) — falta só `SENTRY_AUTH_TOKEN`. iOS (dSYM): 🔴 não configurado |
 | Responsável | Proprietário — criar o projeto Sentry de Produção (guia completo: BETA-08B, nunca commitado como arquivo — resumido em `docs/release/release_infrastructure.md`) | Idem |
 
 ## PostHog
@@ -52,7 +52,7 @@
 | `SENTRY_DSN_PRODUCTION` | Sentry | Proprietário (cria o projeto) | Proprietário |
 | `POSTHOG_API_KEY_PRODUCTION`, `POSTHOG_HOST_PRODUCTION` | PostHog | Proprietário (cria o projeto, decide região) | Proprietário |
 
-**Todos os 9 secrets de Produção têm o mesmo responsável final: o proprietário do projeto** — nenhum pode ser delegado a uma ferramenta automatizada nesta fase, já que todos exigem posse de uma conta externa real.
+**Todos os 12 secrets de Produção** (contagem corrigida na RC-01 — a tabela acima ainda lista só os 4 originais de Sentry/PostHog/Supabase relevantes a este documento; faltam aqui `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN`, adicionados na OBS-01A, e os 4 `ANDROID_KEYSTORE*` já listados acima — ver `docs/release/SECRETS.md` para o inventário completo e atual) **têm o mesmo responsável final: o proprietário do projeto** — nenhum pode ser delegado a uma ferramenta automatizada nesta fase, já que todos exigem posse de uma conta externa real.
 
 ## Environment `production` do GitHub
 

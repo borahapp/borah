@@ -2,6 +2,8 @@
 
 **Contexto:** BETA-10D. Consolida, por categoria, todos os GitHub Secrets já documentados em rodadas anteriores (`docs/operations/CI_CD_SECRETS.md`, BETA-03/05/06/08C1) e confirma o que ainda não existe. Nenhum secret novo foi criado ou cadastrado nesta rodada — só revisão e organização.
 
+**Nota da RC-01 (2026-08-02):** a rodada OBS-01A (posterior a esta) adicionou 3 secrets de Sentry (`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN`, upload do mapping R8) não refletidos no total desta página — a tabela/resumo abaixo ficou desatualizada. **`docs/release/SECRETS.md` é o inventário de secrets de release/CI atualizado** (12 secrets de Produção, não 9) — use aquele documento como fonte corrente; esta página permanece válida para o contexto de infraestrutura mais amplo (Google Play/Apple, histórico).
+
 ---
 
 ## Android
@@ -62,11 +64,11 @@ Todos os 4 já são consumidos condicionalmente (`if: secrets.ANDROID_KEYSTORE !
 | Android | 4 | 0 confirmados |
 | iOS | 0 | — |
 | Supabase | 5 (3 QA + 2 Produção) | QA presumivelmente sim (usado desde a QA-03); Produção 0 |
-| Sentry | 1 | 0 |
+| Sentry | 4 (corrigido na RC-01 — inclui os 3 do plugin Gradle) | 0 |
 | PostHog | 2 | 0 |
 | Google Play | 0 | — |
 | Apple | 0 | — |
 
-**Total de secrets de Produção pendentes de cadastro: 9** (4 Android + 2 Supabase + 1 Sentry + 2 PostHog). Todos já nomeados e consumidos corretamente pelos workflows — falta só o valor real, que depende dos projetos/contas externas serem criados primeiro (Sentry, PostHog, keystore; Supabase de Produção já está pronto, só falta copiar os valores).
+**Total de secrets de Produção pendentes de cadastro: 12** (4 Android + 2 Supabase + 4 Sentry + 2 PostHog — corrigido na RC-01, incluindo os 3 secrets de Sentry Gradle da OBS-01A que não existiam quando esta página foi escrita; ver `docs/release/SECRETS.md`). Todos já nomeados e consumidos corretamente pelos workflows — falta só o valor real, que depende dos projetos/contas externas serem criados primeiro (Sentry, PostHog, keystore; Supabase de Produção já está pronto, só falta copiar os valores).
 
 Nenhum secret foi criado, alterado ou acessado nesta rodada — só auditoria e consolidação da documentação já existente.

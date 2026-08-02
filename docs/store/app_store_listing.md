@@ -6,46 +6,48 @@
 
 ## Subtitle (máximo 30 caracteres)
 
-> Ranking dos rolês do seu grupo
+> Rolês em grupo, com ranking
 
-**30 caracteres exatos** (contados) — no limite.
+**28 caracteres** (contados) — dentro do limite.
 
 ## Promotional Text (máximo 170 caracteres — editável a qualquer momento, sem revisão da Apple)
 
-> Escolha o próximo rolê com seu grupo, avalie os lugares e acompanhe quem lidera o ranking. Social, competitivo e divertido.
+> Crie um grupo fechado, organize o rolê, confirmem presença e avaliem juntos. O ranking do grupo sempre atualizado.
 
-**123 caracteres** (contados) — dentro do limite.
+**116 caracteres** (contados) — dentro do limite.
 
 ## Description (máximo 4000 caracteres)
 
 > **Todo grupo tem seus rolês. Agora eles têm um ranking.**
 >
-> O BORAH é o app para grupos de amigos que estão cansados de esquecer qual foi aquele restaurante bom da última saída — e cansados também da eterna discussão sobre pra onde ir da próxima vez.
+> O BORAH é o app para grupos de amigos que estão cansados da eterna discussão sobre pra onde ir — e de esquecer qual foi aquele lugar bom da última saída.
 >
-> **Avalie e construa o ranking do seu grupo**
+> **Grupo fechado, rolê organizado**
 >
-> Cada avaliação — nota de 1 a 5, comentário e até 5 fotos — alimenta o Ranking de Restaurantes do seu grupo, sempre atualizado com os lugares que vocês já visitaram.
+> Crie um grupo com seus amigos — só entra quem for convidado, por código. Organizem um rolê (local, data), confirmem presença e, depois, avaliem juntos: uma nota e resenha do grupo, não opiniões soltas.
+>
+> **O histórico vivo do seu grupo**
+>
+> Cada avaliação alimenta o Ranking do Grupo, as Estatísticas de quem participa mais e as Memórias — linha do tempo, fotos e resumo do ano de rolês de vocês.
 >
 > **Suba de nível avaliando**
 >
 > Toda interação no BORAH rende XP: avaliar, comentar, curtir. Acompanhe seu nível, desbloqueie conquistas e veja quem no seu grupo lidera o Ranking de Usuários.
 >
-> **Feito para usar em grupo**
->
-> Siga seus amigos, curta e comente as avaliações deles, acompanhe o feed do grupo e favorite os lugares que você ainda quer conhecer.
->
 > **Principais funcionalidades:**
+> • Crie um grupo fechado por convite e organize rolês
+> • Confirmem presença e avaliem o rolê juntos, em grupo
+> • Ranking do Grupo, Estatísticas e Memórias sempre atualizados
+> • Notificações de convite, novo rolê e avaliação liberada
 > • Avalie restaurantes com nota, comentário e fotos
-> • Ranking de restaurantes do seu grupo
 > • Ranking de usuários com XP, níveis e conquistas
-> • Feed social das avaliações e atividades do grupo
-> • Siga amigos, curta e comente
+> • Feed social, siga amigos, curta e comente
 > • Favorite os lugares que você quer visitar
 > • Controle total sobre sua conta, com exclusão a qualquer momento
 >
-> Baixe o BORAH e comece a ranquear os rolês do seu grupo.
+> Baixe o BORAH, crie seu grupo e comece a ranquear os rolês de vocês.
 
-*(Aproximadamente 1150 caracteres — bem dentro do limite de 4000.)*
+*(Aproximadamente 1400 caracteres — bem dentro do limite de 4000.)*
 
 ## Keywords (máximo 100 caracteres, separadas por vírgula sem espaço)
 

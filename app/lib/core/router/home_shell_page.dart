@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../../design_system/components/navigation/app_bottom_navigation.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
+import '../../features/groups/presentation/pages/groups_list_page.dart';
 import '../../features/restaurants/presentation/pages/restaurants_search_page.dart';
-import '../../features/social/presentation/pages/feed_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
 
 /// RC-04E: shell de navegação inicial pós-login em `/home`, conectando o
-/// `AppBottomNavigation` (já existente, nunca usado até esta rodada) às 4
-/// telas mais centrais do app. Nenhuma delas é nova - só deixam de
-/// depender do antigo placeholder de desenvolvedor para serem
-/// alcançadas. `IndexedStack` preserva o estado de cada aba ao trocar
-/// (evita recarregar dados/perder posição de rolagem a cada troca).
+/// `AppBottomNavigation` às 4 telas mais centrais do app. `IndexedStack`
+/// preserva o estado de cada aba ao trocar (evita recarregar dados/
+/// perder posição de rolagem a cada troca).
+///
+/// Decisão de produto (BLOCO 9, pendente desde o relatório de
+/// prontidão): "Feed" saiu da barra principal e "Grupos" entrou em seu
+/// lugar - a home passa a refletir a identidade real do BORAH ("o
+/// ranking dos seus rolês", organizado por grupos de amigos), não a de
+/// um app de review de restaurante individual. `FeedPage` continua a
+/// existir no código (perfis públicos ainda linkam para
+/// seguidores/seguindo, DV-07) - só deixou de ser um destino da barra
+/// inferior.
 class HomeShellPage extends StatefulWidget {
   const HomeShellPage({super.key});
 
@@ -23,22 +30,22 @@ class _HomeShellPageState extends State<HomeShellPage> {
   int _index = 0;
 
   static const _pages = [
+    GroupsListPage(),
     RestaurantsSearchPage(),
-    FeedPage(),
     FavoritesPage(),
     ProfilePage(),
   ];
 
   static const _items = [
     AppBottomNavigationItem(
+      icon: Icons.groups_outlined,
+      selectedIcon: Icons.groups,
+      label: 'Grupos',
+    ),
+    AppBottomNavigationItem(
       icon: Icons.restaurant_outlined,
       selectedIcon: Icons.restaurant,
       label: 'Restaurantes',
-    ),
-    AppBottomNavigationItem(
-      icon: Icons.dynamic_feed_outlined,
-      selectedIcon: Icons.dynamic_feed,
-      label: 'Feed',
     ),
     AppBottomNavigationItem(
       icon: Icons.favorite_border,

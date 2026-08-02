@@ -36,4 +36,20 @@ abstract final class AppEnvironment {
     'POSTHOG_HOST',
     defaultValue: 'https://us.i.posthog.com',
   );
+
+  /// AUTH-02: Client ID "Web" do Google Cloud Console — é o que o
+  /// Supabase usa para validar o `idToken` (audience do token). Vazio
+  /// por padrão - `AuthRemoteDatasource.signInWithGoogle()` recusa o
+  /// login com uma mensagem clara em vez de tentar inicializar o SDK
+  /// sem credencial (mesmo espírito do `sentryDsn` vazio acima).
+  static const googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+  );
+
+  /// AUTH-02: Client ID "iOS" do Google Cloud Console. Necessário apenas
+  /// na plataforma iOS (o Android resolve via SHA-1 do keystore, sem
+  /// precisar deste valor) - vazio por padrão nas demais plataformas.
+  static const googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+  );
 }

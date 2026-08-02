@@ -5,8 +5,7 @@ import '../../tokens/app_spacing.dart';
 /// Card genérico do BORAH — envolve o `Card` do Material (raio/elevação
 /// já vêm de `CardThemeData` em `core/theme/app_theme.dart`), só
 /// acrescenta o preenchimento interno padrão e o toque opcional.
-/// Base para os cards compostos (`RestaurantCard`, `RankingCard`,
-/// `ReviewCard`).
+/// Base para os cards compostos (`RestaurantCard`, `RankingCard`).
 class AppCard extends StatelessWidget {
   const AppCard({super.key, required this.child, this.onTap, this.padding});
 

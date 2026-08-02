@@ -156,8 +156,10 @@ abstract final class AppTheme {
   /// - `labelStyle`/Manrope — herdado de `AppTypography.textTheme`, meio
   ///   `bodyMedium`/`labelLarge` para não conflitar com o texto normal
   ///   de campo.
-  /// `AppChip`/`AppBadge` (Component Library) ainda não têm nenhum uso
-  /// em tela nesta rodada — tema preparado antes de conectá-los.
+  /// Tema nativo do Material `Chip`/`ChipTheme` — nenhum widget do
+  /// projeto o usa hoje (`AppBadge` cobre o caso de selo/etiqueta), mas
+  /// fica configurado para qualquer `Chip` nativo que venha a aparecer
+  /// via widget de terceiros.
   static ChipThemeData _chipTheme(ColorScheme scheme) {
     return ChipThemeData(
       shape: const StadiumBorder(),

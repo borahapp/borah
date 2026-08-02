@@ -30,30 +30,30 @@
 
 ## 3. Roteiro de screenshots (conteúdo, não produção)
 
-6 telas, na ordem que conta a história do produto — da promessa central (ranking) até o reforço social/gamificação:
+6 telas, na ordem que conta a história do produto — do grupo fechado e do rolê até o reforço social/gamificação:
 
-### 1. Ranking de Restaurantes (tela de abertura/hero)
+### 1. Ranking do Grupo (tela de abertura/hero)
 - **Objetivo**: comunicar a promessa central em menos de 1 segundo de leitura.
 - **Mensagem principal**: "O ranking do seu grupo, sempre atualizado."
 - **Texto de overlay**: *"Todo grupo tem seus rolês. Agora eles têm um ranking."*
 - **Dispositivo recomendado**: iPhone 6.9" / Android phone — sempre a primeira screenshot (a mais vista em qualquer loja).
 
-### 2. Feed
-- **Objetivo**: mostrar o app em uso real, com atividade do grupo.
-- **Mensagem principal**: "Veja o que seu grupo está avaliando."
-- **Texto de overlay**: *"Acompanhe cada rolê do seu grupo em tempo real."*
+### 2. Criar rolê / confirmar presença
+- **Objetivo**: mostrar a mecânica central — organizar o rolê com o grupo fechado e confirmar quem vai.
+- **Mensagem principal**: "Organize o rolê, todo mundo confirma presença."
+- **Texto de overlay**: *"Só quem você convidar entra no grupo."*
 - **Dispositivo recomendado**: iPhone 6.9" / Android phone.
 
-### 3. Descoberta/detalhe de um restaurante
-- **Objetivo**: mostrar a riqueza de informação (nota, fotos, comentários) de um lugar já avaliado.
-- **Mensagem principal**: "Cada lugar, com a nota de quem importa: seu grupo."
-- **Texto de overlay**: *"Nada de nota genérica de desconhecido."*
+### 3. Avaliação Coletiva
+- **Objetivo**: mostrar como o grupo constrói uma nota e resenha juntos, não opiniões soltas.
+- **Mensagem principal**: "Uma nota do grupo, não uma bagunça de opiniões."
+- **Texto de overlay**: *"Avaliem o rolê juntos, com nota, comentário e fotos."*
 - **Dispositivo recomendado**: iPhone 6.9".
 
-### 4. Criação de avaliação
-- **Objetivo**: mostrar como é simples registrar um rolê (nota, comentário, foto).
-- **Mensagem principal**: "Avalie em segundos — nota, comentário e fotos."
-- **Texto de overlay**: *"Registre o rolê antes que vocês esqueçam."*
+### 4. Memórias / Estatísticas do grupo
+- **Objetivo**: mostrar o histórico vivo que o grupo constrói com o tempo.
+- **Mensagem principal**: "A linha do tempo dos rolês do seu grupo."
+- **Texto de overlay**: *"Fotos, campeões do ano, tudo que vocês já viveram."*
 - **Dispositivo recomendado**: iPhone 6.9".
 
 ### 5. Perfil / Gamificação (XP, nível, conquistas)

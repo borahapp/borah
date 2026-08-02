@@ -2,6 +2,8 @@
 
 **Contexto:** BETA-10D. Checklist consolidado de tudo o que falta antes da primeira publicação (Beta Fechado). Atualiza e substitui, para fins de acompanhamento, a visão dispersa das rodadas BETA-04/08/09/10A.
 
+**Nota da RC-01 (2026-08-02):** este documento cobre infraestrutura/loja/marketing. Para o checklist reutilizável de engenharia de build/CI (o que rodar antes/depois de cada tag de release), ver `docs/release/CHECKLIST.md`. O item "Upload automático de mapping R8/dSYM" abaixo está desatualizado para Android — ver correção na linha correspondente.
+
 | Categoria | Item | Status |
 |---|---|---|
 | **Infraestrutura** | Supabase de Produção provisionado, migrations aplicadas | ✅ Concluído |
@@ -24,11 +26,12 @@
 | | Guia de setup de Produção | ✅ Concluído (consolidado nesta rodada) |
 | | Projeto Sentry de Produção criado | 🔴 Pendente |
 | | Secret cadastrado (`SENTRY_DSN_PRODUCTION`) | 🔴 Pendente |
-| | Upload automático de mapping R8/dSYM | 🔴 Pendente — plugin não configurado (achado da BETA-10D) |
+| | Upload automático de mapping R8 (Android) | 🟡 Parcial — plugin `io.sentry.android.gradle` configurado desde a OBS-01A (posterior a este checklist), só falta o secret `SENTRY_AUTH_TOKEN` ser cadastrado (ver `docs/release/SECRETS.md`) |
+| | Upload automático de dSYM (iOS) | 🔴 Pendente — não configurado, e só verificável num Mac real |
 | | Alertas configurados | 🔴 Pendente |
 | **GitHub** | Environment `production` criado | 🔴 Pendente |
 | | Secrets QA já cadastrados (presumido, herdado da QA-03) | 🟡 Parcial — não confirmável por este chat |
-| **Segredos** | 9 secrets de Produção documentados (Android ×4, Supabase ×2, Sentry ×1, PostHog ×2) | ✅ Documentado — 0 cadastrados |
+| **Segredos** | 12 secrets de Produção documentados (Android ×4, Supabase ×2, Sentry ×4, PostHog ×2 — ver `docs/release/SECRETS.md`) | ✅ Documentado — 0 cadastrados |
 | **Apple** | Conta Apple Developer Program | 🔴 Pendente |
 | | `DEVELOPMENT_TEAM` configurado | 🔴 Pendente |
 | | Certificados/Provisioning Profiles | 🔴 Pendente |

@@ -194,7 +194,21 @@ class _FavoritesList extends StatelessWidget {
               trailing: restaurant.averageRating != null
                   ? ScoreBubble(rating: restaurant.averageRating)
                   : null,
-              onTap: () => context.push('/restaurants/${restaurant.id}'),
+              // QA-12 (RC): sem isto, desfavoritar um restaurante na
+              // tela de Detalhes e voltar para esta lista (via `push`,
+              // não `pushReplacement` - a lista continua na pilha)
+              // mostrava o item ainda como favorito até um
+              // pull-to-refresh manual. Mesmo padrão já usado em toda
+              // outra lista do app (`GroupsListPage._createGroup`,
+              // `EventsListPage._createEvent`, etc.): recarrega ao
+              // voltar, reaproveitando o `refresh()` que já existe
+              // (mantém a lista anterior visível via `FavoritesSyncing`,
+              // não `FavoritesLoading`).
+              onTap: () async {
+                await context.push('/restaurants/${restaurant.id}');
+                if (!context.mounted) return;
+                await onRefresh();
+              },
             ),
           );
         },

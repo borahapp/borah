@@ -6,6 +6,7 @@ import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
@@ -158,13 +159,16 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
                     ),
                     ReviewsLoaded(:final result) => Column(
                       key: const ValueKey('reviews-loaded'),
-                      children: result.items
+                      children: result.items.indexed
                           .map(
-                            (review) => ReviewSummaryTile(
-                              review: review,
-                              contentPadding: EdgeInsets.zero,
-                              onTap: () =>
-                                  context.push('/reviews/${review.id}'),
+                            (entry) => AppStaggeredListItem(
+                              index: entry.$1,
+                              child: ReviewSummaryTile(
+                                review: entry.$2,
+                                contentPadding: EdgeInsets.zero,
+                                onTap: () =>
+                                    context.push('/reviews/${entry.$2.id}'),
+                              ),
                             ),
                           )
                           .toList(),
