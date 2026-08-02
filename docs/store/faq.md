@@ -5,7 +5,13 @@
 ---
 
 1. **O que é o BORAH?**
-   Um app social para grupos de amigos avaliarem os restaurantes e lugares que frequentam, construindo juntos um ranking dos melhores rolês.
+   Um app para grupos de amigos organizarem rolês, confirmarem presença e avaliarem juntos os lugares que frequentam, construindo um ranking do grupo.
+
+1.1. **Como funciona um grupo no BORAH?**
+   Você cria um grupo fechado e convida seus amigos por código — só entra quem for convidado. Dentro do grupo, qualquer membro pode criar um rolê (local e data), e todo mundo confirma presença.
+
+1.2. **O que é a Avaliação Coletiva?**
+   Depois do rolê, o grupo avalia o lugar junto: uma nota e resenha construída coletivamente, em vez de cada pessoa deixar uma opinião solta. Essa avaliação é o que alimenta o Ranking do Grupo.
 
 2. **O BORAH é gratuito?**
    Sim, totalmente gratuito — não há nenhuma compra dentro do app nesta versão.
@@ -22,8 +28,11 @@
 6. **Quem pode avaliar um restaurante?**
    Qualquer usuário cadastrado. O catálogo de restaurantes é colaborativo — qualquer pessoa pode cadastrar um novo lugar.
 
-7. **O que é o Ranking de Restaurantes?**
-   Uma lista sempre atualizada dos lugares mais bem avaliados, construída a partir das notas de todos os usuários.
+7. **O que é o Ranking do Grupo?**
+   Uma lista sempre atualizada dos lugares mais bem avaliados pelo seu grupo, construída a partir das Avaliações Coletivas de cada rolê.
+
+7.1. **O que são as Memórias e as Estatísticas do grupo?**
+   Memórias é a linha do tempo do grupo — fotos, rolês marcantes e um resumo do ano. Estatísticas mostra números do grupo, dos usuários, dos restaurantes e dos rolês: quem participa mais, quais lugares o grupo mais frequenta.
 
 8. **O que é o Ranking de Usuários?**
    Um ranking baseado em XP e pontos, ganhos ao avaliar, comentar e interagir no app — quanto mais você participa, mais sobe.
