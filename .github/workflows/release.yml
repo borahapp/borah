@@ -69,7 +69,10 @@ jobs:
       # Portão de qualidade antes de publicar (DV-12 §5) - mesmas
       # validações da CI, repetidas aqui porque uma tag pode, em tese,
       # ser criada a partir de qualquer commit, não só de um já validado
-      # em `main`.
+      # em `main`. RC-01D: `dart format` estava faltando aqui - só
+      # `ci.yml` rodava, então uma tag criada a partir de um commit fora
+      # do padrão de formatação passaria pelo release sem ser detectada.
+      - run: dart format --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test
 
@@ -165,6 +168,8 @@ jobs:
             ${{ runner.os }}-pub-
 
       - run: flutter pub get
+      # RC-01D: mesmo portão de qualidade do job Android acima.
+      - run: dart format --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test
       - run: |
