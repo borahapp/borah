@@ -29,10 +29,25 @@ import '../states/group_detail_status.dart';
 /// grupo (admin/owner) ficam por linha/ícone condicionados ao papel do
 /// usuário atual (`GroupDetails.ownRole`) - transferência de
 /// propriedade continua fora do escopo (GROUP-01/BLOCO 2).
+///
+/// [justCreated] (UX-01): `true` só quando `CreateGroupPage` chega até
+/// aqui via `pushReplacement(..., extra: true)` - mesmo mecanismo de
+/// `extra` já usado por `EditGroupPage`/`SubmitEventReviewPage` no
+/// próprio `app_router.dart`, não um padrão novo. Dispara o diálogo de
+/// "Grupo criado com sucesso" uma única vez: a checagem mora em
+/// `initState`, que o Flutter garante executar exatamente uma vez por
+/// instância de `State` - nenhum rebuild (setState, `ref.watch`,
+/// provider reconstruindo) executa `initState` de novo, então não é
+/// preciso nenhuma flag extra para "não mostrar de novo".
 class GroupDetailPage extends ConsumerStatefulWidget {
-  const GroupDetailPage({super.key, required this.groupId});
+  const GroupDetailPage({
+    super.key,
+    required this.groupId,
+    this.justCreated = false,
+  });
 
   final String groupId;
+  final bool justCreated;
 
   @override
   ConsumerState<GroupDetailPage> createState() => _GroupDetailPageState();
@@ -44,7 +59,20 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(groupDetailControllerProvider.notifier).load(widget.groupId);
+      if (widget.justCreated) _showCreatedDialog();
     });
+  }
+
+  Future<void> _showCreatedDialog() async {
+    final shouldShare = await ConfirmationDialog.show(
+      context,
+      title: 'Grupo criado com sucesso',
+      message: 'Convide seus amigos para começar os rolês.',
+      confirmLabel: 'Compartilhar agora',
+      cancelLabel: 'Agora não',
+    );
+    if (!mounted || !shouldShare) return;
+    _shareInviteCode();
   }
 
   /// A página só dispara a ação de compartilhamento nativo - o texto é

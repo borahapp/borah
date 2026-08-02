@@ -23,6 +23,10 @@ import '../states/event_restaurant_search_status.dart';
 /// fora do escopo desta sprint. Nenhuma regra de negócio aqui: só
 /// coleta os 3 valores e chama `create_event()` via
 /// `CreateEventController`.
+///
+/// UX-01: quando a busca não encontra o restaurante, oferece cadastrá-lo
+/// sem sair deste fluxo (`_createRestaurant`) - fecha o beco sem saída
+/// que antes exigia cancelar a criação do rolê inteira.
 class CreateEventPage extends ConsumerStatefulWidget {
   const CreateEventPage({super.key, required this.groupId});
 
@@ -59,6 +63,31 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
 
   void _changeRestaurant() {
     setState(() => _selectedRestaurant = null);
+  }
+
+  /// UX-01: a busca não encontrar o restaurante era um beco sem saída
+  /// (cancelar a criação do rolê, ir para a aba Restaurantes, cadastrar,
+  /// voltar e refazer tudo do início). `extra: true` sinaliza para
+  /// `CreateRestaurantPage` devolver (`context.pop(next.restaurant)`) o
+  /// restaurante recém-criado em vez de ir para o Detalhe dele (mesmo
+  /// mecanismo de `extra` já usado em `_editGroup`/`_shareInviteCode`,
+  /// não um padrão novo). Selecionar direto o `Restaurant` devolvido -
+  /// em vez de refazer a busca e esperar o usuário tocar no resultado -
+  /// é mais simples, não só melhor UX: evita depender de o texto
+  /// buscado antes bater com o nome cadastrado, e evita uma consulta
+  /// totalmente evitável (o objeto já está em memória). Nenhum outro
+  /// estado desta tela (grupo, etapa) se perde - `push` mantém
+  /// `CreateEventPage` montada por baixo, sem recriar o `State`.
+  Future<void> _createRestaurant() async {
+    final restaurant = await context.push<Restaurant>(
+      '/restaurants/new',
+      extra: true,
+    );
+    if (!mounted || restaurant == null) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Restaurante cadastrado.')));
+    setState(() => _selectedRestaurant = restaurant);
   }
 
   Future<void> _pickDate() async {
@@ -223,9 +252,19 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
         message: message,
         onRetry: _search,
       ),
-      EventRestaurantSearchEmpty() => const Center(
-        key: ValueKey('empty'),
-        child: Text('Nenhum restaurante encontrado.'),
+      EventRestaurantSearchEmpty() => Center(
+        key: const ValueKey('empty'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Nenhum restaurante encontrado.'),
+            const SizedBox(height: AppSpacing.md),
+            AppOutlinedButton(
+              label: 'Cadastrar restaurante',
+              onPressed: _createRestaurant,
+            ),
+          ],
+        ),
       ),
       EventRestaurantSearchLoaded(:final restaurants) => ListView.builder(
         key: const ValueKey('loaded'),

@@ -11,14 +11,16 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/create_group_controller.dart';
 import '../states/create_group_status.dart';
 
-/// Tela de criação de grupo (GROUP-02A). Ao concluir com sucesso, só
-/// fecha a própria tela (`context.pop()`, sem valor de retorno) - mesmo
-/// padrão já usado por `change_avatar_page.dart`/`edit_profile_page.dart`/
-/// `edit_review_page.dart` (nenhuma tela do projeto hoje faz
-/// `context.pop(valor)`; introduzir isso agora seria um padrão novo).
-/// A navegação para o Detalhe do Grupo fica para o GROUP-02B, cuja tela
-/// (ainda inexistente) decide, ao ser reaberta/atualizada, o que fazer
-/// com o grupo recém-criado.
+/// Tela de criação de grupo (GROUP-02A). Ao concluir com sucesso, navega
+/// direto para o Detalhe do Grupo recém-criado (UX-01) - mesmo padrão já
+/// usado por `CreateRestaurantPage`/`CreateReviewPage`
+/// (`context.pushReplacement('/.../${next.id}')`, sem snackbar
+/// intermediário: a própria tela de destino já é a confirmação). Antes
+/// desta rodada a tela só fechava (`context.pop()`) e o usuário caía de
+/// volta na lista - obrigando a tocar no grupo de novo para achar o
+/// código de convite, exatamente no momento em que ele está mais
+/// disposto a convidar alguém (achado da auditoria de produto, UX-01
+/// §2.2 do `BORAH_BETA_PLAYBOOK.md`).
 class CreateGroupPage extends ConsumerStatefulWidget {
   const CreateGroupPage({super.key});
 
@@ -65,12 +67,14 @@ class _CreateGroupPageState extends ConsumerState<CreateGroupPage> {
           context,
         ).showSnackBar(SnackBar(content: Text(next.message)));
       } else if (next is CreateGroupSaveSuccess) {
-        // MVP-INTEGRATION-01: faltava feedback de sucesso aqui (o fluxo
-        // de criar rolê já mostra, ROLÊ-02) - mesmo padrão agora.
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Grupo "${next.group.name}" criado.')),
-        );
-        context.pop();
+        // UX-01: vai direto para o Detalhe do Grupo (`extra: true` sinaliza
+        // "acabou de ser criado" - ver GroupDetailPage) em vez de fechar a
+        // tela. Sem snackbar aqui de propósito - o diálogo de
+        // "Grupo criado com sucesso" na tela de destino já cobre o
+        // feedback, mesmo padrão de `CreateRestaurantPage`/`CreateReviewPage`
+        // (nenhuma das duas mostra snackbar antes de navegar para o
+        // detalhe recém-criado).
+        context.pushReplacement('/groups/${next.group.id}', extra: true);
       }
     });
 

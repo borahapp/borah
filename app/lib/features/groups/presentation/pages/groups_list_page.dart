@@ -40,10 +40,13 @@ class _GroupsListPageState extends ConsumerState<GroupsListPage> {
 
   Future<void> _createGroup() async {
     await context.push('/groups/new');
-    // GROUP-02B.0: create_group_page.dart só fecha (`context.pop()`, sem
-    // valor de retorno - ver GROUP-02A) - a lista recarrega sozinha ao
-    // voltar, para que o grupo recém-criado apareça sem precisar reabrir
-    // a tela manualmente.
+    // UX-01: desde esta rodada, `create_group_page.dart` não fecha mais
+    // de volta para esta lista em caso de sucesso - vai direto para
+    // `GroupDetailPage` via `pushReplacement` (ver CreateGroupPage). Este
+    // `await` só resolve, então, se o usuário voltar sem criar nada
+    // (botão de voltar do sistema) ou depois de já ter navegado adiante
+    // e eventualmente retornar até aqui - o reload abaixo continua
+    // correto nos dois casos (idempotente, sem custo perceptível).
     if (!mounted) return;
     ref.read(groupsListControllerProvider.notifier).load();
   }

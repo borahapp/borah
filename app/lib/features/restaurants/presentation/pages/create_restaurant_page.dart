@@ -20,7 +20,19 @@ import '../states/restaurant_detail_status.dart';
 /// documentais do projeto). Latitude/longitude ficam para quando houver
 /// seleção via mapa (DV-03 §19, "Evolução prevista").
 class CreateRestaurantPage extends ConsumerStatefulWidget {
-  const CreateRestaurantPage({super.key});
+  const CreateRestaurantPage({super.key, this.returnToCaller = false});
+
+  /// `true` quando esta tela foi aberta de dentro de outro fluxo que
+  /// precisa retomar de onde parou depois do cadastro (UX-01: Etapa 1 de
+  /// `CreateEventPage`, quando a busca não encontra o restaurante) - em
+  /// vez de ir para o Detalhe do restaurante recém-criado, só volta
+  /// (`context.pop(next.restaurant)`) devolvendo o próprio restaurante
+  /// recém-criado para quem abriu esta tela já usar direto, sem precisar
+  /// buscá-lo de novo (já está em memória - mesmo raciocínio de não
+  /// refazer um `getById` que `_editGroup`/`extra: group` já aplica no
+  /// sentido contrário). Default `false` preserva o comportamento
+  /// original (aba Restaurantes) sem nenhuma mudança.
+  final bool returnToCaller;
 
   @override
   ConsumerState<CreateRestaurantPage> createState() =>
@@ -79,7 +91,11 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
           context,
         ).showSnackBar(SnackBar(content: Text(next.message)));
       } else if (next is RestaurantDetailSaveSuccess) {
-        context.pushReplacement('/restaurants/${next.restaurant.id}');
+        if (widget.returnToCaller) {
+          context.pop(next.restaurant);
+        } else {
+          context.pushReplacement('/restaurants/${next.restaurant.id}');
+        }
       }
     });
 

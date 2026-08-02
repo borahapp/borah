@@ -246,7 +246,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/restaurants/new',
-        builder: (context, state) => const CreateRestaurantPage(),
+        // UX-01: `extra: true` só quando `CreateEventPage` chega aqui
+        // (usuário sem o restaurante no catálogo, Etapa 1 de "Criar
+        // rolê") - navegação normal (aba Restaurantes) nunca passa
+        // `extra`, cai no default `false`.
+        builder: (context, state) =>
+            CreateRestaurantPage(returnToCaller: state.extra as bool? ?? false),
       ),
       GoRoute(
         path: '/restaurants/:id',
@@ -366,8 +371,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/groups/:id',
-        builder: (context, state) =>
-            GroupDetailPage(groupId: state.pathParameters['id']!),
+        builder: (context, state) => GroupDetailPage(
+          groupId: state.pathParameters['id']!,
+          // UX-01: `extra: true` só quando `CreateGroupPage` chega aqui
+          // via `pushReplacement` - navegação normal (tocar num grupo na
+          // lista) nunca passa `extra`, então cai no default `false`.
+          justCreated: state.extra as bool? ?? false,
+        ),
       ),
       GoRoute(
         path: '/groups/:id/edit',

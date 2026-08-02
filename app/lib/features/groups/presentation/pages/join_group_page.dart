@@ -11,10 +11,12 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/join_group_controller.dart';
 import '../states/join_group_status.dart';
 
-/// Tela de "entrar em grupo por código" (ONBOARDING-01) - mesmo padrão
-/// de `CreateGroupPage`: formulário único, `context.pop()` sem valor de
-/// retorno ao concluir (nenhuma tela do projeto usa `context.pop(valor)`).
-/// A lista de grupos recarrega ao voltar (mesmo padrão de
+/// Tela de "entrar em grupo por código" (ONBOARDING-01) - formulário
+/// único, `context.pop()` sem valor de retorno ao concluir (entrar num
+/// grupo já existente não tem o mesmo motivo que `CreateGroupPage` tem,
+/// desde a UX-01, para ir direto ao Detalhe: quem entra por código já
+/// recebeu o convite de outra pessoa, não precisa compartilhar o
+/// próprio). A lista de grupos recarrega ao voltar (mesmo padrão de
 /// `GroupsListPage._createGroup`).
 class JoinGroupPage extends ConsumerStatefulWidget {
   const JoinGroupPage({super.key});
