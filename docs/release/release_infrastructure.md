@@ -38,11 +38,9 @@ Complementa `docs/legal/README.md` e o guia operacional já apresentado na BETA-
 ### Release
 - `sentry_flutter` já detecta automaticamente a versão/build do app (formato padrão `<bundle-id>@<version>+<build>`) sem nenhuma configuração explícita de `options.release`/`options.dist` em `crash_reporting.dart` — confirmado por leitura do código (nenhuma dessas opções é setada manualmente). Isso é suficiente para associar cada evento à versão correta do app automaticamente.
 
-### Source Maps / Símbolos de depuração — achado real desta auditoria
-- **Nenhum plugin do Sentry Gradle está configurado** em `android/app/build.gradle.kts` (confirmado por busca — zero ocorrências de `sentry` nos arquivos Gradle). Isso significa que o `mapping.txt` gerado pelo R8/ProGuard (confirmado existir e ser gerado corretamente na BETA-10B, já que `isMinifyEnabled`/`isShrinkResources` estão ativos) **nunca é enviado ao Sentry automaticamently**.
-- **Efeito prático**: stack traces de crashes reais em builds de Release chegariam ao Sentry com nomes de classe/método ofuscados pelo R8, dificultando (ou impedindo) o diagnóstico.
-- **Recomendação** (não implementada nesta rodada, fora do escopo de "somente documentação"): adicionar o plugin oficial `io.sentry.android.gradle` a `android/app/build.gradle.kts`, que automatiza o upload do `mapping.txt` a cada build de Release. Requer um Auth Token do Sentry (novo tipo de secret, `SENTRY_AUTH_TOKEN`, ainda não documentado em nenhuma rodada anterior).
-- Para iOS, o equivalente seria o upload dos arquivos `dSYM` — só verificável/configurável num ambiente macOS real (ver BETA-10C).
+### Source Maps / Símbolos de depuração — **resolvido na OBS-01A, posterior a esta auditoria**
+- O achado original desta seção (nenhum plugin Sentry Gradle configurado) foi corrigido na rodada OBS-01A: `android/app/build.gradle.kts` agora aplica `io.sentry.android.gradle` (versão `6.16.0`, compatibilidade com AGP 9.0.1/Kotlin 2.3.20 confirmada empiricamente) e automatiza o upload do `mapping.txt` do R8 a cada build de Release, condicionado à presença do secret `SENTRY_AUTH_TOKEN` (sem ele, o upload é pulado sem quebrar o build). Detalhe completo e os 3 secrets envolvidos (`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN`) em `docs/release/ANDROID_RELEASE.md` e `docs/release/SECRETS.md` (documentação oficial de release a partir da RC-01).
+- Para iOS, o equivalente seria o upload dos arquivos `dSYM` — ainda não configurado, e só verificável num ambiente macOS real (mesma limitação registrada em `docs/release/IOS_RELEASE.md`).
 
 ### Alertas
 - Não configurados ainda (dependem do projeto existir). Recomendação: pelo menos um alerta para "novo tipo de erro" (issue nunca vista antes) e um para "spike de volume" (mesmo erro ocorrendo acima de um limiar em curto período) — ambos configuráveis diretamente no dashboard do Sentry, sem nenhuma mudança de código.

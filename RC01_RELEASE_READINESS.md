@@ -2,9 +2,11 @@
 
 **Data:** 2026-08-02
 **Branch:** `claude/turnstile-secret-diagnosis-0g0p82`
-**Commit base:** `4ac3242` + as alterações desta sprint (RC-01A a RC-01D — Podfile iOS, `dart format` no `release.yml`), ainda não comitadas no momento em que este documento foi escrito.
+**Commit:** `f23695f` (Podfile iOS + `dart format` no `release.yml`, RC-01A–D).
 
-Este documento consolida o resultado de RC-01A (auditoria), RC-01B (correções automáticas Android), RC-01C (auditoria/correção iOS) e RC-01D (revisão de CI) num único checklist de prontidão de release.
+Este documento consolida o resultado de RC-01A (auditoria), RC-01B (correções automáticas Android), RC-01C (auditoria/correção iOS) e RC-01D (revisão de CI) num único snapshot de prontidão de release, datado desta rodada específica.
+
+**A partir da RC-01E, a documentação oficial e reutilizável de publicação passou a viver em `docs/release/`** (`BUILD_GUIDE.md`, `CI_GUIDE.md`, `ANDROID_RELEASE.md`, `IOS_RELEASE.md`, `SECRETS.md`, `VERSIONING.md`, `CHECKLIST.md`) — este arquivo continua existindo como o **snapshot datado** desta sprint específica (o que foi encontrado, o que foi corrigido, o estado exato em 2026-08-02); para o processo reutilizável em toda release futura, usar os documentos de `docs/release/`.
 
 ---
 
@@ -65,7 +67,7 @@ Este documento consolida o resultado de RC-01A (auditoria), RC-01B (correções 
 
 Nenhuma pendência abaixo é código — todas exigem uma ação humana fora deste ambiente.
 
-1. Cadastrar os secrets de CI (`docs/operations/CI_CD_SECRETS.md`): keystore Android, projeto Supabase de Produção, Sentry/PostHog de Produção.
+1. Cadastrar os 12 secrets de Produção (`docs/release/SECRETS.md`, detalhamento de obtenção em `docs/operations/CI_CD_SECRETS.md`): keystore Android, projeto Supabase de Produção, Sentry (DSN + 3 do plugin Gradle), PostHog.
 2. Gerar a keystore Android de release real (`keytool -genkey ...`, ver `android/key.properties.example`).
 3. Conta Google Play Console.
 4. Conta Apple Developer Program + `DEVELOPMENT_TEAM` configurado no Xcode.
