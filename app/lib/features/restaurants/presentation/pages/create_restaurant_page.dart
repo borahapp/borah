@@ -10,6 +10,7 @@ import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/restaurant_detail_controller.dart';
+import '../../application/restaurants_controller.dart';
 import '../states/restaurant_detail_status.dart';
 
 /// Tela de Cadastro (DV-03 §5/§6). Expõe apenas os campos que existem no
@@ -79,6 +80,10 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
           context,
         ).showSnackBar(SnackBar(content: Text(next.message)));
       } else if (next is RestaurantDetailSaveSuccess) {
+        // A listagem (`RestaurantsController`) não é `autoDispose` e só
+        // recarrega no `initState` da tela - sem isto, o restaurante recém
+        // criado fica invisível na lista/busca até o app ser reiniciado.
+        ref.read(restaurantsControllerProvider.notifier).loadInitial();
         context.pushReplacement('/restaurants/${next.restaurant.id}');
       }
     });
