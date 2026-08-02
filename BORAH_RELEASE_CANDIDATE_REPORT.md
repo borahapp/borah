@@ -3,6 +3,7 @@
 **Data:** 2026-08-01
 **Versão:** 1.0.0+1
 **Branch:** `claude/turnstile-secret-diagnosis-0g0p82`
+**Commit de fechamento da QA-15 Final:** `c346b67` (2026-08-01) — desenvolvimento do MVP formalmente encerrado a partir deste commit.
 **Escopo:** Auditoria completa de QA (QA-01 a QA-16) conduzida como QA Lead / Staff Software Engineer / CTO / Arquiteto de Software, cobrindo todas as funcionalidades do MVP, os fluxos integrados end-to-end, revisão arquitetural e prontidão de produção — mais duas rodadas adicionais: QA-15B (auditoria arquitetural com mandato de correção, ver `docs/FASE 9 - Execution/QA-15B_ARCHITECTURAL_AUDIT_AND_FIXES.md`) e UX-01 (remoção de 2 becos sem saída identificados na auditoria de produto, ver `BORAH_BETA_PLAYBOOK.md`), encerradas por uma auditoria de fechamento (QA-15 Final, §9).
 
 Este documento representa o estado oficial do projeto imediatamente antes da publicação do Beta.
