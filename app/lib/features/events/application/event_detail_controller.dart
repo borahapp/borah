@@ -6,6 +6,7 @@ import '../domain/event_attendance.dart';
 import '../domain/event_details.dart';
 import '../domain/event_repository.dart';
 import '../presentation/states/event_detail_status.dart';
+import 'events_list_controller.dart';
 
 class EventDetailController extends Notifier<EventDetailStatus> {
   @override
@@ -135,6 +136,16 @@ class EventDetailController extends Notifier<EventDetailStatus> {
 
     try {
       await action();
+      // RC-02D: a listagem (`EventsListController`) não recarrega sozinha
+      // ao voltar do Detalhe - `events_list_page.dart` só empurra essa
+      // responsabilidade para o fluxo de criação (`_createEvent`), nunca
+      // para abrir um rolê já existente (`onTap: () => context.push(...)`
+      // sem `await`/reload). Sem isto, cancelar ou reagendar aqui deixa a
+      // lista mostrando a data/status antigos até o app reiniciar - mesmo
+      // padrão de bug já corrigido em Restaurantes/Criar rolê.
+      ref
+          .read(eventsListControllerProvider.notifier)
+          .load(details.event.groupId);
       await load(details.event.id, details.event.groupId);
     } on EventRepositoryException catch (e) {
       state = EventDetailError(e.message, details, canManage);

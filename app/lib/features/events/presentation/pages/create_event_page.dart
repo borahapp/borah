@@ -14,6 +14,7 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../restaurants/domain/restaurant.dart';
 import '../../application/create_event_controller.dart';
 import '../../application/event_restaurant_search_controller.dart';
+import '../../application/events_list_controller.dart';
 import '../states/create_event_status.dart';
 import '../states/event_restaurant_search_status.dart';
 
@@ -169,6 +170,15 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Rolê criado com sucesso.')),
         );
+        // RC-02D: `EventsListPage._createEvent` recarrega via
+        // `await context.push(...)` + checagem de `mounted` ao retornar -
+        // mas o `PopScope` de 2 etapas desta tela intercepta o primeiro
+        // `context.pop()` quando `_step == 1` (fecha a Etapa 2 de volta
+        // para a Etapa 1 em vez de sair da rota), então o `Future`
+        // aguardado do outro lado nunca resolve no momento esperado e o
+        // reload silenciosamente não roda. Recarregar direto aqui, antes
+        // do pop, independe desse timing.
+        ref.read(eventsListControllerProvider.notifier).load(widget.groupId);
         context.pop();
       }
     });

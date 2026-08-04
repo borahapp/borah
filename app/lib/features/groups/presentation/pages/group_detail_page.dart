@@ -17,6 +17,7 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../users/presentation/widgets/profile_avatar.dart';
 import '../../application/group_detail_controller.dart';
+import '../../application/groups_list_controller.dart';
 import '../../domain/group.dart';
 import '../../domain/group_details.dart';
 import '../../domain/group_member.dart';
@@ -111,6 +112,12 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
     try {
       await ref.read(groupDetailControllerProvider.notifier).leaveGroup(own.id);
       if (!mounted) return;
+      // RC-02D: mesmo padrão de bug já corrigido em Restaurantes/Rolês -
+      // `GroupsListPage` só recarrega no próprio `initState`, então sem
+      // isto o grupo continua aparecendo na lista (com dados obsoletos)
+      // até o app ser reiniciado, mesmo já tendo saído com sucesso no
+      // servidor.
+      ref.read(groupsListControllerProvider.notifier).load();
       context.pop();
     } on GroupRepositoryException catch (e) {
       if (!mounted) return;
