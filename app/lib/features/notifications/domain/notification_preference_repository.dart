@@ -6,12 +6,14 @@ class NotificationPreferenceRepositoryException implements Exception {
   final String message;
 }
 
-/// Contrato do domínio de Preferências (DV-09 decisão 7). Só a categoria
-/// 'social' tem um evento real implementado - por isso o contrato não
-/// parametriza por categoria; as demais categorias existem apenas como
-/// estrutura de banco (decisão 5).
+/// Contrato do domínio de Preferências (DV-09 decisão 7, estendido na
+/// RC-03 Sprint 0 - F48). `category` passou a ser parâmetro explícito:
+/// 'social' e 'groups' têm eventos reais implementados hoje (DV-09,
+/// `20260801130000_add_group_event_notifications.sql`); as demais
+/// categorias do CHECK constraint continuam existindo apenas como
+/// estrutura de banco, sem UI própria ainda.
 abstract interface class NotificationPreferenceRepository {
-  Future<bool> isInAppEnabled(String userId);
+  Future<bool> isInAppEnabled(String userId, String category);
 
-  Future<void> setInAppEnabled(String userId, bool enabled);
+  Future<void> setInAppEnabled(String userId, String category, bool enabled);
 }

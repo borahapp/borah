@@ -12,13 +12,15 @@ class NotificationPreferenceRepositoryImpl
   final NotificationPreferenceRemoteDatasource _datasource;
 
   @override
-  Future<bool> isInAppEnabled(String userId) {
-    return _guard(() => _datasource.fetchInAppEnabled(userId));
+  Future<bool> isInAppEnabled(String userId, String category) {
+    return _guard(() => _datasource.fetchInAppEnabled(userId, category));
   }
 
   @override
-  Future<void> setInAppEnabled(String userId, bool enabled) {
-    return _guard(() => _datasource.upsertInAppEnabled(userId, enabled));
+  Future<void> setInAppEnabled(String userId, String category, bool enabled) {
+    return _guard(
+      () => _datasource.upsertInAppEnabled(userId, category, enabled),
+    );
   }
 
   Future<T> _guard<T>(Future<T> Function() action) async {

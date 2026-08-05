@@ -137,9 +137,20 @@ class _ProfileView extends StatelessWidget {
           // rodada, só eram alcançáveis pelo antigo placeholder de
           // desenvolvedor em `/home` - mesmo padrão de `ListTile` já usado
           // em `SettingsPage`.
+          //
+          // RC-03 Sprint 0 (F24): a rota `/feed` (FeedPage) existia e
+          // funcionava, mas nenhuma tela do app navegava até ela - achado
+          // confirmado por busca em todo `lib/` (RC03_UX_AUDIT.md §2.11).
+          // Este é o ponto de entrada adicionado, seguindo o mesmo padrão
+          // dos 3 atalhos já existentes neste Card.
           Card(
             child: Column(
               children: [
+                ListTile(
+                  leading: const Icon(Icons.dynamic_feed_outlined),
+                  title: const Text('Feed'),
+                  onTap: () => context.push('/feed'),
+                ),
                 ListTile(
                   leading: const Icon(Icons.emoji_events_outlined),
                   title: const Text('Gamificação'),

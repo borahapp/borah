@@ -9,8 +9,9 @@ import '../../../authentication/application/auth_controller.dart';
 import '../../application/notification_preferences_controller.dart';
 import '../states/notification_preferences_status.dart';
 
-/// Tela de Preferências (DV-09 §6/§11) - apenas o toggle de notificações
-/// sociais In-App (decisão 3/5 do DV-09); sem opção de Push.
+/// Tela de Preferências (DV-09 §6/§11, estendida na RC-03 Sprint 0 - F48) -
+/// toggles de notificações In-App para as categorias 'social' e 'groups';
+/// sem opção de Push.
 class NotificationPreferencesPage extends ConsumerStatefulWidget {
   const NotificationPreferencesPage({super.key});
 
@@ -31,10 +32,12 @@ class _NotificationPreferencesPageState
     });
   }
 
-  void _toggle() {
+  void _toggle(String category) {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
-    ref.read(notificationPreferencesControllerProvider.notifier).toggle(userId);
+    ref
+        .read(notificationPreferencesControllerProvider.notifier)
+        .toggle(userId, category);
   }
 
   @override
@@ -60,15 +63,33 @@ class _NotificationPreferencesPageState
                   .load(userId);
             },
           ),
-          NotificationPreferencesLoaded(:final inAppEnabled) => SwitchListTile(
-            key: const ValueKey('loaded'),
-            title: const Text('Notificações sociais'),
-            subtitle: const Text(
-              'Novo seguidor, comentário e curtida nas suas avaliações.',
+          NotificationPreferencesLoaded(
+            :final socialEnabled,
+            :final groupsEnabled,
+          ) =>
+            Column(
+              key: const ValueKey('loaded'),
+              children: [
+                SwitchListTile(
+                  title: const Text('Notificações sociais'),
+                  subtitle: const Text(
+                    'Novo seguidor, comentário e curtida nas suas avaliações.',
+                  ),
+                  value: socialEnabled,
+                  onChanged: (_) =>
+                      _toggle(NotificationPreferenceCategory.social),
+                ),
+                SwitchListTile(
+                  title: const Text('Notificações de grupos'),
+                  subtitle: const Text(
+                    'Novo membro, novo rolê e resposta de presença.',
+                  ),
+                  value: groupsEnabled,
+                  onChanged: (_) =>
+                      _toggle(NotificationPreferenceCategory.groups),
+                ),
+              ],
             ),
-            value: inAppEnabled,
-            onChanged: (_) => _toggle(),
-          ),
         },
       ),
     );

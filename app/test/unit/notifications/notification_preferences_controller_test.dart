@@ -30,24 +30,46 @@ void main() {
     );
   });
 
-  test('load sucesso -> NotificationPreferencesLoaded', () async {
-    when(
-      () => repository.isInAppEnabled('user-1'),
-    ).thenAnswer((_) async => true);
+  test(
+    'load sucesso -> NotificationPreferencesLoaded com as 2 categorias',
+    () async {
+      when(
+        () => repository.isInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.social,
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.isInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.groups,
+        ),
+      ).thenAnswer((_) async => false);
 
-    await container
-        .read(notificationPreferencesControllerProvider.notifier)
-        .load('user-1');
+      await container
+          .read(notificationPreferencesControllerProvider.notifier)
+          .load('user-1');
 
-    final status = container.read(notificationPreferencesControllerProvider);
-    expect(status, isA<NotificationPreferencesLoaded>());
-    expect((status as NotificationPreferencesLoaded).inAppEnabled, isTrue);
-  });
+      final status = container.read(notificationPreferencesControllerProvider);
+      expect(status, isA<NotificationPreferencesLoaded>());
+      expect((status as NotificationPreferencesLoaded).socialEnabled, isTrue);
+      expect(status.groupsEnabled, isFalse);
+    },
+  );
 
   test('load falha -> NotificationPreferencesError', () async {
     when(
-      () => repository.isInAppEnabled('user-1'),
+      () => repository.isInAppEnabled(
+        'user-1',
+        NotificationPreferenceCategory.social,
+      ),
     ).thenThrow(const NotificationPreferenceRepositoryException('Falha.'));
+    when(
+      () => repository.isInAppEnabled(
+        'user-1',
+        NotificationPreferenceCategory.groups,
+      ),
+    ).thenAnswer((_) async => true);
 
     await container
         .read(notificationPreferencesControllerProvider.notifier)
@@ -59,23 +81,89 @@ void main() {
     );
   });
 
-  test('toggle alterna o valor', () async {
-    when(
-      () => repository.isInAppEnabled('user-1'),
-    ).thenAnswer((_) async => true);
-    when(
-      () => repository.setInAppEnabled('user-1', false),
-    ).thenAnswer((_) async {});
+  test(
+    'toggle da categoria social altera só o social, preservando groups',
+    () async {
+      when(
+        () => repository.isInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.social,
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.isInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.groups,
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.setInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.social,
+          false,
+        ),
+      ).thenAnswer((_) async {});
 
-    final notifier = container.read(
-      notificationPreferencesControllerProvider.notifier,
-    );
-    await notifier.load('user-1');
-    await notifier.toggle('user-1');
+      final notifier = container.read(
+        notificationPreferencesControllerProvider.notifier,
+      );
+      await notifier.load('user-1');
+      await notifier.toggle('user-1', NotificationPreferenceCategory.social);
 
-    final status = container.read(notificationPreferencesControllerProvider);
-    expect(status, isA<NotificationPreferencesLoaded>());
-    expect((status as NotificationPreferencesLoaded).inAppEnabled, isFalse);
-    verify(() => repository.setInAppEnabled('user-1', false)).called(1);
-  });
+      final status = container.read(notificationPreferencesControllerProvider);
+      expect(status, isA<NotificationPreferencesLoaded>());
+      expect((status as NotificationPreferencesLoaded).socialEnabled, isFalse);
+      expect(status.groupsEnabled, isTrue);
+      verify(
+        () => repository.setInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.social,
+          false,
+        ),
+      ).called(1);
+    },
+  );
+
+  test(
+    'toggle da categoria groups altera só o groups, preservando social',
+    () async {
+      when(
+        () => repository.isInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.social,
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.isInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.groups,
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.setInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.groups,
+          false,
+        ),
+      ).thenAnswer((_) async {});
+
+      final notifier = container.read(
+        notificationPreferencesControllerProvider.notifier,
+      );
+      await notifier.load('user-1');
+      await notifier.toggle('user-1', NotificationPreferenceCategory.groups);
+
+      final status = container.read(notificationPreferencesControllerProvider);
+      expect(status, isA<NotificationPreferencesLoaded>());
+      expect((status as NotificationPreferencesLoaded).socialEnabled, isTrue);
+      expect(status.groupsEnabled, isFalse);
+      verify(
+        () => repository.setInAppEnabled(
+          'user-1',
+          NotificationPreferenceCategory.groups,
+          false,
+        ),
+      ).called(1);
+    },
+  );
 }

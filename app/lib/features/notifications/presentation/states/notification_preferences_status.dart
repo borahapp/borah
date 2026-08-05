@@ -1,5 +1,6 @@
-/// Estado da tela de Preferências (DV-09), sealed class. Só a categoria
-/// 'social' é exposta (decisão 5/7 do DV-09).
+/// Estado da tela de Preferências (DV-09), sealed class. RC-03 Sprint 0
+/// (F48) estendeu de 1 para 2 categorias expostas na UI ('social' e
+/// 'groups') - as demais categorias do CHECK constraint continuam sem UI.
 sealed class NotificationPreferencesStatus {
   const NotificationPreferencesStatus();
 }
@@ -16,9 +17,23 @@ final class NotificationPreferencesLoading
 
 final class NotificationPreferencesLoaded
     extends NotificationPreferencesStatus {
-  const NotificationPreferencesLoaded(this.inAppEnabled);
+  const NotificationPreferencesLoaded({
+    required this.socialEnabled,
+    required this.groupsEnabled,
+  });
 
-  final bool inAppEnabled;
+  final bool socialEnabled;
+  final bool groupsEnabled;
+
+  NotificationPreferencesLoaded copyWith({
+    bool? socialEnabled,
+    bool? groupsEnabled,
+  }) {
+    return NotificationPreferencesLoaded(
+      socialEnabled: socialEnabled ?? this.socialEnabled,
+      groupsEnabled: groupsEnabled ?? this.groupsEnabled,
+    );
+  }
 }
 
 final class NotificationPreferencesError extends NotificationPreferencesStatus {
