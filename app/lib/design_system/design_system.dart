@@ -31,6 +31,8 @@ export 'components/components.dart';
 export 'tokens/app_colors.dart';
 export 'tokens/app_elevation.dart';
 export 'tokens/app_gradients.dart';
+export 'tokens/app_icon_size.dart';
+export 'tokens/app_image_size.dart';
 export 'tokens/app_radius.dart';
 export 'tokens/app_spacing.dart';
 export 'typography/app_typography.dart';
