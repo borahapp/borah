@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../design_system/components/avatars/user_avatar.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/cards/restaurant_header.dart';
 import '../../../../design_system/components/inputs/app_star_rating.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
-import '../../../../design_system/tokens/app_gradients.dart';
-import '../../../../design_system/tokens/app_icon_size.dart';
 import '../../../../design_system/tokens/app_radius.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/submit_event_review_controller.dart';
@@ -146,7 +144,14 @@ class _SubmitEventReviewPageState extends ConsumerState<SubmitEventReviewPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildContextHeader(context),
+                if (widget.restaurantName != null)
+                  RestaurantHeader(
+                    name: widget.restaurantName!,
+                    subtitle: widget.scheduledAt == null
+                        ? null
+                        : _formatDate(widget.scheduledAt!),
+                    photoUrl: widget.restaurantCoverImage,
+                  ),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl),
                   child: Column(
@@ -233,55 +238,6 @@ class _SubmitEventReviewPageState extends ConsumerState<SubmitEventReviewPage> {
           child: LinearProgressIndicator(value: filled / 5),
         ),
       ],
-    );
-  }
-
-  Widget _buildContextHeader(BuildContext context) {
-    if (widget.restaurantName == null && widget.scheduledAt == null) {
-      return const SizedBox.shrink();
-    }
-
-    final theme = Theme.of(context);
-    final gradients = AppGradients.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(gradient: gradients.purple),
-      child: Row(
-        children: [
-          UserAvatar(
-            imageUrl: widget.restaurantCoverImage,
-            radius: AppIconSize.xl / 2,
-            fallbackIcon: Icons.restaurant,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (widget.restaurantName != null)
-                  Text(
-                    widget.restaurantName!,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                if (widget.scheduledAt != null)
-                  Text(
-                    _formatDate(widget.scheduledAt!),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

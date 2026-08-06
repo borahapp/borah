@@ -16,6 +16,7 @@ export 'cards/event_card.dart';
 export 'cards/group_card.dart';
 export 'cards/ranking_card.dart';
 export 'cards/restaurant_card.dart';
+export 'cards/restaurant_header.dart';
 export 'dialogs/app_dialog.dart';
 export 'dialogs/confirmation_dialog.dart';
 export 'feedback/app_animated_fraction.dart';
