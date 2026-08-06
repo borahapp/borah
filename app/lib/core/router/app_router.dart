@@ -31,6 +31,7 @@ import '../../features/gamification/presentation/pages/gamification_profile_page
 import '../../features/gamification/presentation/pages/ranking_users_page.dart';
 import '../../features/event_reviews/domain/event_review.dart';
 import '../../features/event_reviews/presentation/pages/submit_event_review_page.dart';
+import '../../features/events/domain/event.dart';
 import '../../features/events/presentation/pages/create_event_page.dart';
 import '../../features/events/presentation/pages/event_detail_page.dart';
 import '../../features/events/presentation/pages/events_list_page.dart';
@@ -413,10 +414,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/groups/:groupId/events/:eventId/review',
-        builder: (context, state) => SubmitEventReviewPage(
-          eventId: state.pathParameters['eventId']!,
-          existingReview: state.extra as EventReview?,
-        ),
+        builder: (context, state) {
+          // RC-03 FASE A1: `extra` carrega o rolê completo (não só o
+          // `id`) para contextualizar a tela de avaliação (nome/data/foto
+          // do restaurante, sem nenhuma consulta nova) - ver
+          // `_ReviewsSection._openReviewForm` em `event_detail_page.dart`.
+          final extra =
+              state.extra as ({Event event, EventReview? existingReview});
+          return SubmitEventReviewPage(
+            eventId: state.pathParameters['eventId']!,
+            restaurantName: extra.event.restaurantName,
+            scheduledAt: extra.event.scheduledAt,
+            restaurantCoverImage: extra.event.restaurantCoverImage,
+            existingReview: extra.existingReview,
+          );
+        },
       ),
     ],
   );

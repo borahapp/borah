@@ -149,6 +149,18 @@ abstract final class AppAnalytics {
   static Future<void> trackReviewUpdated(String reviewId) =>
       track('review_updated', properties: {'review_id': reviewId});
 
+  /// Avaliação coletiva de rolê (RC-03, FASE A1) - distinto de
+  /// `trackReviewCreated`/`trackReviewUpdated` (avaliação individual de
+  /// restaurante, `reviews`), que é uma entidade separada por decisão de
+  /// domínio (`BORAH_VISION_v2.0.md`, Capítulo 8).
+  static Future<void> trackEventReviewSubmitted({
+    required String eventId,
+    required bool isEdit,
+  }) => track(
+    'event_review_submitted',
+    properties: {'event_id': eventId, 'is_edit': isEdit},
+  );
+
   static Future<void> trackReviewDeleted(String reviewId) =>
       track('review_deleted', properties: {'review_id': reviewId});
 

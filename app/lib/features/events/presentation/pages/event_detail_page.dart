@@ -20,6 +20,7 @@ import '../../../event_reviews/domain/event_review.dart';
 import '../../../event_reviews/presentation/states/event_reviews_status.dart';
 import '../../../users/presentation/widgets/profile_avatar.dart';
 import '../../application/event_detail_controller.dart';
+import '../../domain/event.dart';
 import '../../domain/event_attendance.dart';
 import '../../domain/event_details.dart';
 import '../states/event_detail_status.dart';
@@ -272,7 +273,7 @@ class _EventDetailContent extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl),
           _ReviewsSection(
             groupId: groupId,
-            eventId: event.id,
+            event: event,
             averageRating: event.averageRating,
             totalReviews: event.totalReviews,
             // Só quem confirmou presença, depois que o rolê já
@@ -343,7 +344,7 @@ class _AttendanceTile extends StatelessWidget {
 class _ReviewsSection extends ConsumerWidget {
   const _ReviewsSection({
     required this.groupId,
-    required this.eventId,
+    required this.event,
     required this.averageRating,
     required this.totalReviews,
     required this.canReview,
@@ -351,7 +352,11 @@ class _ReviewsSection extends ConsumerWidget {
   });
 
   final String groupId;
-  final String eventId;
+
+  /// Rolê completo (não só o `id`) - RC-03 FASE A1: a tela de avaliação
+  /// coletiva passa a mostrar nome/data/foto do restaurante, já
+  /// disponíveis aqui sem nenhuma consulta nova.
+  final Event event;
 
   /// Direto de `Event.averageRating`/`totalReviews` - agregado já
   /// calculado no banco (trigger), sem recomputar aqui a partir de
@@ -362,6 +367,8 @@ class _ReviewsSection extends ConsumerWidget {
   final bool canReview;
   final String? currentUserId;
 
+  String get eventId => event.id;
+
   Future<void> _openReviewForm(
     BuildContext context,
     WidgetRef ref,
@@ -369,7 +376,7 @@ class _ReviewsSection extends ConsumerWidget {
   ) async {
     await context.push(
       '/groups/$groupId/events/$eventId/review',
-      extra: existing,
+      extra: (event: event, existingReview: existing),
     );
     // submit_event_review_page.dart só fecha (`context.pop()`, sem
     // valor de retorno) - recarrega os dois controllers ao voltar: a

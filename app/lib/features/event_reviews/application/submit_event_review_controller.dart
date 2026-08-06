@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../../authentication/application/auth_controller.dart';
 import '../data/event_review_repository_impl.dart';
 import '../domain/event_review_repository.dart';
@@ -50,6 +53,12 @@ class SubmitEventReviewController extends Notifier<SubmitEventReviewStatus> {
               overallScore: overallScore,
               comment: comment,
             );
+      unawaited(
+        AppAnalytics.trackEventReviewSubmitted(
+          eventId: eventId,
+          isEdit: existingReviewId != null,
+        ),
+      );
       state = SubmitEventReviewSaveSuccess(review);
     } on EventReviewRepositoryException catch (e) {
       state = SubmitEventReviewError(e.message);
