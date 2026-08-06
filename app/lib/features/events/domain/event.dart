@@ -12,6 +12,7 @@ class Event {
     this.restaurantName,
     this.restaurantCategory,
     this.restaurantCity,
+    this.restaurantCoverImage,
     this.averageRating,
     this.totalReviews = 0,
   });
@@ -33,6 +34,13 @@ class Event {
   final String? restaurantName;
   final String? restaurantCategory;
   final String? restaurantCity;
+
+  /// URL já resolvida da foto de capa do restaurante (RC-03, FASE A1) -
+  /// usada para contextualizar a tela de avaliação coletiva
+  /// (`submit_event_review_page.dart`). Mesma coluna já usada por
+  /// `Restaurant.coverImage`, só nunca havia sido incluída no embed de
+  /// `events(...)` até agora.
+  final String? restaurantCoverImage;
 
   /// Agregado denormalizado de `event_reviews` (BLOCO 4), mantido por
   /// trigger (`recalculate_event_rating`) - nunca calculado no cliente.

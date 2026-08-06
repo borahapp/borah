@@ -116,6 +116,7 @@ class EventRepositoryImpl implements EventRepository {
       restaurantName: restaurant?['name'] as String?,
       restaurantCategory: restaurant?['category'] as String?,
       restaurantCity: restaurant?['city'] as String?,
+      restaurantCoverImage: restaurant?['cover_image'] as String?,
       averageRating: (row['average_rating'] as num?)?.toDouble(),
       totalReviews: row['total_reviews'] as int? ?? 0,
     );
