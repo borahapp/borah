@@ -28,6 +28,7 @@ export 'feedback/loading_indicator.dart';
 export 'feedback/score_bubble.dart';
 export 'inputs/app_password_field.dart';
 export 'inputs/app_search_field.dart';
+export 'inputs/app_star_rating.dart';
 export 'inputs/app_text_field.dart';
 export 'navigation/app_bottom_navigation.dart';
 export 'navigation/app_tabs.dart';
