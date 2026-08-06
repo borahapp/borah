@@ -4,11 +4,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/validators/app_validators.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/inputs/app_password_field.dart';
 import '../../../../design_system/components/inputs/app_text_field.dart';
 import '../../../../design_system/tokens/app_gradients.dart';
+import '../../../../design_system/tokens/app_icon_size.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
@@ -26,6 +28,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // RC-03 Sprint 2: flag local, não `AuthStatus` compartilhado - mesmo
+  // padrão já usado por `_isResending` em `email_verification_page.dart`.
+  // `AuthStatus.AuthLoading` é único para todos os provedores; se o
+  // spinner do Google também reagisse a ele, tocar em "Entrar" faria o
+  // botão do Google (nunca tocado) mostrar spinner também - confirmado
+  // como regressão real ao rodar a suíte existente, não só uma hipótese.
+  bool _isGoogleLoading = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -41,6 +51,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
+  }
+
+  Future<void> _submitGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      await ref.read(authControllerProvider.notifier).signInWithGoogle();
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
   }
 
   @override
@@ -71,7 +90,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             // neutro. `BoxFit.contain` preserva a proporção original.
             child: Center(
               child: SizedBox(
-                height: 48,
+                height: AppIconSize.xl,
                 child: SvgPicture.asset(
                   'assets/borah/logos/borah_logo_white.svg',
                   semanticsLabel: 'BORAH',
@@ -107,6 +126,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         label: 'Entrar',
                         isLoading: isLoading,
                         onPressed: _submit,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text('ou', style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: AppSpacing.lg),
+                      // RC-03 Sprint 2 (F02): backend já pronto desde a
+                      // RC-02D (`AuthController.signInWithGoogle()`) - só
+                      // faltava o botão. Spinner controlado por
+                      // `_isGoogleLoading` (local), não pelo `isLoading`
+                      // compartilhado do e-mail/senha - ver comentário no
+                      // campo acima.
+                      AppOutlinedButton(
+                        label: 'Continuar com Google',
+                        isLoading: _isGoogleLoading,
+                        onPressed: _submitGoogle,
                       ),
                       AppTextButton(
                         label: 'Esqueci minha senha',

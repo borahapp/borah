@@ -158,6 +158,33 @@ void main() {
     expect(find.text('Login Page'), findsOneWidget);
   });
 
+  testWidgets(
+    'seta de voltar do AppTopBar também navega para a tela de Login',
+    (tester) async {
+      // RC-03 Sprint 2: esta tela só é alcançada via `context.go()`
+      // (nunca `push()`), então `Navigator.canPop()` é sempre `false` -
+      // sem `leading` explícito no `AppTopBar`, nenhuma seta apareceria.
+      // Este teste existe para travar esse comportamento.
+      await tester.pumpWidget(
+        _wrap(
+          repository,
+          initial: const EmailVerificationPending('ana@borah.com'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(AppBar, 'Confirmação de e-mail'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('Voltar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Login Page'), findsOneWidget);
+    },
+  );
+
   group('responsividade', () {
     for (final size in [
       const Size(320, 640),

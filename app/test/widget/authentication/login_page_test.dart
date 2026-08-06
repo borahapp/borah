@@ -124,6 +124,38 @@ void main() {
     expect(find.text('Credenciais inválidas.'), findsOneWidget);
   });
 
+  testWidgets('"Continuar com Google" chama signInWithGoogle no repositório', (
+    tester,
+  ) async {
+    when(() => repository.signInWithGoogle()).thenAnswer((_) async {});
+
+    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Continuar com Google'), findsOneWidget);
+
+    await tester.tap(find.text('Continuar com Google'));
+    await tester.pumpAndSettle();
+
+    verify(() => repository.signInWithGoogle()).called(1);
+  });
+
+  testWidgets('erro no login com Google exibe snackbar com a mensagem', (
+    tester,
+  ) async {
+    when(
+      () => repository.signInWithGoogle(),
+    ).thenThrow(const AuthRepositoryException('Login com Google cancelado.'));
+
+    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continuar com Google'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Login com Google cancelado.'), findsOneWidget);
+  });
+
   testWidgets('"Criar conta" navega para a tela de cadastro', (tester) async {
     await tester.pumpWidget(_wrap(repository));
     await tester.pumpAndSettle();
