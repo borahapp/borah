@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
+import '../../../../design_system/components/cards/group_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
@@ -13,6 +14,7 @@ import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/groups_list_controller.dart';
+import '../../domain/event_summary.dart';
 import '../../domain/group.dart';
 import '../states/groups_list_status.dart';
 
@@ -133,15 +135,30 @@ class _GroupsList extends StatelessWidget {
         final group = groups[index];
         return AppStaggeredListItem(
           index: index,
-          child: ListTile(
-            title: Text(group.name),
-            subtitle: group.description != null
-                ? Text(group.description!)
-                : null,
+          child: GroupCard(
+            name: group.name,
+            // `memberCount` só vem `null` se a linha não tiver passado
+            // pelo embed de `listMine()` (não deveria acontecer aqui,
+            // única chamadora desta tela) - `1` é o mínimo real de um
+            // grupo (o dono), nunca um valor inventado.
+            memberCount: group.memberCount ?? 1,
+            photoUrl: group.photoUrl,
+            nextEventLabel: _nextEventLabel(group.nextEvent),
             onTap: () => context.push('/groups/${group.id}'),
           ),
         );
       },
     );
+  }
+
+  /// Formatação de data pertence à apresentação, não ao domínio
+  /// (`Group.nextEvent` é um `EventSummary?` cru - decisão explícita do
+  /// usuário, RC-03 Sprint 3).
+  String? _nextEventLabel(EventSummary? nextEvent) {
+    if (nextEvent == null) return null;
+    final date = nextEvent.scheduledAt;
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return 'Próximo rolê: $day/$month';
   }
 }

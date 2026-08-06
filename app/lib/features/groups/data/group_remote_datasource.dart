@@ -19,6 +19,7 @@ class GroupRemoteDatasource {
   static const _groupsTable = 'groups';
   static const _membersTable = 'group_members';
   static const _profilesTable = 'profiles';
+  static const _eventsTable = 'events';
 
   Future<Map<String, dynamic>> createGroup({
     required String name,
@@ -39,11 +40,46 @@ class GroupRemoteDatasource {
   /// GROUP-02B.0: `SELECT` direto, sem RPC - a policy `groups_select_members`
   /// (GROUP-01) já restringe as linhas retornadas aos grupos do usuário
   /// autenticado, então nenhum filtro adicional é necessário aqui.
+  ///
+  /// Sprint 3 (F46, `RC03_IMPLEMENTATION_PLAN.md`): `group_members(count)`
+  /// é um embed de agregação do PostgREST - `group_members.group_id` é FK
+  /// real de `groups.id`, então a contagem de integrantes vem nesta mesma
+  /// consulta, sem migration nem N+1. Retorna `group_members: [{count: N}]`
+  /// por linha (formato padrão do PostgREST para embed de `count`).
+  ///
+  /// Sem `description` (auditoria pós-Sprint 3): `GroupCard` não tem
+  /// slot para descrição (`RC03_DESIGN_GAP.md §1.3` nunca previu isso
+  /// aqui) e `groups_list_page.dart` é a única chamadora - buscar essa
+  /// coluna seria over-fetching sem consumidor. `fetchGroupById`/
+  /// `updateGroup` abaixo continuam selecionando `description` porque
+  /// `group_detail_page.dart`/`edit_group_page.dart` de fato a exibem.
   Future<List<Map<String, dynamic>>> listMine() async {
     final rows = await _client
         .from(_groupsTable)
-        .select('id,name,description,photo_url,invite_code')
+        .select('id,name,photo_url,invite_code,group_members(count)')
         .order('last_activity_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// Sprint 3 (F46): próximo rolê agendado de cada grupo em [groupIds],
+  /// para a prévia do `GroupCard`. 1 consulta em lote (não N+1) - mesmo
+  /// padrão de composição já usado por `fetchProfilesByIds` abaixo
+  /// (consulta direta a uma tabela de outra feature, sem view/RPC nova).
+  /// Mesma definição de "próximo" já usada por `Event.isUpcoming`
+  /// (`status == 'scheduled' && scheduledAt.isAfter(now)`). Ordenado
+  /// ascendente por `scheduled_at`: o chamador pode ficar só com a
+  /// primeira ocorrência de cada `group_id` para obter o mais próximo.
+  Future<List<Map<String, dynamic>>> fetchNextEvents(
+    List<String> groupIds,
+  ) async {
+    if (groupIds.isEmpty) return [];
+    final rows = await _client
+        .from(_eventsTable)
+        .select('id,group_id,scheduled_at')
+        .inFilter('group_id', groupIds)
+        .eq('status', 'scheduled')
+        .gt('scheduled_at', DateTime.now().toIso8601String())
+        .order('scheduled_at');
     return List<Map<String, dynamic>>.from(rows);
   }
 

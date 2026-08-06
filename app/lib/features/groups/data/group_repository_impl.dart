@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../../../core/network/supabase_client_provider.dart';
+import '../domain/event_summary.dart';
 import '../domain/group.dart';
 import '../domain/group_details.dart';
 import '../domain/group_member.dart';
@@ -33,7 +34,31 @@ class GroupRepositoryImpl implements GroupRepository {
   Future<List<Group>> listMine() {
     return _guard(() async {
       final rows = await _datasource.listMine();
-      return rows.map(_mapRow).toList();
+      final groupIds = rows.map((row) => row['id'] as String).toList();
+      final eventRows = await _datasource.fetchNextEvents(groupIds);
+
+      // Sprint 3 (F46): `eventRows` já vem ordenado ascendente por
+      // `scheduled_at` (ver `fetchNextEvents`) - `putIfAbsent` mantém só
+      // a primeira ocorrência de cada `group_id`, ou seja, a mais próxima.
+      final nextEventByGroupId = <String, EventSummary>{};
+      for (final eventRow in eventRows) {
+        nextEventByGroupId.putIfAbsent(
+          eventRow['group_id'] as String,
+          () => EventSummary(
+            id: eventRow['id'] as String,
+            scheduledAt: DateTime.parse(eventRow['scheduled_at'] as String),
+          ),
+        );
+      }
+
+      return rows
+          .map(
+            (row) => _mapRow(
+              row,
+              nextEvent: nextEventByGroupId[row['id'] as String],
+            ),
+          )
+          .toList();
     });
   }
 
@@ -104,13 +129,25 @@ class GroupRepositoryImpl implements GroupRepository {
     return _guard(() => _datasource.removeMember(memberId));
   }
 
-  Group _mapRow(Map<String, dynamic> row) {
+  /// [nextEvent] só é conhecido por `listMine()` (única chamadora que
+  /// busca `fetchNextEvents` em lote) - os demais métodos usam o valor
+  /// padrão `null`. `group_members` só existe na linha quando o `select`
+  /// pediu o embed (hoje, só `listMine()` pede); ausente nos outros,
+  /// `memberCount` fica `null` para eles.
+  Group _mapRow(Map<String, dynamic> row, {EventSummary? nextEvent}) {
+    final memberRows = row['group_members'] as List?;
+    final memberCount = memberRows != null && memberRows.isNotEmpty
+        ? memberRows.first['count'] as int
+        : null;
+
     return Group(
       id: row['id'] as String,
       name: row['name'] as String,
       description: row['description'] as String?,
       photoUrl: row['photo_url'] as String?,
       inviteCode: row['invite_code'] as String,
+      memberCount: memberCount,
+      nextEvent: nextEvent,
     );
   }
 
