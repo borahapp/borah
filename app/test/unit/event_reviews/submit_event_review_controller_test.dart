@@ -323,5 +323,51 @@ void main() {
         ).called(1);
       },
     );
+
+    test(
+      'falha ao remover a foto não derruba o envio - salva com aviso',
+      () async {
+        when(
+          () => repository.update(
+            reviewId: 'r-1',
+            foodScore: 5,
+            serviceScore: 4,
+            ambienceScore: 5,
+            costBenefitScore: 4,
+            overallScore: 5,
+            comment: null,
+          ),
+        ).thenAnswer((_) async => _review(photoPath: 'r-1/old.jpg'));
+        when(
+          () =>
+              repository.removePhoto(reviewId: 'r-1', photoPath: 'r-1/old.jpg'),
+        ).thenThrow(const EventReviewRepositoryException('Falha de rede.'));
+
+        await container
+            .read(submitEventReviewControllerProvider.notifier)
+            .save(
+              eventId: 'e-1',
+              existingReviewId: 'r-1',
+              foodScore: 5,
+              serviceScore: 4,
+              ambienceScore: 5,
+              costBenefitScore: 4,
+              overallScore: 5,
+              removePhoto: true,
+              previousPhotoPath: 'r-1/old.jpg',
+            );
+
+        final status = container.read(submitEventReviewControllerProvider);
+        expect(status, isA<SubmitEventReviewSaveSuccess>());
+        expect(
+          (status as SubmitEventReviewSaveSuccess).photoWarning,
+          'Avaliação salva, mas não foi possível remover a foto.',
+        );
+        // A avaliação salva continua sendo a retornada por `update()`
+        // (com `photoPath` antigo ainda presente) - a falha em
+        // `removePhoto()` não é aplicada localmente ao resultado.
+        expect(status.review.photoPath, 'r-1/old.jpg');
+      },
+    );
   });
 }
