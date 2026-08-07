@@ -243,6 +243,91 @@ void main() {
     expect((status as FavoritesLoaded).result.items.map((r) => r.id), ['r-1']);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(
+      () => repository.listForUser(
+        'user-1',
+        query: null,
+        city: null,
+        category: null,
+        sortBy: FavoriteSortBy.date,
+        page: 1,
+        limit: 20,
+      ),
+    ).thenAnswer(
+      (_) async => PagedResult(
+        items: [_restaurant(id: 'r-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listForUser(
+        'user-1',
+        query: null,
+        city: null,
+        category: null,
+        sortBy: FavoriteSortBy.date,
+        page: 2,
+        limit: 20,
+      ),
+    ).thenThrow(const FavoriteRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(favoritesControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(favoritesControllerProvider) as FavoritesLoaded)
+          .result
+          .items
+          .map((r) => r.id),
+      ['r-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(
+      () => repository.listForUser(
+        'user-1',
+        query: null,
+        city: null,
+        category: null,
+        sortBy: FavoriteSortBy.date,
+        page: 2,
+        limit: 20,
+      ),
+    ).thenAnswer(
+      (_) async => PagedResult(
+        items: [_restaurant(id: 'r-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(favoritesControllerProvider);
+    expect(finalStatus, isA<FavoritesLoaded>());
+    expect((finalStatus as FavoritesLoaded).result.items.map((r) => r.id), [
+      'r-1',
+      'r-2',
+    ]);
+    verifyNever(
+      () => repository.listForUser(
+        'user-1',
+        query: null,
+        city: null,
+        category: null,
+        sortBy: FavoriteSortBy.date,
+        page: 3,
+        limit: 20,
+      ),
+    );
+  });
+
   test(
     'concorrência entre loadNextPage e refresh: a resposta desatualizada '
     'do loadNextPage não sobrescreve o resultado mais recente do refresh',

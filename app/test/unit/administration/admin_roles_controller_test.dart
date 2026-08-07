@@ -190,6 +190,65 @@ void main() {
     ]);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => roleRepository.listAdmins(page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [
+          const AdminRoleEntry(
+            userId: 'user-1',
+            role: 'moderator',
+            fullName: 'Ana',
+          ),
+        ],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => roleRepository.listAdmins(page: 2, limit: 20),
+    ).thenThrow(const AdminRoleRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(adminRolesControllerProvider.notifier);
+    await notifier.load();
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(adminRolesControllerProvider) as AdminRolesLoaded)
+          .result
+          .items
+          .map((e) => e.userId),
+      ['user-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => roleRepository.listAdmins(page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [
+          const AdminRoleEntry(
+            userId: 'user-2',
+            role: 'admin',
+            fullName: 'Bia',
+          ),
+        ],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(adminRolesControllerProvider);
+    expect(finalStatus, isA<AdminRolesLoaded>());
+    expect(
+      (finalStatus as AdminRolesLoaded).result.items.map((e) => e.userId),
+      ['user-1', 'user-2'],
+    );
+    verifyNever(() => roleRepository.listAdmins(page: 3, limit: 20));
+  });
+
   test('concorrência entre loadNextPage e grantRole: a resposta '
       'desatualizada do loadNextPage não sobrescreve o resultado mais '
       'recente da mutação', () async {

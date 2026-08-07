@@ -74,11 +74,20 @@ class AdminUsersController extends Notifier<AdminUsersStatus> {
       if (requestId != _requestId) return;
       // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
       // a lista já carregada visível em vez de virar tela cheia de erro.
-      if (previousItems.isNotEmpty) return;
+      // Reverte `_page`: a página que falhou nunca chegou a ser aplicada,
+      // então a próxima tentativa deve rebuscá-la, em vez de pular para a
+      // seguinte.
+      if (previousItems.isNotEmpty) {
+        _page--;
+        return;
+      }
       state = AdminUsersError(e.message);
     } catch (_) {
       if (requestId != _requestId) return;
-      if (previousItems.isNotEmpty) return;
+      if (previousItems.isNotEmpty) {
+        _page--;
+        return;
+      }
       state = const AdminUsersError('Não foi possível carregar os usuários.');
     }
   }

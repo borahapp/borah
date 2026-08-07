@@ -145,6 +145,53 @@ void main() {
     ]);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => repository.listAll(query: null, page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_profile(id: 'user-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listAll(query: null, page: 2, limit: 20),
+    ).thenThrow(const UserProfileRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(adminUsersControllerProvider.notifier);
+    await notifier.load();
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(adminUsersControllerProvider) as AdminUsersLoaded)
+          .result
+          .items
+          .map((u) => u.id),
+      ['user-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => repository.listAll(query: null, page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_profile(id: 'user-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(adminUsersControllerProvider);
+    expect(finalStatus, isA<AdminUsersLoaded>());
+    expect((finalStatus as AdminUsersLoaded).result.items.map((u) => u.id), [
+      'user-1',
+      'user-2',
+    ]);
+    verifyNever(() => repository.listAll(query: null, page: 3, limit: 20));
+  });
+
   test('concorrência entre loadNextPage e um novo load (busca aplicada): a '
       'resposta desatualizada do loadNextPage não sobrescreve o resultado '
       'mais recente', () async {

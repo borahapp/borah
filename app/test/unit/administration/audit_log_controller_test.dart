@@ -129,6 +129,53 @@ void main() {
     expect((status as AuditLogLoaded).result.items.map((e) => e.id), ['log-1']);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => repository.listRecent(page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_entry(id: 'log-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listRecent(page: 2, limit: 20),
+    ).thenThrow(const AuditLogRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(auditLogControllerProvider.notifier);
+    await notifier.load();
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(auditLogControllerProvider) as AuditLogLoaded)
+          .result
+          .items
+          .map((e) => e.id),
+      ['log-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => repository.listRecent(page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_entry(id: 'log-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(auditLogControllerProvider);
+    expect(finalStatus, isA<AuditLogLoaded>());
+    expect((finalStatus as AuditLogLoaded).result.items.map((e) => e.id), [
+      'log-1',
+      'log-2',
+    ]);
+    verifyNever(() => repository.listRecent(page: 3, limit: 20));
+  });
+
   test('concorrência entre loadNextPage e um novo load: a resposta '
       'desatualizada do loadNextPage não sobrescreve o resultado mais '
       'recente', () async {

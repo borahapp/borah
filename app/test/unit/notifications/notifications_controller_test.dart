@@ -188,6 +188,53 @@ void main() {
     ]);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => repository.listForUser('user-1', page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_notification(id: 'n-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listForUser('user-1', page: 2, limit: 20),
+    ).thenThrow(const NotificationRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(notificationsControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(notificationsControllerProvider) as NotificationsLoaded)
+          .result
+          .items
+          .map((n) => n.id),
+      ['n-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => repository.listForUser('user-1', page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_notification(id: 'n-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(notificationsControllerProvider);
+    expect(finalStatus, isA<NotificationsLoaded>());
+    expect((finalStatus as NotificationsLoaded).result.items.map((n) => n.id), [
+      'n-1',
+      'n-2',
+    ]);
+    verifyNever(() => repository.listForUser('user-1', page: 3, limit: 20));
+  });
+
   test('concorrência entre loadNextPage e markAsRead: a resposta '
       'desatualizada do loadNextPage não sobrescreve o resultado mais '
       'recente da mutação', () async {

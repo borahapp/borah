@@ -165,6 +165,53 @@ void main() {
     ]);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => commentRepository.listAllReports(page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_report(id: 'rep-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => commentRepository.listAllReports(page: 2, limit: 20),
+    ).thenThrow(const CommentRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(moderationControllerProvider.notifier);
+    await notifier.load();
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(moderationControllerProvider) as ModerationLoaded)
+          .result
+          .items
+          .map((r) => r.id),
+      ['rep-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => commentRepository.listAllReports(page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_report(id: 'rep-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(moderationControllerProvider);
+    expect(finalStatus, isA<ModerationLoaded>());
+    expect((finalStatus as ModerationLoaded).result.items.map((r) => r.id), [
+      'rep-1',
+      'rep-2',
+    ]);
+    verifyNever(() => commentRepository.listAllReports(page: 3, limit: 20));
+  });
+
   test('concorrência entre loadNextPage e hideComment: a resposta '
       'desatualizada do loadNextPage não sobrescreve o resultado mais '
       'recente da mutação', () async {

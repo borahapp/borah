@@ -93,12 +93,20 @@ class FeedController extends Notifier<FeedStatus> {
       // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
       // a lista já carregada visível em vez de substituí-la por um estado
       // de erro de tela cheia - só a falha do carregamento inicial (sem
-      // nenhum item ainda) vira FeedError.
-      if (previousItems.isNotEmpty) return;
+      // nenhum item ainda) vira FeedError. Reverte `_page`: a página que
+      // falhou nunca chegou a ser aplicada, então a próxima tentativa deve
+      // rebuscá-la, em vez de pular para a seguinte.
+      if (previousItems.isNotEmpty) {
+        _page--;
+        return;
+      }
       state = FeedError(e.message);
     } catch (_) {
       if (requestId != _requestId) return;
-      if (previousItems.isNotEmpty) return;
+      if (previousItems.isNotEmpty) {
+        _page--;
+        return;
+      }
       state = const FeedError('Não foi possível carregar o feed.');
     }
   }

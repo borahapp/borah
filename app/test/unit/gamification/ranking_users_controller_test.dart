@@ -174,6 +174,55 @@ void main() {
     );
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => repository.listGlobalRanking(page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_entry(userId: 'user-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listGlobalRanking(page: 2, limit: 20),
+    ).thenThrow(const GamificationRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(rankingUsersControllerProvider.notifier);
+    await notifier.load('user-1', RankingUsersType.global);
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(rankingUsersControllerProvider) as RankingUsersLoaded)
+          .result
+          .items
+          .map((e) => e.progress.userId),
+      ['user-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => repository.listGlobalRanking(page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_entry(userId: 'user-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(rankingUsersControllerProvider);
+    expect(finalStatus, isA<RankingUsersLoaded>());
+    expect(
+      (finalStatus as RankingUsersLoaded).result.items.map(
+        (e) => e.progress.userId,
+      ),
+      ['user-1', 'user-2'],
+    );
+    verifyNever(() => repository.listGlobalRanking(page: 3, limit: 20));
+  });
+
   test('concorrência entre loadNextPage e um novo load: a resposta '
       'desatualizada do loadNextPage não sobrescreve o resultado mais '
       'recente', () async {

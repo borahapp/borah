@@ -154,6 +154,52 @@ void main() {
     expect((state as FeedLoaded).result.items.map((r) => r.id), ['rv-1']);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(() => repository.listForUser('user-1', page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_review(id: 'rv-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listForUser('user-1', page: 2, limit: 20),
+    ).thenThrow(const FeedRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(feedControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(feedControllerProvider) as FeedLoaded).result.items.map(
+        (r) => r.id,
+      ),
+      ['rv-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(() => repository.listForUser('user-1', page: 2, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_review(id: 'rv-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalState = container.read(feedControllerProvider);
+    expect(finalState, isA<FeedLoaded>());
+    expect((finalState as FeedLoaded).result.items.map((r) => r.id), [
+      'rv-1',
+      'rv-2',
+    ]);
+    verifyNever(() => repository.listForUser('user-1', page: 3, limit: 20));
+  });
+
   test('falha no carregamento inicial (sem itens ainda) continua virando '
       'FeedError', () async {
     when(

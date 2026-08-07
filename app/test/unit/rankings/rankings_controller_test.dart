@@ -176,6 +176,63 @@ void main() {
     expect((status as RankingsLoaded).result.items.map((r) => r.id), ['r-1']);
   });
 
+  test('após falha em loadNextPage, uma nova tentativa rebusca a MESMA '
+      'página em vez de pular para a seguinte', () async {
+    when(
+      () =>
+          repository.listRanked(city: null, category: null, page: 1, limit: 20),
+    ).thenAnswer(
+      (_) async => PagedResult(
+        items: [_restaurant(id: 'r-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () =>
+          repository.listRanked(city: null, category: null, page: 2, limit: 20),
+    ).thenThrow(const RankingRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(rankingsControllerProvider.notifier);
+    await notifier.load();
+    await notifier.loadNextPage(); // página 2 falha
+
+    expect(
+      (container.read(rankingsControllerProvider) as RankingsLoaded)
+          .result
+          .items
+          .map((r) => r.id),
+      ['r-1'],
+    );
+
+    // A segunda tentativa deve rebuscar a página 2 (a que falhou), nunca
+    // pular direto para a 3.
+    when(
+      () =>
+          repository.listRanked(city: null, category: null, page: 2, limit: 20),
+    ).thenAnswer(
+      (_) async => PagedResult(
+        items: [_restaurant(id: 'r-2')],
+        page: 2,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    await notifier.loadNextPage();
+
+    final finalStatus = container.read(rankingsControllerProvider);
+    expect(finalStatus, isA<RankingsLoaded>());
+    expect((finalStatus as RankingsLoaded).result.items.map((r) => r.id), [
+      'r-1',
+      'r-2',
+    ]);
+    verifyNever(
+      () =>
+          repository.listRanked(city: null, category: null, page: 3, limit: 20),
+    );
+  });
+
   test('concorrência entre loadNextPage e um novo load (filtro aplicado): a '
       'resposta desatualizada do loadNextPage não sobrescreve o resultado '
       'mais recente', () async {
