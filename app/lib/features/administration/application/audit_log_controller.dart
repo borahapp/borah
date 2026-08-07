@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../data/audit_log_repository_impl.dart';
+import '../domain/audit_log_entry.dart';
 import '../domain/audit_log_repository.dart';
 import '../presentation/states/audit_log_status.dart';
 
@@ -17,7 +19,7 @@ class AuditLogController extends Notifier<AuditLogStatus> {
 
   Future<void> load() {
     _page = 1;
-    return _run();
+    return _run(const AuditLogLoading());
   }
 
   Future<void> loadNextPage() {
@@ -26,16 +28,27 @@ class AuditLogController extends Notifier<AuditLogStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
-  Future<void> _run() async {
-    state = const AuditLogLoading();
+  Future<void> _run(
+    AuditLogStatus loadingState, {
+    List<AuditLogEntry> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = await _repository.listRecent(page: _page, limit: _limit);
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const AuditLogEmpty()
-          : AuditLogLoaded(result);
+          : AuditLogLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on AuditLogRepositoryException catch (e) {
       state = AuditLogError(e.message);
     } catch (_) {

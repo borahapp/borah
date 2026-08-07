@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../data/review_repository_impl.dart';
+import '../domain/review.dart';
 import '../domain/review_repository.dart';
 import '../presentation/states/reviews_status.dart';
 
@@ -32,10 +34,13 @@ class ReviewsController extends Notifier<ReviewsStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current);
+    return _run(current, previousItems: current.result.items);
   }
 
-  Future<void> _run(ReviewsStatus loadingState) async {
+  Future<void> _run(
+    ReviewsStatus loadingState, {
+    List<Review> previousItems = const [],
+  }) async {
     state = loadingState;
     try {
       final result = await _repository.listByRestaurant(
@@ -43,9 +48,17 @@ class ReviewsController extends Notifier<ReviewsStatus> {
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty && _page == 1
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const ReviewsEmpty()
-          : ReviewsLoaded(result);
+          : ReviewsLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on ReviewRepositoryException catch (e) {
       state = ReviewsError(e.message);
     } catch (_) {

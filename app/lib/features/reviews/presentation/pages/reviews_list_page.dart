@@ -24,6 +24,9 @@ class ReviewsListPage extends ConsumerStatefulWidget {
 }
 
 class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +35,29 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
           .read(reviewsControllerProvider.notifier)
           .loadForRestaurant(widget.restaurantId);
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(reviewsControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   @override
@@ -67,6 +93,7 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
           ),
           ReviewsLoaded(:final result) => ListView.builder(
             key: const ValueKey('loaded'),
+            controller: _scrollController,
             itemCount: result.items.length,
             itemBuilder: (context, index) {
               final review = result.items[index];

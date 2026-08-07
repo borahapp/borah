@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../data/admin_role_repository_impl.dart';
 import '../data/audit_log_repository_impl.dart';
 import '../domain/admin_role_repository.dart';
@@ -23,7 +24,7 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
 
   Future<void> load() {
     _page = 1;
-    return _run();
+    return _run(const AdminRolesLoading());
   }
 
   Future<void> loadNextPage() {
@@ -32,7 +33,7 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
   Future<void> grantRole(
@@ -71,7 +72,10 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
     }
     try {
       await action();
-      await _run();
+      // Volta para a página 1: mesma simplificação de
+      // `AdminRestaurantsController.updateStatus`.
+      _page = 1;
+      await _run(const AdminRolesLoading());
     } on AdminRoleRepositoryException catch (e) {
       state = AdminRolesError(e.message);
     } catch (_) {
@@ -79,13 +83,24 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
     }
   }
 
-  Future<void> _run() async {
-    state = const AdminRolesLoading();
+  Future<void> _run(
+    AdminRolesStatus loadingState, {
+    List<AdminRoleEntry> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = await _repository.listAdmins(page: _page, limit: _limit);
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const AdminRolesEmpty()
-          : AdminRolesLoaded(result);
+          : AdminRolesLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on AdminRoleRepositoryException catch (e) {
       state = AdminRolesError(e.message);
     } catch (_) {

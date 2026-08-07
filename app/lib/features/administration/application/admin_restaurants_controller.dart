@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../../restaurants/data/restaurant_repository_impl.dart';
+import '../../restaurants/domain/restaurant.dart';
 import '../../restaurants/domain/restaurant_repository.dart';
 import '../data/audit_log_repository_impl.dart';
 import '../domain/audit_log_repository.dart';
@@ -25,7 +27,7 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
   Future<void> load({String? query}) {
     _query = query;
     _page = 1;
-    return _run();
+    return _run(const AdminRestaurantsLoading());
   }
 
   Future<void> loadNextPage() {
@@ -34,7 +36,7 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
   Future<void> updateStatus(
@@ -57,7 +59,12 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
         entityId: restaurantId,
         metadata: {'status': status},
       );
-      await _run();
+      // Volta para a página 1: mesma simplificação de
+      // `NotificationsController.markAsRead` - re-buscar cada página já
+      // acumulada individualmente para preservar 1 item editado não vale
+      // a complexidade.
+      _page = 1;
+      await _run(const AdminRestaurantsLoading());
     } on RestaurantRepositoryException catch (e) {
       state = AdminRestaurantsError(e.message);
     } catch (_) {
@@ -67,17 +74,28 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
     }
   }
 
-  Future<void> _run() async {
-    state = const AdminRestaurantsLoading();
+  Future<void> _run(
+    AdminRestaurantsStatus loadingState, {
+    List<Restaurant> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = await _restaurantRepository.listAllForAdmin(
         query: _query,
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const AdminRestaurantsEmpty()
-          : AdminRestaurantsLoaded(result);
+          : AdminRestaurantsLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on RestaurantRepositoryException catch (e) {
       state = AdminRestaurantsError(e.message);
     } catch (_) {

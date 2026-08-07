@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../../users/data/user_profile_repository_impl.dart';
+import '../../users/domain/user_profile.dart';
 import '../../users/domain/user_profile_repository.dart';
 import '../presentation/states/admin_users_status.dart';
 
@@ -21,7 +23,7 @@ class AdminUsersController extends Notifier<AdminUsersStatus> {
   Future<void> load({String? query}) {
     _query = query;
     _page = 1;
-    return _run();
+    return _run(const AdminUsersLoading());
   }
 
   Future<void> loadNextPage() {
@@ -30,20 +32,31 @@ class AdminUsersController extends Notifier<AdminUsersStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
-  Future<void> _run() async {
-    state = const AdminUsersLoading();
+  Future<void> _run(
+    AdminUsersStatus loadingState, {
+    List<UserProfile> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = await _repository.listAll(
         query: _query,
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const AdminUsersEmpty()
-          : AdminUsersLoaded(result);
+          : AdminUsersLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on UserProfileRepositoryException catch (e) {
       state = AdminUsersError(e.message);
     } catch (_) {

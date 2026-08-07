@@ -25,6 +25,9 @@ class FollowListPage extends ConsumerStatefulWidget {
 }
 
 class _FollowListPageState extends ConsumerState<FollowListPage> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +36,29 @@ class _FollowListPageState extends ConsumerState<FollowListPage> {
           .read(followListControllerProvider.notifier)
           .load(widget.userId, widget.type);
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(followListControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   @override
@@ -63,6 +89,7 @@ class _FollowListPageState extends ConsumerState<FollowListPage> {
           ),
           FollowListLoaded(:final result) => ListView.builder(
             key: const ValueKey('loaded'),
+            controller: _scrollController,
             itemCount: result.items.length,
             itemBuilder: (context, index) {
               final profile = result.items[index];

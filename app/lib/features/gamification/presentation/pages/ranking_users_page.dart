@@ -20,17 +20,43 @@ class RankingUsersPage extends ConsumerStatefulWidget {
 
 class _RankingUsersPageState extends ConsumerState<RankingUsersPage> {
   RankingUsersType _type = RankingUsersType.global;
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
   }
 
   void _load() {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     ref.read(rankingUsersControllerProvider.notifier).load(userId, _type);
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref
+        .read(rankingUsersControllerProvider.notifier)
+        .loadNextPage()
+        .whenComplete(() {
+          if (mounted) _isLoadingMore = false;
+        });
   }
 
   @override
@@ -73,10 +99,11 @@ class _RankingUsersPageState extends ConsumerState<RankingUsersPage> {
                 message: 'Nenhum resultado ainda.',
               ),
               RankingUsersLoaded(:final result) => ListView.builder(
+                controller: _scrollController,
                 itemCount: result.items.length,
                 itemBuilder: (context, index) {
                   final entry = result.items[index];
-                  final position = (result.page - 1) * result.limit + index + 1;
+                  final position = index + 1;
                   return RankingCard(
                     position: position,
                     name: entry.fullName ?? '',

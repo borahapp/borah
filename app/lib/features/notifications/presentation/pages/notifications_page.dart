@@ -23,6 +23,9 @@ class NotificationsPage extends ConsumerStatefulWidget {
 }
 
 class _NotificationsPageState extends ConsumerState<NotificationsPage> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,10 +34,34 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       if (userId == null) return;
       ref.read(notificationsControllerProvider.notifier).loadForUser(userId);
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
   }
 
   void _markAllAsRead() {
     ref.read(notificationsControllerProvider.notifier).markAllAsRead();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref
+        .read(notificationsControllerProvider.notifier)
+        .loadNextPage()
+        .whenComplete(() {
+          if (mounted) _isLoadingMore = false;
+        });
   }
 
   @override
@@ -78,6 +105,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           ),
           NotificationsLoaded(:final result) => ListView.builder(
             key: const ValueKey('loaded'),
+            controller: _scrollController,
             itemCount: result.items.length,
             itemBuilder: (context, index) {
               final notification = result.items[index];

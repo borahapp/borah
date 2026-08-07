@@ -28,7 +28,9 @@ class AdminRolesPage extends ConsumerStatefulWidget {
 
 class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
   final _userIdController = TextEditingController();
+  final _scrollController = ScrollController();
   String _selectedRole = _availableRoles.first;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -36,12 +38,30 @@ class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(adminRolesControllerProvider.notifier).load();
     });
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _userIdController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(adminRolesControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   void _grant() {
@@ -113,6 +133,7 @@ class _AdminRolesPageState extends ConsumerState<AdminRolesPage> {
                 ),
                 AdminRolesSaving(:final result) ||
                 AdminRolesLoaded(:final result) => ListView.builder(
+                  controller: _scrollController,
                   itemCount: result.items.length,
                   itemBuilder: (context, index) {
                     final entry = result.items[index];

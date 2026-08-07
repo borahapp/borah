@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
+import '../../users/domain/user_profile.dart';
 import '../data/follower_repository_impl.dart';
 import '../domain/follower_repository.dart';
 import '../presentation/states/follow_list_status.dart';
@@ -23,7 +25,7 @@ class FollowListController extends Notifier<FollowListStatus> {
     _userId = userId;
     _type = type;
     _page = 1;
-    return _run();
+    return _run(const FollowListLoading());
   }
 
   Future<void> loadNextPage() {
@@ -34,11 +36,14 @@ class FollowListController extends Notifier<FollowListStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
-  Future<void> _run() async {
-    state = const FollowListLoading();
+  Future<void> _run(
+    FollowListStatus loadingState, {
+    List<UserProfile> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = _type == FollowListType.followers
           ? await _repository.listFollowers(
@@ -51,9 +56,17 @@ class FollowListController extends Notifier<FollowListStatus> {
               page: _page,
               limit: _limit,
             );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const FollowListEmpty()
-          : FollowListLoaded(result);
+          : FollowListLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on FollowerRepositoryException catch (e) {
       state = FollowListError(e.message);
     } catch (_) {

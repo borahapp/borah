@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../data/notification_repository_impl.dart';
+import '../domain/app_notification.dart';
 import '../domain/notification_repository.dart';
 import '../presentation/states/notifications_status.dart';
 
@@ -21,7 +23,7 @@ class NotificationsController extends Notifier<NotificationsStatus> {
   Future<void> loadForUser(String userId) {
     _userId = userId;
     _page = 1;
-    return _run();
+    return _run(const NotificationsLoading());
   }
 
   Future<void> loadNextPage() {
@@ -32,13 +34,18 @@ class NotificationsController extends Notifier<NotificationsStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
   Future<void> markAsRead(String id) async {
     try {
       await _repository.markAsRead(id);
-      await _run();
+      // Volta para a página 1: manter a lista acumulada e só trocar o
+      // status de leitura de 1 item exigiria re-buscar cada página já
+      // carregada individualmente - mesma simplificação já aplicada em
+      // `markAllAsRead`.
+      _page = 1;
+      await _run(const NotificationsLoading());
     } on NotificationRepositoryException catch (e) {
       state = NotificationsError(e.message);
     } catch (_) {
@@ -51,7 +58,7 @@ class NotificationsController extends Notifier<NotificationsStatus> {
     try {
       await _repository.markAllAsRead(_userId!);
       _page = 1;
-      await _run();
+      await _run(const NotificationsLoading());
     } on NotificationRepositoryException catch (e) {
       state = NotificationsError(e.message);
     } catch (_) {
@@ -61,18 +68,29 @@ class NotificationsController extends Notifier<NotificationsStatus> {
     }
   }
 
-  Future<void> _run() async {
+  Future<void> _run(
+    NotificationsStatus loadingState, {
+    List<AppNotification> previousItems = const [],
+  }) async {
     if (_userId == null) return;
-    state = const NotificationsLoading();
+    state = loadingState;
     try {
       final result = await _repository.listForUser(
         _userId!,
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const NotificationsEmpty()
-          : NotificationsLoaded(result);
+          : NotificationsLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on NotificationRepositoryException catch (e) {
       state = NotificationsError(e.message);
     } catch (_) {

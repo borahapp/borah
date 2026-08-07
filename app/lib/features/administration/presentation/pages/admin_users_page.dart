@@ -23,6 +23,8 @@ class AdminUsersPage extends ConsumerStatefulWidget {
 
 class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   final _queryController = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -30,12 +32,30 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(adminUsersControllerProvider.notifier).load();
     });
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _queryController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(adminUsersControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   void _search() {
@@ -74,6 +94,7 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                   message: 'Nenhum usuário encontrado.',
                 ),
                 AdminUsersLoaded(:final result) => ListView.builder(
+                  controller: _scrollController,
                   itemCount: result.items.length,
                   itemBuilder: (context, index) {
                     final profile = result.items[index];

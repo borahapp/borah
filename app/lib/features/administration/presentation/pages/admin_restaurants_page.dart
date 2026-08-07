@@ -27,6 +27,8 @@ class AdminRestaurantsPage extends ConsumerStatefulWidget {
 
 class _AdminRestaurantsPageState extends ConsumerState<AdminRestaurantsPage> {
   final _queryController = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -34,12 +36,31 @@ class _AdminRestaurantsPageState extends ConsumerState<AdminRestaurantsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(adminRestaurantsControllerProvider.notifier).load();
     });
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _queryController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref
+        .read(adminRestaurantsControllerProvider.notifier)
+        .loadNextPage()
+        .whenComplete(() {
+          if (mounted) _isLoadingMore = false;
+        });
   }
 
   void _search() {
@@ -89,6 +110,7 @@ class _AdminRestaurantsPageState extends ConsumerState<AdminRestaurantsPage> {
                 ),
                 AdminRestaurantsSaving(:final result) ||
                 AdminRestaurantsLoaded(:final result) => ListView.builder(
+                  controller: _scrollController,
                   itemCount: result.items.length,
                   itemBuilder: (context, index) {
                     final restaurant = result.items[index];

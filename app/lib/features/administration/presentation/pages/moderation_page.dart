@@ -23,12 +23,38 @@ class ModerationPage extends ConsumerStatefulWidget {
 }
 
 class _ModerationPageState extends ConsumerState<ModerationPage> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(moderationControllerProvider.notifier).load();
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(moderationControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   void _hideComment(String commentId) {
@@ -58,6 +84,7 @@ class _ModerationPageState extends ConsumerState<ModerationPage> {
           ),
           ModerationProcessing(:final result) ||
           ModerationLoaded(:final result) => ListView.builder(
+            controller: _scrollController,
             itemCount: result.items.length,
             itemBuilder: (context, index) {
               final report = result.items[index];

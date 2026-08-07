@@ -19,12 +19,38 @@ class AuditLogPage extends ConsumerStatefulWidget {
 }
 
 class _AuditLogPageState extends ConsumerState<AuditLogPage> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(auditLogControllerProvider.notifier).load();
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(auditLogControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   @override
@@ -44,6 +70,7 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
             message: 'Nenhum registro de auditoria ainda.',
           ),
           AuditLogLoaded(:final result) => ListView.builder(
+            controller: _scrollController,
             itemCount: result.items.length,
             itemBuilder: (context, index) {
               final entry = result.items[index];

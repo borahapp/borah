@@ -24,10 +24,22 @@ class FeedPage extends ConsumerStatefulWidget {
 }
 
 class _FeedPageState extends ConsumerState<FeedPage> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
   }
 
   void _load() {
@@ -38,6 +50,18 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   Future<void> _refresh() {
     return ref.read(feedControllerProvider.notifier).refresh();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(feedControllerProvider.notifier).loadNextPage().whenComplete(() {
+      if (mounted) _isLoadingMore = false;
+    });
   }
 
   @override
@@ -64,6 +88,13 @@ class _FeedPageState extends ConsumerState<FeedPage> {
             key: const ValueKey('loaded'),
             onRefresh: _refresh,
             child: ListView.builder(
+              controller: _scrollController,
+              // Sem isto, um `ScrollController` explícito desativa o
+              // scroll "sempre disponível" que `RefreshIndicator`
+              // precisa para funcionar em listas pequenas (que não
+              // preenchem a viewport) - regressão real encontrada por
+              // `feed_page_test.dart` ao conectar o scroll desta fase.
+              physics: const AlwaysScrollableScrollPhysics(),
               itemCount: result.items.length,
               itemBuilder: (context, index) {
                 final review = result.items[index];

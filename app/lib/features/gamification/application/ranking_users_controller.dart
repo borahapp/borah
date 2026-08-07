@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../data/gamification_repository_impl.dart';
 import '../domain/gamification_repository.dart';
+import '../domain/ranking_entry.dart';
 import '../presentation/states/ranking_users_status.dart';
 
 /// Ranking de Usuários (DV-10 §5): Global e Entre Amigos via um único
@@ -22,7 +24,7 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
     _userId = userId;
     _type = type;
     _page = 1;
-    return _run();
+    return _run(const RankingUsersLoading());
   }
 
   Future<void> loadNextPage() {
@@ -33,11 +35,14 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
-  Future<void> _run() async {
-    state = const RankingUsersLoading();
+  Future<void> _run(
+    RankingUsersStatus loadingState, {
+    List<RankingEntry> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = _type == RankingUsersType.global
           ? await _repository.listGlobalRanking(page: _page, limit: _limit)
@@ -46,9 +51,17 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
               page: _page,
               limit: _limit,
             );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const RankingUsersEmpty()
-          : RankingUsersLoaded(result);
+          : RankingUsersLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on GamificationRepositoryException catch (e) {
       state = RankingUsersError(e.message);
     } catch (_) {

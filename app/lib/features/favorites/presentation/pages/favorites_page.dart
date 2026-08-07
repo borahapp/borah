@@ -32,7 +32,9 @@ class FavoritesPage extends ConsumerStatefulWidget {
 class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   final _queryController = TextEditingController();
   final _cityController = TextEditingController();
+  final _scrollController = ScrollController();
   FavoriteSortBy _sortBy = FavoriteSortBy.date;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -42,13 +44,31 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       if (userId == null) return;
       ref.read(favoritesControllerProvider.notifier).loadForUser(userId);
     });
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _queryController.dispose();
     _cityController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(favoritesControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   void _applyFilters() {
@@ -140,6 +160,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                   key: const ValueKey('loaded'),
                   result: result,
                   onRefresh: _refresh,
+                  scrollController: _scrollController,
                 ),
               },
             ),
@@ -155,16 +176,23 @@ class _FavoritesList extends StatelessWidget {
     super.key,
     required this.result,
     required this.onRefresh,
+    required this.scrollController,
   });
 
   final PagedResult<Restaurant> result;
   final Future<void> Function() onRefresh;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.builder(
+        controller: scrollController,
+        // Sem isto, um `ScrollController` explícito desativa o scroll
+        // "sempre disponível" que `RefreshIndicator` precisa em listas
+        // pequenas (mesma regressão encontrada em `feed_page.dart`).
+        physics: const AlwaysScrollableScrollPhysics(),
         itemCount: result.items.length,
         itemBuilder: (context, index) {
           final restaurant = result.items[index];

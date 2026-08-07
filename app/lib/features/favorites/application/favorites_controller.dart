@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
+import '../../restaurants/domain/restaurant.dart';
 import '../data/favorite_repository_impl.dart';
 import '../domain/favorite_repository.dart';
 import '../domain/favorite_sort_by.dart';
@@ -48,7 +50,7 @@ class FavoritesController extends Notifier<FavoritesStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current);
+    return _run(current, previousItems: current.result.items);
   }
 
   /// Atualiza a lista já carregada sem esconder o resultado anterior
@@ -63,7 +65,10 @@ class FavoritesController extends Notifier<FavoritesStatus> {
     return _run(syncingState);
   }
 
-  Future<void> _run(FavoritesStatus loadingState) async {
+  Future<void> _run(
+    FavoritesStatus loadingState, {
+    List<Restaurant> previousItems = const [],
+  }) async {
     state = loadingState;
     try {
       final result = await _repository.listForUser(
@@ -75,9 +80,17 @@ class FavoritesController extends Notifier<FavoritesStatus> {
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const FavoritesEmpty()
-          : FavoritesLoaded(result);
+          : FavoritesLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on FavoriteRepositoryException catch (e) {
       state = FavoritesError(e.message);
     } catch (_) {

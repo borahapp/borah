@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
+import '../../restaurants/domain/restaurant.dart';
 import '../data/ranking_repository_impl.dart';
 import '../domain/ranking_repository.dart';
 import '../presentation/states/rankings_status.dart';
@@ -26,7 +28,7 @@ class RankingsController extends Notifier<RankingsStatus> {
     _city = city;
     _category = category;
     _page = 1;
-    return _run();
+    return _run(const RankingsLoading());
   }
 
   Future<void> loadNextPage() {
@@ -35,11 +37,14 @@ class RankingsController extends Notifier<RankingsStatus> {
       return Future.value();
     }
     _page++;
-    return _run();
+    return _run(current, previousItems: current.result.items);
   }
 
-  Future<void> _run() async {
-    state = const RankingsLoading();
+  Future<void> _run(
+    RankingsStatus loadingState, {
+    List<Restaurant> previousItems = const [],
+  }) async {
+    state = loadingState;
     try {
       final result = await _repository.listRanked(
         city: _city,
@@ -47,9 +52,17 @@ class RankingsController extends Notifier<RankingsStatus> {
         page: _page,
         limit: _limit,
       );
-      state = result.items.isEmpty
+      final items = [...previousItems, ...result.items];
+      state = items.isEmpty
           ? const RankingsEmpty()
-          : RankingsLoaded(result);
+          : RankingsLoaded(
+              PagedResult(
+                items: items,
+                page: result.page,
+                limit: result.limit,
+                hasNextPage: result.hasNextPage,
+              ),
+            );
     } on RankingRepositoryException catch (e) {
       state = RankingsError(e.message);
     } catch (_) {

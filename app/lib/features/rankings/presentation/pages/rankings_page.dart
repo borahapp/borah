@@ -28,6 +28,8 @@ class RankingsPage extends ConsumerStatefulWidget {
 class _RankingsPageState extends ConsumerState<RankingsPage> {
   final _cityController = TextEditingController();
   final _categoryController = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -35,13 +37,31 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(rankingsControllerProvider.notifier).load();
     });
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _cityController.dispose();
     _categoryController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref.read(rankingsControllerProvider.notifier).loadNextPage().whenComplete(
+      () {
+        if (mounted) _isLoadingMore = false;
+      },
+    );
   }
 
   void _applyFilters() {
@@ -97,11 +117,11 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
                 ),
                 RankingsLoaded(:final result) => ListView.builder(
                   key: const ValueKey('loaded'),
+                  controller: _scrollController,
                   itemCount: result.items.length,
                   itemBuilder: (context, index) {
                     final restaurant = result.items[index];
-                    final position =
-                        (result.page - 1) * result.limit + index + 1;
+                    final position = index + 1;
                     return AppStaggeredListItem(
                       index: index,
                       child: RankingCard(
