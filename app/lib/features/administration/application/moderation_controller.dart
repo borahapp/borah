@@ -24,11 +24,12 @@ class ModerationController extends Notifier<ModerationStatus> {
       ref.read(auditLogRepositoryProvider);
 
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> load() {
     _page = 1;
-    return _run(const ModerationLoading());
+    return _run(const ModerationLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -37,7 +38,11 @@ class ModerationController extends Notifier<ModerationStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
   Future<void> hideComment(String commentId, {required String actorId}) {
@@ -65,28 +70,38 @@ class ModerationController extends Notifier<ModerationStatus> {
   }
 
   Future<void> _mutate(Future<void> Function() action) async {
+    // Reivindica a geração antes de qualquer `await` (mesmo mecanismo de
+    // `AdminRestaurantsController.updateStatus`).
+    final requestId = ++_requestId;
     final current = state;
     if (current is ModerationLoaded) {
       state = ModerationProcessing(current.result);
     }
     try {
       await action();
+      if (requestId != _requestId) return;
       // Volta para a página 1: mesma simplificação de
       // `AdminRestaurantsController.updateStatus`.
       _page = 1;
-      await _run(const ModerationLoading());
+      await _run(const ModerationLoading(), requestId: requestId);
     } on CommentRepositoryException catch (e) {
+      if (requestId != _requestId) return;
       state = ModerationError(e.message);
     } on ReviewRepositoryException catch (e) {
+      if (requestId != _requestId) return;
       state = ModerationError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
       state = const ModerationError('Não foi possível concluir a operação.');
     }
   }
 
+  /// [requestId] coordena chamadas concorrentes (mesmo mecanismo de
+  /// `AdminRestaurantsController._run`).
   Future<void> _run(
     ModerationStatus loadingState, {
     List<CommentReport> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -94,6 +109,7 @@ class ModerationController extends Notifier<ModerationStatus> {
         page: _page,
         limit: _limit,
       );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const ModerationEmpty()
@@ -106,8 +122,14 @@ class ModerationController extends Notifier<ModerationStatus> {
               ),
             );
     } on CommentRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = ModerationError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const ModerationError('Não foi possível carregar as denúncias.');
     }
   }

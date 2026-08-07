@@ -24,6 +24,7 @@ class FavoritesController extends Notifier<FavoritesStatus> {
   String? _category;
   FavoriteSortBy _sortBy = FavoriteSortBy.date;
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> loadForUser(
@@ -39,7 +40,7 @@ class FavoritesController extends Notifier<FavoritesStatus> {
     _category = category;
     _sortBy = sortBy;
     _page = 1;
-    return _run(const FavoritesLoading());
+    return _run(const FavoritesLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -50,7 +51,11 @@ class FavoritesController extends Notifier<FavoritesStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
   /// Atualiza a lista já carregada sem esconder o resultado anterior
@@ -62,12 +67,19 @@ class FavoritesController extends Notifier<FavoritesStatus> {
         ? FavoritesSyncing(current.result)
         : const FavoritesLoading();
     _page = 1;
-    return _run(syncingState);
+    return _run(syncingState, requestId: ++_requestId);
   }
 
+  /// [requestId] coordena chamadas concorrentes (mesmo mecanismo de
+  /// `FeedController._run`): só a resposta cujo `requestId` ainda bate com
+  /// `_requestId` no momento em que o fetch resolve pode escrever em
+  /// `state` - evita que um `loadNextPage` e um `refresh` disparados quase
+  /// ao mesmo tempo produzam um resultado final inconsistente, qualquer
+  /// que seja a ordem em que as respostas cheguem.
   Future<void> _run(
     FavoritesStatus loadingState, {
     List<Restaurant> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -80,6 +92,7 @@ class FavoritesController extends Notifier<FavoritesStatus> {
         page: _page,
         limit: _limit,
       );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const FavoritesEmpty()
@@ -92,8 +105,14 @@ class FavoritesController extends Notifier<FavoritesStatus> {
               ),
             );
     } on FavoriteRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = FavoritesError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const FavoritesError('Não foi possível carregar os favoritos.');
     }
   }

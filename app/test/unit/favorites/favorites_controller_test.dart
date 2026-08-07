@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/favorites/application/favorites_controller.dart';
 import 'package:app/features/favorites/data/favorite_repository_impl.dart';
@@ -197,5 +199,134 @@ void main() {
     final status = container.read(favoritesControllerProvider);
     expect(status, isA<FavoritesLoaded>());
     expect((status as FavoritesLoaded).result.page, 2);
+    expect((status).result.items.map((r) => r.id), ['r-1', 'r-2']);
   });
+
+  test('falha ao buscar a página seguinte preserva os itens já carregados '
+      'em vez de virar FavoritesError', () async {
+    when(
+      () => repository.listForUser(
+        'user-1',
+        query: null,
+        city: null,
+        category: null,
+        sortBy: FavoriteSortBy.date,
+        page: 1,
+        limit: 20,
+      ),
+    ).thenAnswer(
+      (_) async => PagedResult(
+        items: [_restaurant(id: 'r-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listForUser(
+        'user-1',
+        query: null,
+        city: null,
+        category: null,
+        sortBy: FavoriteSortBy.date,
+        page: 2,
+        limit: 20,
+      ),
+    ).thenThrow(const FavoriteRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(favoritesControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+    await notifier.loadNextPage();
+
+    final status = container.read(favoritesControllerProvider);
+    expect(status, isA<FavoritesLoaded>());
+    expect((status as FavoritesLoaded).result.items.map((r) => r.id), ['r-1']);
+  });
+
+  test(
+    'concorrência entre loadNextPage e refresh: a resposta desatualizada '
+    'do loadNextPage não sobrescreve o resultado mais recente do refresh',
+    () async {
+      when(
+        () => repository.listForUser(
+          'user-1',
+          query: null,
+          city: null,
+          category: null,
+          sortBy: FavoriteSortBy.date,
+          page: 1,
+          limit: 20,
+        ),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_restaurant(id: 'r-1')],
+          page: 1,
+          limit: 20,
+          hasNextPage: true,
+        ),
+      );
+
+      final notifier = container.read(favoritesControllerProvider.notifier);
+      await notifier.loadForUser('user-1');
+
+      // loadNextPage (página 2) fica pendente, controlado manualmente.
+      final page2Completer = Completer<PagedResult<Restaurant>>();
+      when(
+        () => repository.listForUser(
+          'user-1',
+          query: null,
+          city: null,
+          category: null,
+          sortBy: FavoriteSortBy.date,
+          page: 2,
+          limit: 20,
+        ),
+      ).thenAnswer((_) => page2Completer.future);
+      final loadNextPageFuture = notifier.loadNextPage();
+
+      // Enquanto isso, um refresh mais recente é disparado e reseta para
+      // a página 1.
+      when(
+        () => repository.listForUser(
+          'user-1',
+          query: null,
+          city: null,
+          category: null,
+          sortBy: FavoriteSortBy.date,
+          page: 1,
+          limit: 20,
+        ),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [
+            _restaurant(id: 'r-1'),
+            _restaurant(id: 'r-3'),
+          ],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      final refreshFuture = notifier.refresh();
+
+      // A resposta da página 2 (mais antiga) chega DEPOIS do refresh já
+      // ter assumido - não deve aparecer no resultado final.
+      page2Completer.complete(
+        PagedResult(
+          items: [_restaurant(id: 'r-2')],
+          page: 2,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await loadNextPageFuture;
+      await refreshFuture;
+
+      final status = container.read(favoritesControllerProvider);
+      expect(status, isA<FavoritesLoaded>());
+      final items = (status as FavoritesLoaded).result.items;
+      expect(items.map((r) => r.id), ['r-1', 'r-3']);
+    },
+  );
 }

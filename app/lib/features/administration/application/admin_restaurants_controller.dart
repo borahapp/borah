@@ -21,13 +21,14 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
       ref.read(auditLogRepositoryProvider);
 
   int _page = 1;
+  int _requestId = 0;
   String? _query;
   static const _limit = 20;
 
   Future<void> load({String? query}) {
     _query = query;
     _page = 1;
-    return _run(const AdminRestaurantsLoading());
+    return _run(const AdminRestaurantsLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -36,7 +37,11 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
   Future<void> updateStatus(
@@ -44,6 +49,11 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
     required String status,
     required String actorId,
   }) async {
+    // Reivindica a geração antes de qualquer `await`: enquanto a mutação
+    // está em voo, um `loadNextPage` concorrente (scroll perto do fim)
+    // reconhece que uma operação mais nova assumiu e descarta sua própria
+    // resposta em vez de sobrescrever `Saving`/o resultado desta mutação.
+    final requestId = ++_requestId;
     final current = state;
     if (current is AdminRestaurantsLoaded) {
       state = AdminRestaurantsSaving(current.result);
@@ -59,24 +69,37 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
         entityId: restaurantId,
         metadata: {'status': status},
       );
+      // Se uma operação mais nova já assumiu enquanto a mutação estava em
+      // voo, a mutação em si já foi persistida (efeito real, sempre
+      // executado) - só o refresh de tela é descartado, para não
+      // sobrescrever um estado mais recente com uma página 1 desatualizada.
+      if (requestId != _requestId) return;
       // Volta para a página 1: mesma simplificação de
       // `NotificationsController.markAsRead` - re-buscar cada página já
       // acumulada individualmente para preservar 1 item editado não vale
       // a complexidade.
       _page = 1;
-      await _run(const AdminRestaurantsLoading());
+      await _run(const AdminRestaurantsLoading(), requestId: requestId);
     } on RestaurantRepositoryException catch (e) {
+      if (requestId != _requestId) return;
       state = AdminRestaurantsError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
       state = const AdminRestaurantsError(
         'Não foi possível atualizar o restaurante.',
       );
     }
   }
 
+  /// [requestId] coordena chamadas concorrentes (`loadNextPage`,
+  /// `updateStatus`, `load`): só a escrita cujo `requestId` ainda bate com
+  /// `_requestId` no momento em que o fetch resolve é aplicada - uma
+  /// resposta mais antiga que chega depois de uma chamada mais nova já ter
+  /// assumido é descartada silenciosamente.
   Future<void> _run(
     AdminRestaurantsStatus loadingState, {
     List<Restaurant> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -85,6 +108,7 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
         page: _page,
         limit: _limit,
       );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const AdminRestaurantsEmpty()
@@ -97,8 +121,14 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
               ),
             );
     } on RestaurantRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = AdminRestaurantsError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const AdminRestaurantsError(
         'Não foi possível carregar os restaurantes.',
       );

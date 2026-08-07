@@ -16,12 +16,13 @@ class FeedController extends Notifier<FeedStatus> {
 
   String? _userId;
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> loadForUser(String userId) {
     _userId = userId;
     _page = 1;
-    return _run(const FeedLoading());
+    return _run(const FeedLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -32,7 +33,11 @@ class FeedController extends Notifier<FeedStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
   /// Atualiza o feed já carregado sem esconder o resultado anterior
@@ -44,15 +49,25 @@ class FeedController extends Notifier<FeedStatus> {
         ? FeedRefreshing(current.result)
         : const FeedLoading();
     _page = 1;
-    return _run(refreshingState);
+    return _run(refreshingState, requestId: ++_requestId);
   }
 
   /// [previousItems] permite acumular páginas anteriores (Infinite Scroll,
   /// DV-07 §11) quando chamado por `loadNextPage` - vazio por padrão, para
   /// que `loadForUser`/`refresh` continuem substituindo a lista inteira.
+  ///
+  /// [requestId] coordena chamadas concorrentes: `loadNextPage`/`refresh`/
+  /// `loadForUser` disparadas quase ao mesmo tempo (ex.: rolar até o fim
+  /// enquanto um `refresh` ainda está em voo) capturam o valor de
+  /// `_requestId` no início de cada chamada; só a resposta cujo
+  /// `requestId` ainda bate com `_requestId` no momento em que o fetch
+  /// resolve pode escrever em `state` - uma resposta mais antiga que chega
+  /// depois de uma chamada mais nova já ter assumido é descartada
+  /// silenciosamente, em vez de sobrescrever um resultado mais atual.
   Future<void> _run(
     FeedStatus loadingState, {
     List<Review> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -61,6 +76,7 @@ class FeedController extends Notifier<FeedStatus> {
         page: _page,
         limit: _limit,
       );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const FeedEmpty()
@@ -73,8 +89,16 @@ class FeedController extends Notifier<FeedStatus> {
               ),
             );
     } on FeedRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de substituí-la por um estado
+      // de erro de tela cheia - só a falha do carregamento inicial (sem
+      // nenhum item ainda) vira FeedError.
+      if (previousItems.isNotEmpty) return;
       state = FeedError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const FeedError('Não foi possível carregar o feed.');
     }
   }

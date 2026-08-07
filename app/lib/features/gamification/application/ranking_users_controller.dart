@@ -18,13 +18,14 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
   String? _userId;
   RankingUsersType _type = RankingUsersType.global;
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> load(String userId, RankingUsersType type) {
     _userId = userId;
     _type = type;
     _page = 1;
-    return _run(const RankingUsersLoading());
+    return _run(const RankingUsersLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -35,12 +36,24 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
+  /// [requestId] coordena chamadas concorrentes (mesmo mecanismo de
+  /// `FeedController._run`): só a resposta cujo `requestId` ainda bate com
+  /// `_requestId` no momento em que o fetch resolve pode escrever em
+  /// `state` - evita que um `loadNextPage` disparado durante um `load`
+  /// (ex.: trocar de Global para Amigos com o scroll perto do fim) produza
+  /// um resultado final inconsistente, qualquer que seja a ordem das
+  /// respostas.
   Future<void> _run(
     RankingUsersStatus loadingState, {
     List<RankingEntry> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -51,6 +64,7 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
               page: _page,
               limit: _limit,
             );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const RankingUsersEmpty()
@@ -63,8 +77,14 @@ class RankingUsersController extends Notifier<RankingUsersStatus> {
               ),
             );
     } on GamificationRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = RankingUsersError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const RankingUsersError('Não foi possível carregar o ranking.');
     }
   }

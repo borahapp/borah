@@ -22,13 +22,14 @@ class RankingsController extends Notifier<RankingsStatus> {
   String? _city;
   String? _category;
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> load({String? city, String? category}) {
     _city = city;
     _category = category;
     _page = 1;
-    return _run(const RankingsLoading());
+    return _run(const RankingsLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -37,12 +38,24 @@ class RankingsController extends Notifier<RankingsStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
+  /// [requestId] coordena chamadas concorrentes (mesmo mecanismo de
+  /// `FeedController._run`): só a resposta cujo `requestId` ainda bate com
+  /// `_requestId` no momento em que o fetch resolve pode escrever em
+  /// `state` - evita que um `loadNextPage` disparado durante um `load`
+  /// (ex.: aplicar um filtro com o scroll perto do fim) produza um
+  /// resultado final inconsistente, qualquer que seja a ordem das
+  /// respostas.
   Future<void> _run(
     RankingsStatus loadingState, {
     List<Restaurant> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -52,6 +65,7 @@ class RankingsController extends Notifier<RankingsStatus> {
         page: _page,
         limit: _limit,
       );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const RankingsEmpty()
@@ -64,8 +78,14 @@ class RankingsController extends Notifier<RankingsStatus> {
               ),
             );
     } on RankingRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = RankingsError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const RankingsError('Não foi possível carregar o ranking.');
     }
   }

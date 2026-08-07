@@ -18,12 +18,13 @@ class ReviewsController extends Notifier<ReviewsStatus> {
 
   String? _restaurantId;
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> loadForRestaurant(String restaurantId) {
     _restaurantId = restaurantId;
     _page = 1;
-    return _run(const ReviewsLoading());
+    return _run(const ReviewsLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -34,12 +35,23 @@ class ReviewsController extends Notifier<ReviewsStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
+  /// [requestId] coordena chamadas concorrentes (mesmo mecanismo de
+  /// `FeedController._run`): só a resposta cujo `requestId` ainda bate com
+  /// `_requestId` no momento em que o fetch resolve pode escrever em
+  /// `state` - evita que um `loadNextPage` disparado durante um
+  /// `loadForRestaurant` (ou vice-versa) produza um resultado final
+  /// inconsistente, qualquer que seja a ordem em que as respostas cheguem.
   Future<void> _run(
     ReviewsStatus loadingState, {
     List<Review> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
@@ -48,6 +60,7 @@ class ReviewsController extends Notifier<ReviewsStatus> {
         page: _page,
         limit: _limit,
       );
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const ReviewsEmpty()
@@ -60,8 +73,14 @@ class ReviewsController extends Notifier<ReviewsStatus> {
               ),
             );
     } on ReviewRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = ReviewsError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const ReviewsError('Não foi possível carregar as avaliações.');
     }
   }

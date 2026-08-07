@@ -20,11 +20,12 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
       ref.read(auditLogRepositoryProvider);
 
   int _page = 1;
+  int _requestId = 0;
   static const _limit = 20;
 
   Future<void> load() {
     _page = 1;
-    return _run(const AdminRolesLoading());
+    return _run(const AdminRolesLoading(), requestId: ++_requestId);
   }
 
   Future<void> loadNextPage() {
@@ -33,7 +34,11 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
       return Future.value();
     }
     _page++;
-    return _run(current, previousItems: current.result.items);
+    return _run(
+      current,
+      previousItems: current.result.items,
+      requestId: ++_requestId,
+    );
   }
 
   Future<void> grantRole(
@@ -66,30 +71,40 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
   }
 
   Future<void> _mutate(Future<void> Function() action) async {
+    // Reivindica a geração antes de qualquer `await` (mesmo mecanismo de
+    // `AdminRestaurantsController.updateStatus`).
+    final requestId = ++_requestId;
     final current = state;
     if (current is AdminRolesLoaded) {
       state = AdminRolesSaving(current.result);
     }
     try {
       await action();
+      if (requestId != _requestId) return;
       // Volta para a página 1: mesma simplificação de
       // `AdminRestaurantsController.updateStatus`.
       _page = 1;
-      await _run(const AdminRolesLoading());
+      await _run(const AdminRolesLoading(), requestId: requestId);
     } on AdminRoleRepositoryException catch (e) {
+      if (requestId != _requestId) return;
       state = AdminRolesError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
       state = const AdminRolesError('Não foi possível concluir a operação.');
     }
   }
 
+  /// [requestId] coordena chamadas concorrentes (mesmo mecanismo de
+  /// `AdminRestaurantsController._run`).
   Future<void> _run(
     AdminRolesStatus loadingState, {
     List<AdminRoleEntry> previousItems = const [],
+    required int requestId,
   }) async {
     state = loadingState;
     try {
       final result = await _repository.listAdmins(page: _page, limit: _limit);
+      if (requestId != _requestId) return;
       final items = [...previousItems, ...result.items];
       state = items.isEmpty
           ? const AdminRolesEmpty()
@@ -102,8 +117,14 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
               ),
             );
     } on AdminRoleRepositoryException catch (e) {
+      if (requestId != _requestId) return;
+      // Falha ao buscar a PRÓXIMA página com itens já acumulados: mantém
+      // a lista já carregada visível em vez de virar tela cheia de erro.
+      if (previousItems.isNotEmpty) return;
       state = AdminRolesError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
+      if (previousItems.isNotEmpty) return;
       state = const AdminRolesError(
         'Não foi possível carregar os administradores.',
       );

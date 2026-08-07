@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/reviews/domain/review.dart';
 import 'package:app/features/social/application/feed_controller.dart';
@@ -128,4 +130,102 @@ void main() {
     final items = (state as FeedLoaded).result.items;
     expect(items.map((r) => r.id), ['rv-1', 'rv-2']);
   });
+
+  test('falha ao buscar a página seguinte preserva os itens já carregados '
+      'em vez de virar FeedError', () async {
+    when(() => repository.listForUser('user-1', page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_review(id: 'rv-1')],
+        page: 1,
+        limit: 20,
+        hasNextPage: true,
+      ),
+    );
+    when(
+      () => repository.listForUser('user-1', page: 2, limit: 20),
+    ).thenThrow(const FeedRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(feedControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+    await notifier.loadNextPage();
+
+    final state = container.read(feedControllerProvider);
+    expect(state, isA<FeedLoaded>());
+    expect((state as FeedLoaded).result.items.map((r) => r.id), ['rv-1']);
+  });
+
+  test('falha no carregamento inicial (sem itens ainda) continua virando '
+      'FeedError', () async {
+    when(
+      () => repository.listForUser('user-1', page: 1, limit: 20),
+    ).thenThrow(const FeedRepositoryException('Falha de rede.'));
+
+    final notifier = container.read(feedControllerProvider.notifier);
+    await notifier.loadForUser('user-1');
+
+    expect(container.read(feedControllerProvider), isA<FeedError>());
+  });
+
+  test(
+    'concorrência entre loadNextPage e refresh: a resposta desatualizada '
+    'do loadNextPage não sobrescreve o resultado mais recente do refresh',
+    () async {
+      when(
+        () => repository.listForUser('user-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_review(id: 'rv-1')],
+          page: 1,
+          limit: 20,
+          hasNextPage: true,
+        ),
+      );
+
+      final notifier = container.read(feedControllerProvider.notifier);
+      await notifier.loadForUser('user-1');
+
+      // loadNextPage (página 2) fica pendente, controlado manualmente.
+      final page2Completer = Completer<PagedResult<Review>>();
+      when(
+        () => repository.listForUser('user-1', page: 2, limit: 20),
+      ).thenAnswer((_) => page2Completer.future);
+      final loadNextPageFuture = notifier.loadNextPage();
+
+      // Enquanto isso, um refresh mais recente é disparado (ex.: puxar
+      // para atualizar) e reseta para a página 1.
+      when(
+        () => repository.listForUser('user-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [
+            _review(id: 'rv-1'),
+            _review(id: 'rv-3'),
+          ],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      final refreshFuture = notifier.refresh();
+
+      // A resposta da página 2 (mais antiga) chega DEPOIS do refresh já
+      // ter assumido - não deve aparecer no resultado final.
+      page2Completer.complete(
+        PagedResult(
+          items: [_review(id: 'rv-2')],
+          page: 2,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await loadNextPageFuture;
+      await refreshFuture;
+
+      final state = container.read(feedControllerProvider);
+      expect(state, isA<FeedLoaded>());
+      final items = (state as FeedLoaded).result.items;
+      expect(items.map((r) => r.id), ['rv-1', 'rv-3']);
+    },
+  );
 }
