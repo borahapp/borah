@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:app/features/authentication/application/auth_controller.dart';
+import 'package:app/features/event_reviews/application/submit_event_review_controller.dart';
 import 'package:app/features/event_reviews/data/event_review_repository_impl.dart';
 import 'package:app/features/event_reviews/domain/event_review.dart';
 import 'package:app/features/event_reviews/domain/event_review_repository.dart';
@@ -17,6 +21,7 @@ Widget _wrap(
   DateTime? scheduledAt,
   String? restaurantCoverImage,
   EventReview? existingReview,
+  ProviderContainer? container,
 }) {
   // A tela real só é alcançada via `context.push` a partir de
   // `event_detail_page.dart` - nunca como raiz da navegação. Uma rota
@@ -48,12 +53,37 @@ Widget _wrap(
     ],
   );
 
+  if (container != null) {
+    return UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(routerConfig: router),
+    );
+  }
+
   return ProviderScope(
     overrides: [
       eventReviewRepositoryProvider.overrideWithValue(repository),
       currentUserIdProvider.overrideWithValue('user-1'),
     ],
     child: MaterialApp.router(routerConfig: router),
+  );
+}
+
+EventReview _existingReviewWithPhoto({String photoPath = 'r-1/old.jpg'}) {
+  return EventReview(
+    id: 'r-1',
+    eventId: 'e-1',
+    userId: 'user-1',
+    foodScore: 5,
+    serviceScore: 3,
+    ambienceScore: 4,
+    costBenefitScore: 2,
+    overallScore: 5,
+    comment: 'Muito bom!',
+    fullName: 'Você',
+    avatarUrl: null,
+    photoPath: photoPath,
+    photoUrl: 'https://x/$photoPath',
   );
 }
 
@@ -89,14 +119,21 @@ Future<void> _rateAllCriteria(WidgetTester tester, {int stars = 4}) async {
   }
 }
 
-Future<void> _tapSubmit(WidgetTester tester) async {
-  final finder = find.widgetWithText(FilledButton, 'Enviar avaliação');
+Future<void> _tapSubmit(
+  WidgetTester tester, {
+  String label = 'Enviar avaliação',
+}) async {
+  final finder = find.widgetWithText(FilledButton, label);
   await tester.ensureVisible(finder);
   await tester.tap(finder);
 }
 
 void main() {
   late MockEventReviewRepository repository;
+
+  setUpAll(() {
+    registerFallbackValue(Uint8List(0));
+  });
 
   setUp(() {
     repository = MockEventReviewRepository();
@@ -293,5 +330,179 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Não foi possível avaliar.'), findsOneWidget);
+  });
+
+  group('foto (FASE A2)', () {
+    testWidgets('sem foto, mostra botão para adicionar foto opcional', (
+      tester,
+    ) async {
+      await _pumpAndOpen(tester, _wrap(repository));
+
+      expect(
+        find.widgetWithText(OutlinedButton, 'Adicionar foto (opcional)'),
+        findsOneWidget,
+      );
+      expect(find.byType(Image), findsNothing);
+    });
+
+    testWidgets(
+      'modo edição com foto existente, mostra a foto e o botão de remover',
+      (tester) async {
+        await _pumpAndOpen(
+          tester,
+          _wrap(repository, existingReview: _existingReviewWithPhoto()),
+        );
+        while (tester.takeException() != null) {}
+
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.byIcon(Icons.close), findsOneWidget);
+        expect(
+          find.widgetWithText(OutlinedButton, 'Adicionar foto (opcional)'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'tocar em remover a foto existente e enviar, chama update e removePhoto',
+      (tester) async {
+        when(
+          () => repository.update(
+            reviewId: 'r-1',
+            foodScore: any(named: 'foodScore'),
+            serviceScore: any(named: 'serviceScore'),
+            ambienceScore: any(named: 'ambienceScore'),
+            costBenefitScore: any(named: 'costBenefitScore'),
+            overallScore: any(named: 'overallScore'),
+            comment: any(named: 'comment'),
+          ),
+        ).thenAnswer((_) async => _existingReviewWithPhoto());
+        when(
+          () =>
+              repository.removePhoto(reviewId: 'r-1', photoPath: 'r-1/old.jpg'),
+        ).thenAnswer(
+          (_) async => const EventReview(
+            id: 'r-1',
+            eventId: 'e-1',
+            userId: 'user-1',
+            foodScore: 5,
+            serviceScore: 3,
+            ambienceScore: 4,
+            costBenefitScore: 2,
+            overallScore: 5,
+            comment: 'Muito bom!',
+            fullName: 'Você',
+            avatarUrl: null,
+          ),
+        );
+
+        await _pumpAndOpen(
+          tester,
+          _wrap(repository, existingReview: _existingReviewWithPhoto()),
+        );
+        while (tester.takeException() != null) {}
+
+        final removeButton = find.byIcon(Icons.close);
+        await tester.ensureVisible(removeButton);
+        await tester.tap(removeButton);
+        await tester.pump();
+
+        // O botão de adicionar reaparece porque a foto existente foi
+        // marcada para remoção (nenhuma nova foi escolhida no lugar).
+        expect(
+          find.widgetWithText(OutlinedButton, 'Adicionar foto (opcional)'),
+          findsOneWidget,
+        );
+
+        await _tapSubmit(tester, label: 'Salvar');
+        await tester.pumpAndSettle();
+
+        verify(
+          () =>
+              repository.removePhoto(reviewId: 'r-1', photoPath: 'r-1/old.jpg'),
+        ).called(1);
+      },
+    );
+
+    // A seleção real de foto passa por ImagePickerService/image_picker,
+    // que não é mockável em widget test (sem canal de plataforma) - mesma
+    // limitação já documentada em `review_detail_page_test.dart`. Para
+    // cobrir o caminho "foto anexada com falha -> aviso" na tela real,
+    // aciona `save()` diretamente via um ProviderContainer compartilhado
+    // com photoBytes simulados, e confirma que a tela renderiza o
+    // snackbar de aviso (não o de confirmação padrão).
+    testWidgets('falha ao anexar a foto mostra o aviso, não o erro genérico', (
+      tester,
+    ) async {
+      when(
+        () => repository.submit(
+          eventId: any(named: 'eventId'),
+          userId: any(named: 'userId'),
+          foodScore: any(named: 'foodScore'),
+          serviceScore: any(named: 'serviceScore'),
+          ambienceScore: any(named: 'ambienceScore'),
+          costBenefitScore: any(named: 'costBenefitScore'),
+          overallScore: any(named: 'overallScore'),
+          comment: any(named: 'comment'),
+        ),
+      ).thenAnswer(
+        (_) async => const EventReview(
+          id: 'r-1',
+          eventId: 'e-1',
+          userId: 'user-1',
+          foodScore: 4,
+          serviceScore: 4,
+          ambienceScore: 4,
+          costBenefitScore: 4,
+          overallScore: 4,
+          comment: null,
+          fullName: 'Você',
+          avatarUrl: null,
+        ),
+      );
+      when(
+        () => repository.attachPhoto(
+          reviewId: any(named: 'reviewId'),
+          bytes: any(named: 'bytes'),
+          fileExtension: any(named: 'fileExtension'),
+          previousPath: any(named: 'previousPath'),
+        ),
+      ).thenThrow(const EventReviewRepositoryException('Falha de rede.'));
+
+      final container = ProviderContainer(
+        overrides: [
+          eventReviewRepositoryProvider.overrideWithValue(repository),
+          currentUserIdProvider.overrideWithValue('user-1'),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await _pumpAndOpen(tester, _wrap(repository, container: container));
+
+      unawaited(
+        container
+            .read(submitEventReviewControllerProvider.notifier)
+            .save(
+              eventId: 'e-1',
+              foodScore: 4,
+              serviceScore: 4,
+              ambienceScore: 4,
+              costBenefitScore: 4,
+              overallScore: 4,
+              photoBytes: Uint8List(0),
+              photoFileExtension: 'jpg',
+            ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Avaliação salva, mas não foi possível enviar a foto.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Sua nota já atualizou o ranking do grupo.'),
+        findsNothing,
+      );
+    });
   });
 }
