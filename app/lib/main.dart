@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/analytics/app_analytics.dart';
+import 'core/deep_link/deep_link_dispatcher.dart';
 import 'core/feature_flags/app_feature_flags.dart';
 import 'core/feedback/app_feedback.dart';
 import 'core/network/supabase_client_provider.dart';
 import 'core/observability/crash_reporting.dart';
 import 'core/observability/sentry_provider_observer.dart';
 import 'design_system/components/feedback/error_state.dart';
+import 'features/groups/application/pending_invite_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,11 +45,25 @@ Future<void> main() async {
     // nenhum feedback pode ser enviado antes da primeira tela carregar.
     unawaited(AppFeedback.initialize());
 
+    // Deep Link: o único lugar autorizado a conectar DeepLinkDispatcher
+    // (core/) ao PendingInviteController real (features/groups/) - nem
+    // um nem outro se conhecem diretamente (ver deep_link_dispatcher.
+    // dart). ProviderContainer manual (em vez de ProviderScope direto)
+    // é necessário para poder ler deepLinkDispatcherProvider uma única
+    // vez, agora, no bootstrap - nunca dentro de uma página, widget ou
+    // controller (ciclo de vida documentado na própria classe).
+    final container = ProviderContainer(
+      observers: const [SentryProviderObserver()],
+      overrides: [
+        deepLinkReceiversProvider.overrideWith(
+          (ref) => [ref.read(pendingInviteControllerProvider.notifier)],
+        ),
+      ],
+    );
+    container.read(deepLinkDispatcherProvider);
+
     runApp(
-      ProviderScope(
-        observers: const [SentryProviderObserver()],
-        child: const BorahApp(),
-      ),
+      UncontrolledProviderScope(container: container, child: const BorahApp()),
     );
   });
 }
