@@ -152,6 +152,14 @@ class _EventsList extends StatelessWidget {
 
   /// BLOCO 6 ("Memórias") - "mais visitado" e "restaurante campeão",
   /// derivados de [realized] em memória, sem nenhuma consulta nova.
+  ///
+  /// FASE B, Entrega 1: `group_hub_page.dart` (`_MemoriesContent
+  /// ._buildMemoryCards`) duplica esta função deliberadamente - ver o
+  /// contrato completo do futuro componente compartilhado documentado
+  /// lá. A Entrega 2 extrai as duas cópias para 1 componente único;
+  /// até lá, qualquer correção feita aqui precisa ser replicada
+  /// manualmente na cópia (janela curta por construção - nenhuma outra
+  /// entrega da FASE B toca esta função nesse meio-tempo).
   List<Widget> _memoryCards(BuildContext context, List<Event> realized) {
     final visitCounts = <String, int>{};
     final nameByRestaurant = <String, String>{};
