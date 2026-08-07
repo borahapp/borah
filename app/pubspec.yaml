@@ -81,6 +81,7 @@ dependencies:
   # em rodada futura, ranking/expressões/decorativos) sem duplicar cada
   # um também em PNG. Pacote mantido pela publisher verificada flutter.dev.
   flutter_svg: ^2.3.0
+  app_links: ^7.2.1
 
 dev_dependencies:
   flutter_test:
