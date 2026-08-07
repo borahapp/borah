@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
+import '../../../../design_system/components/cards/event_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
@@ -257,13 +257,20 @@ class _EventsList extends StatelessWidget {
   Widget _tile(BuildContext context, int index, Event event) {
     return AppStaggeredListItem(
       index: index,
-      child: ListTile(
-        title: Text(event.restaurantName ?? ''),
-        subtitle: Text(_formatDateTime(event.scheduledAt)),
-        trailing: event.status == 'cancelled'
-            ? AppBadge(label: event.statusLabel, earned: false)
-            : null,
-        onTap: () => context.push('/groups/$groupId/events/${event.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
+        child: EventCard(
+          restaurantName: event.restaurantName ?? '',
+          dateTimeLabel: _formatDateTime(event.scheduledAt),
+          confirmedCount: event.confirmedCount,
+          status: event.status,
+          statusLabel: event.statusLabel,
+          restaurantPhotoUrl: event.restaurantCoverImage,
+          onTap: () => context.push('/groups/$groupId/events/${event.id}'),
+        ),
       ),
     );
   }
