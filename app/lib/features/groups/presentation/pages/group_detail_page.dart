@@ -28,8 +28,8 @@ import '../states/group_detail_status.dart';
 /// BLOCO 2). Nome/descrição/código de convite + compartilhar + lista de
 /// membros. Promover/rebaixar/remover membro (admin/owner) e editar
 /// grupo (admin/owner) ficam por linha/ícone condicionados ao papel do
-/// usuário atual (`GroupDetails.ownRole`) - transferência de
-/// propriedade continua fora do escopo (GROUP-01/BLOCO 2).
+/// usuário atual (`GroupDetails.ownRole`) - transferir propriedade e
+/// excluir o grupo (owner) foram adicionados na FASE C.1.
 ///
 /// [justCreated] (UX-01): `true` só quando `CreateGroupPage` chega até
 /// aqui via `pushReplacement(..., extra: true)` - mesmo mecanismo de
@@ -97,6 +97,39 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
     // possivelmente alterados.
     if (!mounted) return;
     ref.read(groupDetailControllerProvider.notifier).load(widget.groupId);
+  }
+
+  /// FASE C.1: único caminho de saída para um owner que é o único membro
+  /// do grupo (sem ninguém para quem transferir a propriedade). Mesmo
+  /// padrão exato de `_leaveGroup` abaixo.
+  Future<void> _deleteGroup(String groupId) async {
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Excluir grupo',
+      message:
+          'Isso vai apagar o grupo, os rolês e as avaliações coletivas '
+          'para sempre. Deseja continuar?',
+      confirmLabel: 'Excluir',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref.read(groupDetailControllerProvider.notifier).deleteGroup();
+      if (!mounted) return;
+      ref.read(groupsListControllerProvider.notifier).load();
+      context.pop();
+    } on GroupRepositoryException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível excluir o grupo.')),
+      );
+    }
   }
 
   Future<void> _leaveGroup(GroupMember own) async {
@@ -189,6 +222,9 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
                   context.push('/groups/${widget.groupId}/hub', extra: 1);
                 }
                 if (value == 'leave') _leaveGroup(own);
+                if (value == 'delete_group') {
+                  _deleteGroup(detailsForActions!.group.id);
+                }
               },
               itemBuilder: (context) => [
                 if (own.isAdminOrOwner)
@@ -206,12 +242,20 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
                 ),
                 // Owner não pode sair sem transferir a propriedade antes
                 // (RLS `group_members_delete_self_or_admin`, GROUP-01) -
-                // transferência de propriedade fica fora do escopo,
-                // então a opção nem aparece para o owner.
+                // a opção nem aparece para o owner; o caminho dele é
+                // "Transferir propriedade" (por linha de membro, FASE
+                // C.1) ou, se for o único membro, "Excluir grupo" abaixo.
                 if (!own.isOwner)
                   const PopupMenuItem(
                     value: 'leave',
                     child: Text('Sair do grupo'),
+                  ),
+                // FASE C.1: único caminho de saída do owner quando não há
+                // ninguém para quem transferir.
+                if (own.isOwner && detailsForActions!.members.length == 1)
+                  const PopupMenuItem(
+                    value: 'delete_group',
+                    child: Text('Excluir grupo'),
                   ),
               ],
             ),
@@ -271,6 +315,31 @@ class _GroupDetailContent extends ConsumerWidget {
     return ref
         .read(groupDetailControllerProvider.notifier)
         .demoteToMember(member.id);
+  }
+
+  /// FASE C.1: caminho do owner para deixar de ser owner quando o grupo
+  /// tem outros membros - depois de transferir, "Sair do grupo" (topbar)
+  /// passa a valer para ele automaticamente, sem nenhuma mudança nesse
+  /// fluxo.
+  Future<void> _transferOwnership(
+    BuildContext context,
+    WidgetRef ref,
+    GroupMember member,
+  ) async {
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Transferir propriedade',
+      message:
+          '${member.fullName ?? 'Este membro'} vai virar o novo '
+          'proprietário do grupo. Você deixará de ser proprietário. '
+          'Deseja continuar?',
+      confirmLabel: 'Transferir',
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+    await ref
+        .read(groupDetailControllerProvider.notifier)
+        .transferOwnership(member.id);
   }
 
   Future<void> _remove(
@@ -352,6 +421,9 @@ class _GroupDetailContent extends ConsumerWidget {
                             onSelected: (value) {
                               if (value == 'promote') _promote(ref, member);
                               if (value == 'demote') _demote(ref, member);
+                              if (value == 'transfer_ownership') {
+                                _transferOwnership(context, ref, member);
+                              }
                               if (value == 'remove') {
                                 _remove(context, ref, member);
                               }
@@ -366,6 +438,15 @@ class _GroupDetailContent extends ConsumerWidget {
                                 const PopupMenuItem(
                                   value: 'demote',
                                   child: Text('Rebaixar a membro'),
+                                ),
+                              // FASE C.1: disponível para qualquer outro
+                              // membro (admin ou member), não só quando
+                              // já é admin - mesma condição de
+                              // `canChangeRole` (só o owner transfere).
+                              if (canChangeRole)
+                                const PopupMenuItem(
+                                  value: 'transfer_ownership',
+                                  child: Text('Transferir propriedade'),
                                 ),
                               if (canRemove)
                                 const PopupMenuItem(
