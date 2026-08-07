@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DeepLinkParser.parse', () {
-    test('borah://group/join?code=X vira GroupJoinDeepLink', () {
+    test('borah://group/join?invite=X vira GroupJoinDeepLink', () {
       final result = DeepLinkParser.parse(
-        Uri.parse('borah://group/join?code=ABCD1234'),
+        Uri.parse('borah://group/join?invite=ABCD1234'),
       );
 
       expect(result, isA<GroupJoinDeepLink>());
@@ -14,7 +14,7 @@ void main() {
     });
 
     test('esquema diferente de borah vira UnknownDeepLink', () {
-      final uri = Uri.parse('https://group/join?code=ABCD1234');
+      final uri = Uri.parse('https://group/join?invite=ABCD1234');
       final result = DeepLinkParser.parse(uri);
 
       expect(result, isA<UnknownDeepLink>());
@@ -23,7 +23,7 @@ void main() {
 
     test('domínio desconhecido vira UnknownDeepLink', () {
       final result = DeepLinkParser.parse(
-        Uri.parse('borah://restaurant/join?code=ABCD1234'),
+        Uri.parse('borah://restaurant/join?invite=ABCD1234'),
       );
 
       expect(result, isA<UnknownDeepLink>());
@@ -33,22 +33,36 @@ void main() {
       'ação desconhecida dentro de um domínio válido vira UnknownDeepLink',
       () {
         final result = DeepLinkParser.parse(
-          Uri.parse('borah://group/leave?code=ABCD1234'),
+          Uri.parse('borah://group/leave?invite=ABCD1234'),
         );
 
         expect(result, isA<UnknownDeepLink>());
       },
     );
 
-    test('group/join sem code vira UnknownDeepLink, nunca lança', () {
+    test('group/join sem invite vira UnknownDeepLink, nunca lança', () {
       final result = DeepLinkParser.parse(Uri.parse('borah://group/join'));
 
       expect(result, isA<UnknownDeepLink>());
     });
 
-    test('group/join com code vazio vira UnknownDeepLink', () {
+    test('group/join com invite vazio vira UnknownDeepLink', () {
       final result = DeepLinkParser.parse(
-        Uri.parse('borah://group/join?code='),
+        Uri.parse('borah://group/join?invite='),
+      );
+
+      expect(result, isA<UnknownDeepLink>());
+    });
+
+    // Regressão do bug crítico encontrado no Smoke Test (auditoria de
+    // infraestrutura): `code` é o parâmetro que o listener interno do
+    // supabase_flutter intercepta para qualquer link `borah://`,
+    // tentando trocá-lo por uma sessão via PKCE - por isso o parâmetro
+    // de convite se chama `invite`, nunca `code`. Este teste garante que
+    // a convenção antiga (`?code=`) não volta a ser aceita por engano.
+    test('group/join com o parâmetro antigo ?code= vira UnknownDeepLink', () {
+      final result = DeepLinkParser.parse(
+        Uri.parse('borah://group/join?code=ABCD1234'),
       );
 
       expect(result, isA<UnknownDeepLink>());
@@ -71,7 +85,7 @@ void main() {
     });
 
     test('é determinístico - mesma Uri produz o mesmo resultado sempre', () {
-      final uri = Uri.parse('borah://group/join?code=XYZ');
+      final uri = Uri.parse('borah://group/join?invite=XYZ');
       final first = DeepLinkParser.parse(uri);
       final second = DeepLinkParser.parse(uri);
 

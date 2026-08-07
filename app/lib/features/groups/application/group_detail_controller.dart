@@ -31,7 +31,7 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
   /// o botão de compartilhar quando o estado já é `GroupDetailLoaded`,
   /// então isso é só uma proteção defensiva).
   ///
-  /// Deep Link de convite (`borah://group/join?code=X`) incluído a
+  /// Deep Link de convite (`borah://group/join?invite=X`) incluído a
   /// partir daqui - quem recebe e já tem o app instalado entra direto,
   /// sem digitar o código; o código continua no texto para quem não
   /// reconhece o link (mesmo cliente que já ignorava um esquema
@@ -42,7 +42,7 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
 
     final group = current.details.group;
     return 'Entre no meu grupo "${group.name}" no BORAH! '
-        'borah://group/join?code=${group.inviteCode}\n'
+        'borah://group/join?invite=${group.inviteCode}\n'
         'Ou use o código de convite: ${group.inviteCode}';
   }
 

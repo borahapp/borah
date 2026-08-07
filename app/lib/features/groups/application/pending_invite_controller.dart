@@ -5,7 +5,7 @@ import '../../../core/deep_link/deep_link_receiver.dart';
 import '../presentation/states/pending_invite_state.dart';
 
 /// Guarda o código de convite de grupo recebido por Deep Link
-/// (`borah://group/join?code=X`) até poder ser consumido por
+/// (`borah://group/join?invite=X`) até poder ser consumido por
 /// `JoinGroupPage`.
 ///
 /// Completamente passivo: nunca abre uma `StreamSubscription`, nunca

@@ -42,15 +42,20 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="borah" android:host="password-recovery"/>
             </intent-filter>
-            <!-- Deep Link de convite de grupo (borah://group/join?code=X).
+            <!-- Deep Link de convite de grupo (borah://group/join?invite=X).
                  Mesmo esquema customizado já usado acima para recuperação de
                  senha - convenção domínio/ação (host/path) documentada em
                  core/deep_link/deep_link.dart. Capturado em Dart pelo pacote
-                 app_links (DeepLinkService), nunca pelo supabase_flutter (que
-                 só observa host=password-recovery). App Links reais
-                 (https://appborah.com.br/..., com assetlinks.json verificado)
-                 ficam para quando a assinatura de release final existir - ver
-                 docs/release (pendência já registrada). -->
+                 app_links (DeepLinkService). O listener interno do
+                 supabase_flutter também recebe este link (ele não filtra por
+                 host - intercepta qualquer `borah://` cuja query contenha
+                 `code`/`access_token`/`error*`), mas o ignora: o parâmetro
+                 chama-se `invite`, não `code`, exatamente para não colidir
+                 com o vocabulário de auth do Supabase (ver comentário em
+                 GroupJoinDeepLink, core/deep_link/deep_link.dart). App Links
+                 reais (https://appborah.com.br/..., com assetlinks.json
+                 verificado) ficam para quando a assinatura de release final
+                 existir - ver docs/release (pendência já registrada). -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

@@ -38,9 +38,9 @@ abstract final class DeepLinkParser {
     final action = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '';
 
     if (domain == 'group' && action == 'join') {
-      final code = uri.queryParameters['code'];
-      if (code == null || code.isEmpty) return UnknownDeepLink(uri: uri);
-      return GroupJoinDeepLink(inviteCode: code);
+      final invite = uri.queryParameters['invite'];
+      if (invite == null || invite.isEmpty) return UnknownDeepLink(uri: uri);
+      return GroupJoinDeepLink(inviteCode: invite);
     }
 
     return UnknownDeepLink(uri: uri);

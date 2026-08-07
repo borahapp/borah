@@ -10,7 +10,7 @@
 /// - **Payload**: os dados mínimos necessários para executar a ação
 ///   (`inviteCode`, `id`...) - os campos do próprio subtipo.
 ///
-/// Válido: `group/join?code=X`, `event/detail?id=X`,
+/// Válido: `group/join?invite=X`, `event/detail?id=X`,
 /// `profile/view?userId=X`, `ranking/group?groupId=X`.
 /// **Nunca válido**: qualquer coisa que codifique mais de uma tela ou
 /// uma sequência (`group/X/event/Y/review`, por exemplo) - um Deep
@@ -22,7 +22,15 @@ sealed class DeepLink {
   const DeepLink();
 }
 
-/// Domínio `group`, ação `join` - `borah://group/join?code=XXXX`.
+/// Domínio `group`, ação `join` - `borah://group/join?invite=XXXX`.
+///
+/// O parâmetro se chama `invite`, não `code`: o `supabase_flutter` tem
+/// seu próprio listener de Deep Link para o mesmo esquema `borah://`
+/// (usado para recuperação de senha/OAuth) que intercepta **qualquer**
+/// link com um parâmetro `code` na query, tentando trocá-lo por uma
+/// sessão via PKCE - `code` colide com o vocabulário de auth do
+/// Supabase, mesmo sem nenhuma relação com login. `invite` nunca é
+/// interpretado por aquele listener.
 final class GroupJoinDeepLink extends DeepLink {
   const GroupJoinDeepLink({required this.inviteCode});
 

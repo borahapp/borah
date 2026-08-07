@@ -20,7 +20,7 @@ import '../states/join_group_status.dart';
 /// próprio). A lista de grupos recarrega ao voltar (mesmo padrão de
 /// `GroupsListPage._createGroup`).
 ///
-/// Deep Link de convite (`borah://group/join?code=X`): o código, se
+/// Deep Link de convite (`borah://group/join?invite=X`): o código, se
 /// houver, já chega pronto via `PendingInviteController.consumir()` -
 /// pré-preenche o campo, mas **nunca envia sozinho** - o toque em
 /// "Entrar" continua sendo a confirmação explícita, mesmo padrão de
