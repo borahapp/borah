@@ -120,6 +120,7 @@ class EventRepositoryImpl implements EventRepository {
       id: row['id'] as String,
       groupId: row['group_id'] as String,
       restaurantId: row['restaurant_id'] as String,
+      organizerId: row['organizer_id'] as String,
       scheduledAt: DateTime.parse(row['scheduled_at'] as String),
       status: row['status'] as String,
       restaurantName: restaurant?['name'] as String?,

@@ -21,7 +21,7 @@ class EventRemoteDatasource {
   static const _profilesTable = 'profiles';
 
   static const _eventColumns =
-      'id,group_id,restaurant_id,scheduled_at,status,average_rating,total_reviews,'
+      'id,group_id,restaurant_id,organizer_id,scheduled_at,status,average_rating,total_reviews,'
       'restaurants(name,category,city,cover_image),event_attendances(count)';
 
   /// Filtro aplicado ao embed `event_attendances(count)` de

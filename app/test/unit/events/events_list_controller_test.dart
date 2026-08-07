@@ -14,6 +14,7 @@ Event _event({String id = 'e-1', String restaurantName = 'Bar do Zé'}) {
     id: id,
     groupId: 'g-1',
     restaurantId: 'r-1',
+    organizerId: 'u-organizer',
     scheduledAt: DateTime(2026, 8, 20, 20, 0),
     status: 'scheduled',
     restaurantName: restaurantName,

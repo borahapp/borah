@@ -23,6 +23,7 @@ EventDetails _details({String status = 'scheduled'}) {
       id: 'e-1',
       groupId: 'g-1',
       restaurantId: 'r-1',
+      organizerId: 'u-organizer',
       scheduledAt: DateTime(2026, 1, 1),
       status: status,
       restaurantName: 'Cantina da Vila',

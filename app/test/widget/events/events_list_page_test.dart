@@ -17,11 +17,13 @@ Event _event({
   int confirmedCount = 0,
   String restaurantName = 'Cantina da Vila',
   String? restaurantCoverImage,
+  String organizerId = 'u-organizer',
 }) {
   return Event(
     id: id,
     groupId: 'g-1',
     restaurantId: 'r-1',
+    organizerId: organizerId,
     scheduledAt: scheduledAt ?? DateTime.now().add(const Duration(days: 3)),
     status: status,
     restaurantName: restaurantName,

@@ -41,11 +41,13 @@ Event _event({
   String restaurantId = 'r-1',
   String restaurantName = 'Cantina da Vila',
   double? averageRating,
+  String organizerId = 'u-organizer',
 }) {
   return Event(
     id: id,
     groupId: 'g-1',
     restaurantId: restaurantId,
+    organizerId: organizerId,
     scheduledAt:
         scheduledAt ?? DateTime.now().subtract(const Duration(days: 3)),
     status: status,

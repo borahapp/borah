@@ -1,12 +1,13 @@
 /// Entidade de Rolê (ROLÊ-02, campos de restaurante adicionados no
 /// ROLÊ-03) - só os campos necessários até agora (criação, lista,
-/// detalhe). `organizerId`/`createdAt`/`updatedAt` existem na tabela
-/// (ROLÊ-01) mas nenhuma tela usa ainda.
+/// detalhe). `createdAt`/`updatedAt` existem na tabela (ROLÊ-01) mas
+/// nenhuma tela usa ainda.
 class Event {
   const Event({
     required this.id,
     required this.groupId,
     required this.restaurantId,
+    required this.organizerId,
     required this.scheduledAt,
     required this.status,
     this.restaurantName,
@@ -21,6 +22,17 @@ class Event {
   final String id;
   final String groupId;
   final String restaurantId;
+
+  /// Quem criou o rolê (ROLÊ-01, `events.organizer_id`) - registro
+  /// histórico, nunca usado para permissão (essa continua sendo
+  /// exclusivamente pelo papel do grupo - `is_group_admin`/
+  /// `is_group_owner`). Não-nulável: a coluna é `not null` no banco e,
+  /// diferente de `restaurantName`/`confirmedCount` (que dependem de um
+  /// embed ausente no retorno de `create_event()`), `organizer_id` é
+  /// coluna simples da própria tabela `events` - está presente em toda
+  /// consulta, com ou sem embed (FASE B, Entrega 3, F45 "quem mais
+  /// escolheu").
+  final String organizerId;
   final DateTime scheduledAt;
 
   /// Valor real do banco (`scheduled`/`completed`/`cancelled` - ROLÊ-01).
