@@ -17,6 +17,7 @@ import '../../../authentication/application/auth_controller.dart';
 import '../../../events/application/events_list_controller.dart';
 import '../../../events/domain/event.dart';
 import '../../../events/presentation/states/events_list_status.dart';
+import '../../../events/presentation/widgets/event_memory_cards.dart';
 import '../../application/group_ranking_controller.dart';
 import '../../domain/group_ranking_entry.dart';
 import '../states/group_ranking_status.dart';
@@ -378,10 +379,6 @@ class _StatsContent extends StatelessWidget {
   }
 }
 
-/// Mesmo conteúdo de `_EventsList._memoryCards()` em
-/// `events_list_page.dart` - mas aqui a duplicação **é** o ponto
-/// central desta entrega, não um detalhe incidental. Ver o comentário
-/// completo em [_buildMemoryCards].
 class _MemoriesTab extends ConsumerWidget {
   const _MemoriesTab({required this.groupId});
 
@@ -427,7 +424,7 @@ class _MemoriesContent extends StatelessWidget {
     final realized = events
         .where((e) => !e.isUpcoming && e.status != 'cancelled')
         .toList();
-    final cards = _buildMemoryCards(context, realized);
+    final cards = EventMemoryCards.build(context, realized);
 
     if (cards.isEmpty) {
       return const EmptyState(
@@ -441,143 +438,5 @@ class _MemoriesContent extends StatelessWidget {
         children: cards,
       ),
     );
-  }
-
-  /// ## Duplicação deliberada e temporária (Entrega 1 da FASE B)
-  ///
-  /// Esta função é uma cópia intencional de
-  /// `_EventsList._memoryCards()` (`events_list_page.dart`) - **não**
-  /// uma tentativa de reaproveitamento malfeita, nem um esquecimento a
-  /// ser corrigido depois "se sobrar tempo". Regra combinada
-  /// explicitamente para a FASE B: **extrair um componente
-  /// compartilhado só quando existirem 2 consumidores reais, nunca
-  /// antes**. Antes desta tela existir, `EventsListPage` era o único
-  /// consumidor - extrair um componente ali teria sido adivinhar a
-  /// forma de uma reutilização que ainda não existia. A partir desta
-  /// entrega, os 2 consumidores reais existem (`EventsListPage` e
-  /// `GroupHubPage`) - a **Entrega 2** da FASE B extrai esta lógica
-  /// (cálculo + renderização) para um componente único que os dois
-  /// passam a chamar, eliminando esta cópia.
-  ///
-  /// ### Contrato do futuro componente compartilhado de Memórias
-  ///
-  /// Responsabilidades - o que ele **vai** fazer:
-  /// - Recebe a lista de rolês já filtrada como "realizados" (mesmo
-  ///   filtro usado aqui e em `_EventsList`) - quem chama filtra, o
-  ///   componente nunca decide sozinho o que conta como realizado.
-  /// - Agrega e renderiza as métricas de memória a partir dessa lista -
-  ///   hoje: "mais visitado" e "campeão" (por nota média, agregada por
-  ///   restaurante, nunca por rolê individual); a Entrega 3 da FASE B
-  ///   adiciona "quem mais escolheu" ao mesmo componente, no mesmo lugar.
-  /// - É reutilizável por qualquer tela futura que já tenha a lista de
-  ///   rolês do grupo carregada - não é específica a `EventsListPage`/
-  ///   `GroupHubPage` por construção, só por serem os 2 consumidores
-  ///   que existem até agora.
-  ///
-  /// O que ele **nunca** deve fazer, sob nenhuma justificativa futura:
-  /// - Nunca buscar dado sozinho - sem `ref.watch`/`ref.read` de
-  ///   nenhum provider, sem repositório, sem controller próprio.
-  ///   Recebe `List<Event>` já carregada por parâmetro, mesma regra já
-  ///   aplicada a `RankingCard`/`EventCard` (componentes "burros").
-  /// - Nunca decidir navegação (`context.push`/`context.go` dentro
-  ///   dele) - qualquer interação (se um dia existir) delega via
-  ///   callback (`onTap`), nunca decide sozinho para onde ir.
-  /// - Nunca conhecer "grupo" ou "usuário atual" diretamente - recebe
-  ///   só a lista já filtrada e, se algum card futuro precisar, um
-  ///   dado já resolvido (ex.: `currentUserId`) como parâmetro simples,
-  ///   nunca lendo um provider global por conta própria.
-  /// - Nunca crescer por antecipação - um parâmetro/métrica nova só
-  ///   entra quando essa métrica for de fato implementada numa entrega
-  ///   real (nunca "para o caso de precisar depois").
-  List<Widget> _buildMemoryCards(BuildContext context, List<Event> realized) {
-    if (realized.isEmpty) return const [];
-
-    final visitCounts = <String, int>{};
-    final nameByRestaurant = <String, String>{};
-    for (final event in realized) {
-      visitCounts.update(event.restaurantId, (v) => v + 1, ifAbsent: () => 1);
-      nameByRestaurant[event.restaurantId] = event.restaurantName ?? '';
-    }
-    final mostVisitedId = visitCounts.entries
-        .reduce((a, b) => b.value > a.value ? b : a)
-        .key;
-    final mostVisitedCount = visitCounts[mostVisitedId]!;
-
-    // Mesmo cuidado de `_EventsList`/`group_stats_page.dart` (QA-13):
-    // agrega por restaurante antes de eleger o campeão - nunca pega
-    // `averageRating` de um único rolê escolhido arbitrariamente.
-    final ratingByRestaurant =
-        <String, ({String name, double ratingSum, int ratingCount})>{};
-    for (final event in realized) {
-      final rating = event.averageRating;
-      if (rating == null) continue;
-      final current = ratingByRestaurant[event.restaurantId];
-      ratingByRestaurant[event.restaurantId] = (
-        name: event.restaurantName ?? '',
-        ratingSum: (current?.ratingSum ?? 0) + rating,
-        ratingCount: (current?.ratingCount ?? 0) + 1,
-      );
-    }
-    String? championName;
-    double? championAverage;
-    for (final entry in ratingByRestaurant.values) {
-      final average = entry.ratingSum / entry.ratingCount;
-      if (championAverage == null || average > championAverage) {
-        championName = entry.name;
-        championAverage = average;
-      }
-    }
-
-    return [
-      Row(
-        children: [
-          Expanded(
-            child: AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mais visitado',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    nameByRestaurant[mostVisitedId] ?? '',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    mostVisitedCount == 1
-                        ? '1 rolê'
-                        : '$mostVisitedCount rolês',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (championName != null) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Campeão',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      championName,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text('${championAverage!.toStringAsFixed(1)} ⭐'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    ];
   }
 }

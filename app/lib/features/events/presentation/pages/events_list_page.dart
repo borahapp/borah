@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
-import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/cards/event_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
@@ -17,6 +16,7 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/events_list_controller.dart';
 import '../../domain/event.dart';
 import '../states/events_list_status.dart';
+import '../widgets/event_memory_cards.dart';
 
 /// Tela "Rolês do grupo" (ROLÊ-03; separação Próximos/Realizados no
 /// BLOCO 3; resumo de "memórias" no BLOCO 6) — mesmo padrão de
@@ -123,7 +123,16 @@ class _EventsList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
-        if (realized.isNotEmpty) ..._memoryCards(context, realized),
+        if (realized.isNotEmpty)
+          ...EventMemoryCards.build(context, realized).map(
+            (card) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: card,
+            ),
+          ),
         if (upcoming.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.symmetric(
@@ -148,118 +157,6 @@ class _EventsList extends StatelessWidget {
         ],
       ],
     );
-  }
-
-  /// BLOCO 6 ("Memórias") - "mais visitado" e "restaurante campeão",
-  /// derivados de [realized] em memória, sem nenhuma consulta nova.
-  ///
-  /// FASE B, Entrega 1: `group_hub_page.dart` (`_MemoriesContent
-  /// ._buildMemoryCards`) duplica esta função deliberadamente - ver o
-  /// contrato completo do futuro componente compartilhado documentado
-  /// lá. A Entrega 2 extrai as duas cópias para 1 componente único;
-  /// até lá, qualquer correção feita aqui precisa ser replicada
-  /// manualmente na cópia (janela curta por construção - nenhuma outra
-  /// entrega da FASE B toca esta função nesse meio-tempo).
-  List<Widget> _memoryCards(BuildContext context, List<Event> realized) {
-    final visitCounts = <String, int>{};
-    final nameByRestaurant = <String, String>{};
-    for (final event in realized) {
-      visitCounts.update(event.restaurantId, (v) => v + 1, ifAbsent: () => 1);
-      nameByRestaurant[event.restaurantId] = event.restaurantName ?? '';
-    }
-    final mostVisitedId = visitCounts.entries
-        .reduce((a, b) => b.value > a.value ? b : a)
-        .key;
-    final mostVisitedCount = visitCounts[mostVisitedId]!;
-
-    // QA-13 (RC): "Campeão" é o RESTAURANTE com a melhor nota - não o
-    // rolê individual mais bem avaliado. Mesmo bug já corrigido em
-    // `group_stats_page.dart` (BLOCO 7): pegar `event.averageRating` de
-    // um único evento escolhido arbitrariamente distorcia o resultado
-    // quando o mesmo restaurante tinha rolês com notas diferentes (ex.:
-    // restaurante visitado 3x com notas [3, 3, 5] "vencia" um visitado
-    // 1x com nota 4.5, mesmo tendo a média pior). Agrega por
-    // restaurante antes de decidir o campeão - mesmo padrão de
-    // `visitsByRestaurant` do `group_stats_page.dart`.
-    final ratingByRestaurant =
-        <String, ({String name, double ratingSum, int ratingCount})>{};
-    for (final event in realized) {
-      final rating = event.averageRating;
-      if (rating == null) continue;
-      final current = ratingByRestaurant[event.restaurantId];
-      ratingByRestaurant[event.restaurantId] = (
-        name: event.restaurantName ?? '',
-        ratingSum: (current?.ratingSum ?? 0) + rating,
-        ratingCount: (current?.ratingCount ?? 0) + 1,
-      );
-    }
-    String? championName;
-    double? championAverage;
-    for (final entry in ratingByRestaurant.values) {
-      final average = entry.ratingSum / entry.ratingCount;
-      if (championAverage == null || average > championAverage) {
-        championName = entry.name;
-        championAverage = average;
-      }
-    }
-
-    return [
-      Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mais visitado',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      nameByRestaurant[mostVisitedId] ?? '',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      mostVisitedCount == 1
-                          ? '1 rolê'
-                          : '$mostVisitedCount rolês',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (championName != null) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Campeão',
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        championName,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text('${championAverage!.toStringAsFixed(1)} ⭐'),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    ];
   }
 
   Widget _tile(BuildContext context, int index, Event event) {
