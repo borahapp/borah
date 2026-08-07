@@ -129,6 +129,21 @@ class GroupRepositoryImpl implements GroupRepository {
     return _guard(() => _datasource.removeMember(memberId));
   }
 
+  @override
+  Future<void> transferOwnership({
+    required String groupId,
+    required String newOwnerMemberId,
+  }) {
+    return _guard(
+      () => _datasource.transferOwnership(groupId, newOwnerMemberId),
+    );
+  }
+
+  @override
+  Future<void> delete(String groupId) {
+    return _guard(() => _datasource.deleteGroup(groupId));
+  }
+
   /// [nextEvent] só é conhecido por `listMine()` (única chamadora que
   /// busca `fetchNextEvents` em lote) - os demais métodos usam o valor
   /// padrão `null`. `group_members` só existe na linha quando o `select`

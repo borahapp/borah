@@ -167,4 +167,24 @@ class GroupRemoteDatasource {
   Future<void> removeMember(String memberId) {
     return _client.from(_membersTable).delete().eq('id', memberId);
   }
+
+  /// FASE C.1: `transfer_group_ownership()` é `security definer` (migration
+  /// `20260807180000`) - atualiza `groups.owner_id` e o papel das 2 linhas
+  /// de `group_members` envolvidas na mesma transação. Mesma disciplina de
+  /// nomes exatos de parâmetro já usada em `createGroup`/`joinByInviteCode`.
+  Future<void> transferOwnership(String groupId, String newOwnerMemberId) {
+    return _client.rpc(
+      'transfer_group_ownership',
+      params: {
+        'p_group_id': groupId,
+        'p_new_owner_member_id': newOwnerMemberId,
+      },
+    );
+  }
+
+  /// FASE C.1: `DELETE` direto, sem RPC - a policy `groups_delete_owner`
+  /// (GROUP-01, já existente) já restringe isso ao owner.
+  Future<void> deleteGroup(String id) {
+    return _client.from(_groupsTable).delete().eq('id', id);
+  }
 }

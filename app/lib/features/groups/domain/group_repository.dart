@@ -65,4 +65,25 @@ abstract interface class GroupRepository {
   /// permitido: o próprio membro sempre pode remover a si mesmo, ou um
   /// admin/owner pode remover qualquer membro exceto o owner.
   Future<void> removeMember(String memberId);
+
+  /// Transfere a propriedade do grupo para outro membro (FASE C.1). Só o
+  /// owner atual pode chamar - a RPC `transfer_group_ownership`
+  /// (`security definer`) verifica isso e atualiza `groups.owner_id` e o
+  /// papel das duas linhas de `group_members` envolvidas atomicamente
+  /// (o chamador vira `admin`, o alvo vira `owner`). Depois de transferir,
+  /// o próprio `removeMember` (acima) passa a permitir que o ex-owner
+  /// saia do grupo, sem nenhuma mudança nele - a RLS que hoje bloqueia
+  /// `removeMember` para `role = 'owner'` deixa de se aplicar.
+  Future<void> transferOwnership({
+    required String groupId,
+    required String newOwnerMemberId,
+  });
+
+  /// Exclui o grupo (FASE C.1). Só o owner - a RLS (`groups_delete_owner`,
+  /// já existente desde o GROUP-01, nunca usada até agora) garante isso.
+  /// Único caminho de saída para um owner que é o único membro do grupo
+  /// (não há para quem transferir); cascata de FK (`group_members`/
+  /// `events`/`event_attendances`/`event_reviews`, todas `on delete
+  /// cascade`) já apaga tudo relacionado ao grupo.
+  Future<void> delete(String groupId);
 }
