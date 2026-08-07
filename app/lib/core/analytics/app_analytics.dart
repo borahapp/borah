@@ -208,11 +208,13 @@ abstract final class AppAnalytics {
   /// reautenticação ou de erro na própria exclusão.
   static Future<void> trackAccountDeleted() => track('account_deleted');
 
-  /// Cobre os dois pontos de upload de foto do app: avatar
-  /// (`UserProfileController.updateAvatar`) e foto de avaliação
-  /// (`ReviewDetailController.addPhoto`) — [type] distingue qual é qual
-  /// (`'avatar'`/`'review'`); [success] registra tanto o caminho de
-  /// sucesso quanto o de falha do upload.
+  /// Cobre os pontos de upload de foto do app: avatar
+  /// (`UserProfileController.updateAvatar`), foto de avaliação
+  /// individual (`ReviewDetailController.addPhoto`) e foto de avaliação
+  /// coletiva (`SubmitEventReviewController.save`, RC-03 FASE A2) —
+  /// [type] distingue qual é qual (`'avatar'`/`'review'`/
+  /// `'event_review'`); [success] registra tanto o caminho de sucesso
+  /// quanto o de falha do upload.
   static Future<void> trackPhotoUploaded({
     required String type,
     required bool success,

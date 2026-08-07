@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
@@ -22,7 +24,11 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
         for (final profile in profileRows) profile['id'] as String: profile,
       };
 
-      return rows.map((row) => _mapRow(row, profilesById)).toList();
+      // `Future.wait` resolve as URLs assinadas das fotos em paralelo
+      // (uma por avaliação com `photo_path`, RC-03 FASE A2) - nunca
+      // sequencial, mesmo espírito de reuso/composição já usado em
+      // `GroupRepositoryImpl.listMine()` (Sprint 3).
+      return Future.wait(rows.map((row) => _mapRow(row, profilesById)));
     });
   }
 
@@ -48,7 +54,7 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
         overallScore: overallScore,
         comment: comment,
       );
-      return _mapRow(row, const {});
+      return await _mapRow(row, const {});
     });
   }
 
@@ -72,16 +78,56 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
         overallScore: overallScore,
         comment: comment,
       );
+      return await _mapRow(row, const {});
+    });
+  }
+
+  @override
+  Future<EventReview> attachPhoto({
+    required String reviewId,
+    required Uint8List bytes,
+    required String fileExtension,
+    String? previousPath,
+  }) {
+    return _guard(() async {
+      final path = await _datasource.uploadPhoto(
+        reviewId,
+        bytes,
+        fileExtension,
+        previousPath: previousPath,
+      );
+      final row = await _datasource.updatePhotoPath(reviewId, path);
       return _mapRow(row, const {});
     });
   }
 
-  EventReview _mapRow(
+  @override
+  Future<EventReview> removePhoto({
+    required String reviewId,
+    required String photoPath,
+  }) {
+    return _guard(() async {
+      await _datasource.deletePhoto(photoPath);
+      final row = await _datasource.updatePhotoPath(reviewId, null);
+      return _mapRow(row, const {});
+    });
+  }
+
+  @override
+  Future<String> getPhotoUrl(String photoPath) {
+    return _guard(() => _datasource.getPhotoUrl(photoPath));
+  }
+
+  Future<EventReview> _mapRow(
     Map<String, dynamic> row,
     Map<String, dynamic> profilesById,
-  ) {
+  ) async {
     final userId = row['user_id'] as String;
     final profile = profilesById[userId];
+    final photoPath = row['photo_path'] as String?;
+    final photoUrl = photoPath == null
+        ? null
+        : await _datasource.getPhotoUrl(photoPath);
     return EventReview(
       id: row['id'] as String,
       eventId: row['event_id'] as String,
@@ -92,6 +138,8 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
       costBenefitScore: (row['cost_benefit_score'] as num).toDouble(),
       overallScore: (row['overall_score'] as num).toDouble(),
       comment: row['comment'] as String?,
+      photoPath: photoPath,
+      photoUrl: photoUrl,
       fullName: profile?['full_name'] as String?,
       avatarUrl: profile?['avatar_url'] as String?,
     );

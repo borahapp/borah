@@ -1,4 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/storage/app_storage.dart';
+import '../../../core/storage/storage_upload_config.dart';
 
 /// Encapsula todo acesso a `event_reviews` via PostgREST (BLOCO 4).
 ///
@@ -15,10 +20,11 @@ class EventReviewRemoteDatasource {
 
   static const _table = 'event_reviews';
   static const _profilesTable = 'profiles';
+  static const _bucket = 'event-review-photos';
 
   static const _columns =
       'id,event_id,user_id,food_score,service_score,ambience_score,'
-      'cost_benefit_score,overall_score,comment';
+      'cost_benefit_score,overall_score,comment,photo_path';
 
   /// Sem embed com `profiles` - mesma limitação de
   /// `EventRemoteDatasource.fetchAttendances` (sem FK direta).
@@ -93,4 +99,73 @@ class EventReviewRemoteDatasource {
         .select(_columns)
         .single();
   }
+
+  /// Pasta `<reviewId>/` no bucket privado `event-review-photos`
+  /// (RC-03 FASE A2) - mesma técnica de pasta-por-id já usada por
+  /// `review-photos`, via `AppStorage` (RC-04B), primeira feature a
+  /// efetivamente conectar essa infraestrutura a uma tela. Com
+  /// [previousPath], troca com limpeza best-effort do arquivo antigo
+  /// (`AppStorage.replace`); sem, é o primeiro upload.
+  Future<String> uploadPhoto(
+    String reviewId,
+    Uint8List bytes,
+    String fileExtension, {
+    String? previousPath,
+  }) {
+    final contentType = _mimeTypeFor(fileExtension);
+    if (previousPath == null) {
+      return AppStorage.upload(
+        bucket: _bucket,
+        folder: reviewId,
+        bytes: bytes,
+        originalFileName: 'photo.$fileExtension',
+        contentType: contentType,
+        config: StorageUploadConfig.eventReviewPhoto,
+      );
+    }
+    return AppStorage.replace(
+      bucket: _bucket,
+      folder: reviewId,
+      bytes: bytes,
+      originalFileName: 'photo.$fileExtension',
+      contentType: contentType,
+      config: StorageUploadConfig.eventReviewPhoto,
+      previousPath: previousPath,
+    );
+  }
+
+  Future<void> deletePhoto(String photoPath) {
+    return AppStorage.delete(bucket: _bucket, path: photoPath);
+  }
+
+  /// Bucket privado - URL assinada, nunca pública (`AppStorage.
+  /// getSignedUrl`, mesma técnica já usada para `avatars`).
+  Future<String> getPhotoUrl(String photoPath) {
+    return AppStorage.getSignedUrl(bucket: _bucket, path: photoPath);
+  }
+
+  Future<Map<String, dynamic>> updatePhotoPath(
+    String reviewId,
+    String? photoPath,
+  ) {
+    return _client
+        .from(_table)
+        .update({'photo_path': photoPath})
+        .eq('id', reviewId)
+        .select(_columns)
+        .single();
+  }
+
+  /// `ImagePickerService` (compartilhado) só devolve bytes+extensão,
+  /// nunca o MIME - `AppStorage.upload`/`.replace` exigem `contentType`
+  /// explícito para validar contra `StorageUploadConfig.
+  /// allowedMimeTypes`. Mapeamento local (não extraído para um helper
+  /// compartilhado): esta é a primeira feature a conectar `AppStorage`
+  /// a uma tela real - extrair um helper comum fica para quando
+  /// `reviews`/`restaurants`/`avatars` também migrarem para cá.
+  String _mimeTypeFor(String extension) => switch (extension.toLowerCase()) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    _ => 'image/jpeg',
+  };
 }

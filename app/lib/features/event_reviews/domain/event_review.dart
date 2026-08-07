@@ -16,6 +16,8 @@ class EventReview {
     required this.comment,
     required this.fullName,
     required this.avatarUrl,
+    this.photoPath,
+    this.photoUrl,
   });
 
   final String id;
@@ -29,6 +31,22 @@ class EventReview {
   final String? comment;
   final String? fullName;
   final String? avatarUrl;
+
+  /// Caminho bruto no bucket `event-review-photos` (RC-03 FASE A2,
+  /// `BORAH_VISION_v2.0.md`) - exatamente 1 foto por avaliação
+  /// (`photo_path`, não `photos_count` como em `reviews`, que aceita
+  /// até 5). Necessário para substituir/remover a foto depois
+  /// (`AppStorage.replace`/`.delete`); a UI nunca exibe isto
+  /// diretamente, usa [photoUrl].
+  final String? photoPath;
+
+  /// URL assinada já resolvida de [photoPath], pronta para exibição -
+  /// resolvida pelo repositório (bucket privado, escopado a membros do
+  /// grupo), nunca pela tela (Capítulo 12 da Vision: formatação/
+  /// resolução não é responsabilidade da apresentação... na prática
+  /// aqui, resolução é responsabilidade do repositório, para que a
+  /// navegação já entregue um dado pronto para renderizar).
+  final String? photoUrl;
 
   /// "Nota final" desta avaliação individual - média simples dos 5
   /// critérios (mesma decisão de pesos iguais registrada na migration

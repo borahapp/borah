@@ -37,4 +37,14 @@ class StorageUploadConfig {
     allowedMimeTypes: {'image/jpeg', 'image/png', 'image/webp'},
     allowedExtensions: {'jpg', 'jpeg', 'png', 'webp'},
   );
+
+  /// RC-03 FASE A2 (`BORAH_VISION_v2.0.md`) - mesmos limites de
+  /// [reviewPhoto], bucket próprio (`event-review-photos`, privado).
+  /// Primeira config desta classe efetivamente conectada a uma tela
+  /// (as anteriores eram só infraestrutura, RC-04B).
+  static const eventReviewPhoto = StorageUploadConfig(
+    maxBytes: 10 * 1024 * 1024,
+    allowedMimeTypes: {'image/jpeg', 'image/png', 'image/webp'},
+    allowedExtensions: {'jpg', 'jpeg', 'png', 'webp'},
+  );
 }

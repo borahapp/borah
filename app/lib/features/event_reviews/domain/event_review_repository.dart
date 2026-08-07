@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'event_review.dart';
 
 /// Erro traduzido pela camada de dados - mesmo padrão de
@@ -49,4 +51,31 @@ abstract interface class EventReviewRepository {
     required double overallScore,
     String? comment,
   });
+
+  /// Anexa (ou substitui, se [previousPath] for informado) a única foto
+  /// permitida por avaliação coletiva (RC-03 FASE A2). [previousPath]
+  /// vem de `EventReview.photoPath` (a própria tela já o tem, sem
+  /// consulta nova) - quando informado, o arquivo antigo é removido
+  /// depois do novo upload ter sucesso (`AppStorage.replace`).
+  Future<EventReview> attachPhoto({
+    required String reviewId,
+    required Uint8List bytes,
+    required String fileExtension,
+    String? previousPath,
+  });
+
+  /// Remove a foto já anexada, sem enviar uma nova. [photoPath] vem de
+  /// `EventReview.photoPath` (já disponível na tela).
+  Future<EventReview> removePhoto({
+    required String reviewId,
+    required String photoPath,
+  });
+
+  /// Resolve a URL assinada de um [photoPath] já conhecido - exposto no
+  /// domínio para reuso futuro (ex.: uma tela que só tem o caminho
+  /// salvo, sem ter carregado a avaliação inteira). `listByEvent`/
+  /// `submit`/`update`/`attachPhoto` já devolvem `EventReview.photoUrl`
+  /// resolvido, então este método não precisa ser chamado à parte no
+  /// fluxo normal da tela de avaliação.
+  Future<String> getPhotoUrl(String photoPath);
 }
