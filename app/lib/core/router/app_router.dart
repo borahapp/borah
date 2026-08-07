@@ -151,6 +151,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
+    // Sem isto, `initialLocation: '/'` acima é ignorado sempre que o app
+    // abre a frio via Deep Link (`overridePlatformDefaultLocation` do
+    // go_router é `false` por padrão, e nesse caso ele usa a rota crua da
+    // plataforma - `WidgetsBinding.instance.platformDispatcher
+    // .defaultRouteName`, preenchida direto pela URI do Intent) - quebra a
+    // regra permanente de `core/deep_link/deep_link.dart` de que um Deep
+    // Link nunca é uma rota de navegação literal: `borah://group/join`
+    // virava a rota `/group/join`, que não existe (a rota real é
+    // `/groups/join`), e caía no `errorBuilder`. Forçar `true` garante que
+    // todo cold start - com ou sem Deep Link - sempre passe por `/`
+    // (Splash), que é quem decide o redirecionamento, já considerando
+    // sessão restaurada e convite pendente.
+    overridePlatformDefaultLocation: true,
     refreshListenable: refreshNotifier,
     errorBuilder: (context, state) {
       // RC-03A: erro de navegação (rota desconhecida ou falha ao
