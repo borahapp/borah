@@ -71,6 +71,44 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
   Future<void> leaveGroup(String memberId) =>
       _repository.removeMember(memberId);
 
+  /// Transfere a propriedade do grupo (FASE C.1) para outro membro. Ao
+  /// contrário de `leaveGroup`, o chamador continua no grupo (agora como
+  /// `admin`) - recarrega como as demais ações administrativas acima
+  /// (`_mutate`), para refletir o novo papel de cada um na mesma tela.
+  Future<void> transferOwnership(String newOwnerMemberId) {
+    final current = state;
+    final details = switch (current) {
+      GroupDetailLoaded(:final details) => details,
+      GroupDetailError(:final details) => details,
+      _ => null,
+    };
+    if (details == null) return Future.value();
+
+    return _mutate(
+      () => _repository.transferOwnership(
+        groupId: details.group.id,
+        newOwnerMemberId: newOwnerMemberId,
+      ),
+    );
+  }
+
+  /// Exclui o grupo (FASE C.1) - único caminho de saída para um owner
+  /// que é o único membro (sem ninguém para quem transferir). Mesmo
+  /// padrão de `leaveGroup`: a operação é exposta direto, sem recarregar
+  /// (o grupo deixou de existir) - sucesso significa a página fechar e
+  /// voltar para a lista de grupos.
+  Future<void> deleteGroup() {
+    final current = state;
+    final details = switch (current) {
+      GroupDetailLoaded(:final details) => details,
+      GroupDetailError(:final details) => details,
+      _ => null,
+    };
+    if (details == null) return Future.value();
+
+    return _repository.delete(details.group.id);
+  }
+
   Future<void> _mutate(Future<void> Function() action) async {
     final current = state;
     final details = switch (current) {

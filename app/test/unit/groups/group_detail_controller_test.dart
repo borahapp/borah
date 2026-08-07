@@ -209,4 +209,112 @@ void main() {
       verify(() => repository.removeMember('m-2')).called(1);
     });
   });
+
+  group('transferOwnership', () {
+    test('sucesso -> chama o repository e recarrega o grupo', () async {
+      when(() => repository.getById('g-1')).thenAnswer((_) async => _details());
+      when(
+        () => repository.transferOwnership(
+          groupId: 'g-1',
+          newOwnerMemberId: 'm-2',
+        ),
+      ).thenAnswer((_) async {});
+
+      final notifier = container.read(groupDetailControllerProvider.notifier);
+      await notifier.load('g-1');
+      await notifier.transferOwnership('m-2');
+
+      verify(
+        () => repository.transferOwnership(
+          groupId: 'g-1',
+          newOwnerMemberId: 'm-2',
+        ),
+      ).called(1);
+      verify(() => repository.getById('g-1')).called(2);
+      expect(
+        container.read(groupDetailControllerProvider),
+        isA<GroupDetailLoaded>(),
+      );
+    });
+
+    test('falha -> GroupDetailError com o grupo ainda carregado', () async {
+      when(() => repository.getById('g-1')).thenAnswer((_) async => _details());
+      when(
+        () => repository.transferOwnership(
+          groupId: 'g-1',
+          newOwnerMemberId: 'm-2',
+        ),
+      ).thenThrow(
+        const GroupRepositoryException(
+          'Apenas o proprietário do grupo pode transferir a propriedade.',
+        ),
+      );
+
+      final notifier = container.read(groupDetailControllerProvider.notifier);
+      await notifier.load('g-1');
+      await notifier.transferOwnership('m-2');
+
+      final status = container.read(groupDetailControllerProvider);
+      expect(status, isA<GroupDetailError>());
+      expect(
+        (status as GroupDetailError).message,
+        'Apenas o proprietário do grupo pode transferir a propriedade.',
+      );
+      expect(status.details, isNotNull);
+      expect(status.details!.members, hasLength(2));
+    });
+
+    test('sem grupo carregado -> não chama o repository', () async {
+      await container
+          .read(groupDetailControllerProvider.notifier)
+          .transferOwnership('m-2');
+
+      verifyNever(
+        () => repository.transferOwnership(
+          groupId: any(named: 'groupId'),
+          newOwnerMemberId: any(named: 'newOwnerMemberId'),
+        ),
+      );
+    });
+  });
+
+  group('deleteGroup', () {
+    test('sucesso -> delega direto ao repository (sem recarregar)', () async {
+      when(() => repository.getById('g-1')).thenAnswer((_) async => _details());
+      when(() => repository.delete('g-1')).thenAnswer((_) async {});
+
+      final notifier = container.read(groupDetailControllerProvider.notifier);
+      await notifier.load('g-1');
+      await notifier.deleteGroup();
+
+      verify(() => repository.delete('g-1')).called(1);
+      // Não recarrega - `getById` continua tendo sido chamado só 1 vez
+      // (o `load()` inicial), diferente de `transferOwnership`, que
+      // chama de novo após o sucesso.
+      verify(() => repository.getById('g-1')).called(1);
+    });
+
+    test('falha -> propaga a exceção (mesmo padrão de leaveGroup)', () async {
+      when(() => repository.getById('g-1')).thenAnswer((_) async => _details());
+      when(() => repository.delete('g-1')).thenThrow(
+        const GroupRepositoryException('Não foi possível excluir o grupo.'),
+      );
+
+      final notifier = container.read(groupDetailControllerProvider.notifier);
+      await notifier.load('g-1');
+
+      expect(
+        () => notifier.deleteGroup(),
+        throwsA(isA<GroupRepositoryException>()),
+      );
+    });
+
+    test('sem grupo carregado -> não chama o repository', () async {
+      await container
+          .read(groupDetailControllerProvider.notifier)
+          .deleteGroup();
+
+      verifyNever(() => repository.delete(any()));
+    });
+  });
 }
