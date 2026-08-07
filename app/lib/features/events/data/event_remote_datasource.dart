@@ -22,7 +22,20 @@ class EventRemoteDatasource {
 
   static const _eventColumns =
       'id,group_id,restaurant_id,scheduled_at,status,average_rating,total_reviews,'
-      'restaurants(name,category,city,cover_image)';
+      'restaurants(name,category,city,cover_image),event_attendances(count)';
+
+  /// Filtro aplicado ao embed `event_attendances(count)` de
+  /// [_eventColumns] em toda consulta que o usa (FASE B0,
+  /// `EventCard.confirmedCount`) - sem isto, o embed contaria TODAS as
+  /// presenças (confirmadas/pendentes/recusadas), não só as
+  /// confirmadas. Mesma técnica de `group_members(count)`
+  /// (`GroupRemoteDatasource`, Sprint 3), com um filtro a mais no path
+  /// do embed - sintaxe validada contra o projeto QA real via HTTP
+  /// direto antes de escrever este código (`select=...,
+  /// event_attendances(count)&event_attendances.status=eq.confirmed`
+  /// retornou 200, não 400).
+  static const _confirmedAttendanceColumn = 'event_attendances.status';
+  static const _confirmedAttendanceValue = 'confirmed';
 
   Future<Map<String, dynamic>> createEvent({
     required String groupId,
@@ -51,6 +64,7 @@ class EventRemoteDatasource {
         .from(_eventsTable)
         .select(_eventColumns)
         .eq('group_id', groupId)
+        .eq(_confirmedAttendanceColumn, _confirmedAttendanceValue)
         .order('scheduled_at');
     return List<Map<String, dynamic>>.from(rows);
   }
@@ -59,6 +73,7 @@ class EventRemoteDatasource {
     return _client
         .from(_eventsTable)
         .select(_eventColumns)
+        .eq(_confirmedAttendanceColumn, _confirmedAttendanceValue)
         .eq('id', eventId)
         .single();
   }
@@ -134,6 +149,7 @@ class EventRemoteDatasource {
         .from(_eventsTable)
         .update({'scheduled_at': scheduledAt.toIso8601String()})
         .eq('id', eventId)
+        .eq(_confirmedAttendanceColumn, _confirmedAttendanceValue)
         .select(_eventColumns)
         .single();
   }

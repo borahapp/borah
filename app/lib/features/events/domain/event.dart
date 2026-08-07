@@ -15,6 +15,7 @@ class Event {
     this.restaurantCoverImage,
     this.averageRating,
     this.totalReviews = 0,
+    this.confirmedCount = 0,
   });
 
   final String id;
@@ -49,6 +50,18 @@ class Event {
   /// rolê, não ao restaurante - os dois nunca se misturam.
   final double? averageRating;
   final int totalReviews;
+
+  /// Contagem de `event_attendances` com `status = 'confirmed'` (FASE B0,
+  /// `EventCard`) - resolvida via embed filtrado do PostgREST
+  /// (`event_attendances(count)` + filtro no path do embed, mesma
+  /// técnica de `Group.memberCount`/`group_members(count)`, Sprint 3),
+  /// nunca uma consulta separada nem recontada a partir de uma lista de
+  /// presenças carregada à parte. `0` quando o `Event` vem de
+  /// `create_event()` (RPC, sem embed - mesma limitação já documentada
+  /// para `restaurantName` acima); a lista recarrega via `listByGroup()`
+  /// logo em seguida à criação e corrige o valor, então isso nunca fica
+  /// visível para o usuário.
+  final int confirmedCount;
 
   String get statusLabel => switch (status) {
     'cancelled' => 'Cancelado',

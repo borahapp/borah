@@ -107,6 +107,15 @@ class EventRepositoryImpl implements EventRepository {
 
   Event _mapRow(Map<String, dynamic> row) {
     final restaurant = row['restaurants'] as Map<String, dynamic>?;
+    // Mesmo padrão de `GroupRepositoryImpl._mapRow`/`Group.memberCount`
+    // (Sprint 3) - `event_attendances` só existe na linha quando o
+    // `select` pediu o embed filtrado (FASE B0); ausente no retorno de
+    // `create_event()` (RPC sem embed), `confirmedCount` fica `0`.
+    final attendanceRows = row['event_attendances'] as List?;
+    final confirmedCount = attendanceRows != null && attendanceRows.isNotEmpty
+        ? attendanceRows.first['count'] as int
+        : 0;
+
     return Event(
       id: row['id'] as String,
       groupId: row['group_id'] as String,
@@ -119,6 +128,7 @@ class EventRepositoryImpl implements EventRepository {
       restaurantCoverImage: restaurant?['cover_image'] as String?,
       averageRating: (row['average_rating'] as num?)?.toDouble(),
       totalReviews: row['total_reviews'] as int? ?? 0,
+      confirmedCount: confirmedCount,
     );
   }
 
