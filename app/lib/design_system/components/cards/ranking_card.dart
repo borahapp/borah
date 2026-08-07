@@ -65,8 +65,10 @@ class RankingCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(name, style: theme.textTheme.titleMedium),
-                if (subtitle != null)
+                if (subtitle != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
                   Text(subtitle!, style: theme.textTheme.bodyMedium),
+                ],
               ],
             ),
           ),
