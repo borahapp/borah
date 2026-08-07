@@ -30,13 +30,20 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
   /// Retorna `null` se não houver grupo carregado (a página só oferece
   /// o botão de compartilhar quando o estado já é `GroupDetailLoaded`,
   /// então isso é só uma proteção defensiva).
+  ///
+  /// Deep Link de convite (`borah://group/join?code=X`) incluído a
+  /// partir daqui - quem recebe e já tem o app instalado entra direto,
+  /// sem digitar o código; o código continua no texto para quem não
+  /// reconhece o link (mesmo cliente que já ignorava um esquema
+  /// customizado antes disso).
   String? buildInviteShareMessage() {
     final current = state;
     if (current is! GroupDetailLoaded) return null;
 
     final group = current.details.group;
     return 'Entre no meu grupo "${group.name}" no BORAH! '
-        'Use o código de convite: ${group.inviteCode}';
+        'borah://group/join?code=${group.inviteCode}\n'
+        'Ou use o código de convite: ${group.inviteCode}';
   }
 
   /// Promove/rebaixa um membro (BLOCO 2). Recarrega do servidor após o

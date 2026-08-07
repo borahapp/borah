@@ -132,6 +132,9 @@ void main() {
         expect(message, isNotNull);
         expect(message, contains('Turma do João'));
         expect(message, contains('FS575HP5'));
+        // Deep Link de convite (RC-03, próxima fase pós-FASE B0) - quem
+        // já tem o app entra direto, sem digitar o código.
+        expect(message, contains('borah://group/join?code=FS575HP5'));
       },
     );
   });
