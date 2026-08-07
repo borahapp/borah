@@ -17,9 +17,9 @@ class GroupRankingController extends Notifier<GroupRankingStatus> {
       final entries = await _repository.listByGroup(groupId);
       // Mesmo padrão de `RankingsController`/`UserReviewsController`:
       // estado `Empty` dedicado em vez de `Loaded` com lista vazia -
-      // permite à `GroupRankingPage` mostrar o `EmptyState` do design
-      // system (mesmo componente de `RankingsPage`) em vez de uma
-      // `ListView` em branco.
+      // permite à aba Ranking de `group_hub_page.dart` mostrar o
+      // `EmptyState` do design system (mesmo componente de
+      // `RankingsPage`) em vez de uma `ListView` em branco.
       state = entries.isEmpty
           ? const GroupRankingEmpty()
           : GroupRankingLoaded(entries);

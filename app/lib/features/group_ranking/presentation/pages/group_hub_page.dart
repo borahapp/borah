@@ -23,25 +23,31 @@ import '../../domain/group_ranking_entry.dart';
 import '../states/group_ranking_status.dart';
 
 /// Tela unificada "Meu Grupo" (F23, `RC03_DESIGN_GAP.md §1.3`) - Ranking
-/// + Estatísticas + Memórias em `AppTabs`, entrega 1 da FASE B.
+/// + Estatísticas + Memórias em `AppTabs`.
 ///
-/// `GroupRankingPage`/`GroupStatsPage` **continuam existindo** por
-/// enquanto - esta tela não as substitui ainda, só oferece o mesmo
-/// conteúdo em um único destino. A remoção das 2 rotas antigas (e desta
-/// duplicação de Ranking/Estatísticas, que desaparece junto) é a
-/// Entrega 5 da FASE B, não esta. Diferente da aba Memórias (ver
-/// [_MemoriesTab]), a duplicação de Ranking/Estatísticas não tem um
-/// componente compartilhado planejado - ela só some quando as telas
-/// antigas forem deletadas, não por extração.
-///
-/// Sem rota própria ainda (mesmo padrão já usado para `AppTabs`/
-/// `EventCard` na Sprint 1/FASE B0: infraestrutura construída e coberta
-/// por teste de widget antes de ganhar um consumidor de navegação) - a
-/// Entrega 5 é quem conecta esta tela a uma rota real.
+/// FASE B, Entrega 5: rota única (`/groups/:id/hub`), substituindo
+/// `GroupRankingPage`/`GroupStatsPage` - as duas telas antigas (e as 2
+/// rotas separadas que apontavam para elas) foram removidas nesta
+/// entrega. O conteúdo das abas Ranking/Estatísticas, que era uma
+/// duplicação deliberada das telas antigas desde a Entrega 1 (sem
+/// componente compartilhado planejado, diferente da aba Memórias - ver
+/// [_MemoriesTab]), agora é simplesmente a implementação canônica -
+/// não há mais nada do qual seja "cópia".
 class GroupHubPage extends ConsumerStatefulWidget {
-  const GroupHubPage({super.key, required this.groupId});
+  const GroupHubPage({
+    super.key,
+    required this.groupId,
+    this.initialTabIndex = 0,
+  });
 
   final String groupId;
+
+  /// Aba aberta ao entrar (0 = Ranking, 1 = Estatísticas, 2 = Memórias)
+  /// - permite que os 2 pontos de entrada de `group_detail_page.dart`
+  /// ("Ranking do grupo"/"Estatísticas") continuem levando direto à
+  /// aba correspondente, mesmo com as 2 rotas antigas consolidadas
+  /// nesta única tela.
+  final int initialTabIndex;
 
   @override
   ConsumerState<GroupHubPage> createState() => _GroupHubPageState();
@@ -53,8 +59,8 @@ class _GroupHubPageState extends ConsumerState<GroupHubPage> {
     super.initState();
     // Carrega os 2 controllers de uma vez, não sob demanda por aba -
     // evita o flicker de "trocar de aba e ver Loading" para dado que já
-    // poderia estar pronto (mesmo motivo de `GroupStatsPage` já carregar
-    // ambos hoje).
+    // poderia estar pronto, mesmo quando a aba inicial não é a
+    // primeira (`initialTabIndex`).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(groupRankingControllerProvider.notifier).load(widget.groupId);
       ref.read(eventsListControllerProvider.notifier).load(widget.groupId);
@@ -66,6 +72,7 @@ class _GroupHubPageState extends ConsumerState<GroupHubPage> {
     return Scaffold(
       appBar: const AppTopBar(title: 'Meu grupo'),
       body: AppTabs(
+        initialIndex: widget.initialTabIndex,
         tabs: [
           AppTabItem(
             label: 'Ranking',
@@ -85,8 +92,10 @@ class _GroupHubPageState extends ConsumerState<GroupHubPage> {
   }
 }
 
-/// Mesmo conteúdo de `GroupRankingPage` (duplicado, não extraído - ver
-/// doc de [GroupHubPage]).
+/// Aba "Ranking" (BLOCO 5) - reaproveita `RankingCard` (design system)
+/// tal qual `RankingUsersPage`/`RankingsPage` já fazem: as 3 primeiras
+/// posições já mostram a medalha oficial automaticamente, resolvido
+/// pelo próprio componente, sem UI nova.
 class _RankingTab extends ConsumerWidget {
   const _RankingTab({required this.groupId});
 
@@ -142,8 +151,10 @@ class _RankingTab extends ConsumerWidget {
   }
 }
 
-/// Mesmo conteúdo de `GroupStatsPage` (duplicado, não extraído - ver
-/// doc de [GroupHubPage]).
+/// Aba "Estatísticas" (BLOCO 7) - Grupo/Você/Restaurantes/Rolês, tudo
+/// derivado de dados que os 2 controllers já carregados no `initState`
+/// de [GroupHubPage] expõem - nenhum provider, consulta ou tabela
+/// nova.
 class _StatsTab extends ConsumerWidget {
   const _StatsTab({required this.groupId});
 

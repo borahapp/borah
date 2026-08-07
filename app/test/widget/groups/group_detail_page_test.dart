@@ -43,6 +43,16 @@ Widget _wrap(MockGroupRepository repository, {required bool justCreated}) {
         builder: (_, _) =>
             GroupDetailPage(groupId: 'g-1', justCreated: justCreated),
       ),
+      // Stub - o próprio GroupHubPage já é testado em
+      // group_hub_page_test.dart; aqui só interessa confirmar para
+      // onde e com qual aba inicial a navegação acontece (FASE B,
+      // Entrega 5), mesmo padrão de stub já usado em
+      // events_list_page_test.dart para a rota de detalhe do rolê.
+      GoRoute(
+        path: '/groups/:id/hub',
+        builder: (_, state) =>
+            Scaffold(body: Text('Group Hub - aba ${state.extra}')),
+      ),
     ],
   );
 
@@ -94,4 +104,52 @@ void main() {
 
     expect(find.text('Grupo criado com sucesso'), findsNothing);
   });
+
+  testWidgets(
+    '"Ranking do grupo" navega para o Group Hub já na aba 0 (Ranking) '
+    '(FASE B, Entrega 5)',
+    (tester) async {
+      await tester.pumpWidget(_wrap(repository, justCreated: false));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ranking do grupo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Group Hub - aba 0'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"Estatísticas" navega para o Group Hub já na aba 1 (Estatísticas) '
+    '(FASE B, Entrega 5)',
+    (tester) async {
+      await tester.pumpWidget(_wrap(repository, justCreated: false));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Estatísticas'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Group Hub - aba 1'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'as 2 rotas antigas de Ranking/Estatísticas não existem mais - ambos os '
+    'itens do menu continuam visíveis, levando ao Group Hub (FASE B, '
+    'Entrega 5)',
+    (tester) async {
+      await tester.pumpWidget(_wrap(repository, justCreated: false));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ranking do grupo'), findsOneWidget);
+      expect(find.text('Estatísticas'), findsOneWidget);
+    },
+  );
 }

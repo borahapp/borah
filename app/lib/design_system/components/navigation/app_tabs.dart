@@ -4,26 +4,25 @@ import 'package:flutter/material.dart';
 /// Material, com cor/tipografia vindas de `Theme.of(context)` (nunca
 /// hardcoded), mesma regra de todo componente do design system.
 ///
-/// Único uso previsto hoje é a tela unificada "Meu Grupo" (F23,
-/// `RC03_DESIGN_GAP.md §1.3`: Ranking/Estatísticas/Memórias em abas) -
-/// construído genérico o suficiente (lista de rótulo+conteúdo) para
-/// servir qualquer tela futura com abas, sem parâmetros especulativos
-/// além do que uma implementação simples exige.
+/// Construído genérico o suficiente (lista de rótulo+conteúdo) para
+/// servir qualquer tela com abas, sem parâmetros especulativos além do
+/// que uma implementação simples exige.
 ///
-/// Ainda sem consumidor real (auditoria de componentes RC-03, FASE B0)
-/// - **não é dívida técnica**: "Meu Grupo" continua sendo item Core
-/// (`BORAH_VISION_v2.0.md`, Capítulo 11) e sua própria fase de
-/// implementação ainda não foi aberta. Este componente é infraestrutura
-/// construída deliberadamente adiantada para essa fase futura, não um
-/// componente esquecido ou sem propósito.
+/// Consumidor real desde a FASE B, Entrega 1: `GroupHubPage` ("Meu
+/// Grupo", F23, `RC03_DESIGN_GAP.md §1.3`) - Ranking/Estatísticas/
+/// Memórias. Construído adiantado na Sprint 1, antes de "Meu Grupo"
+/// existir (não era dívida técnica na época, e a previsão se
+/// confirmou).
 class AppTabs extends StatelessWidget {
   const AppTabs({super.key, required this.tabs, this.initialIndex = 0});
 
   final List<AppTabItem> tabs;
 
-  /// Aba aberta inicialmente (ex.: destino direto de uma notificação
-  /// para "Memórias" em vez de "Ranking"). `0` preserva o comportamento
-  /// original.
+  /// Aba aberta inicialmente - usado por `GroupHubPage` (FASE B,
+  /// Entrega 5) para que os 2 pontos de entrada de
+  /// `group_detail_page.dart` ("Ranking do grupo"/"Estatísticas")
+  /// levem direto à aba correspondente. `0` preserva o comportamento
+  /// original (primeira aba).
   final int initialIndex;
 
   @override

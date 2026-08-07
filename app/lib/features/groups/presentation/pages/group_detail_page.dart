@@ -177,11 +177,16 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') _editGroup(detailsForActions!.group);
+                // FASE B, Entrega 5: as 2 rotas antigas viraram uma só
+                // (`GroupHubPage`) - cada item continua abrindo direto
+                // na aba correspondente (0 = Ranking, 1 = Estatísticas)
+                // via `extra`, mesmo padrão já usado para `justCreated`
+                // acima.
                 if (value == 'ranking') {
-                  context.push('/groups/${widget.groupId}/ranking');
+                  context.push('/groups/${widget.groupId}/hub', extra: 0);
                 }
                 if (value == 'stats') {
-                  context.push('/groups/${widget.groupId}/stats');
+                  context.push('/groups/${widget.groupId}/hub', extra: 1);
                 }
                 if (value == 'leave') _leaveGroup(own);
               },

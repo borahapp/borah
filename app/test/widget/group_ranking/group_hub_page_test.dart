@@ -59,13 +59,16 @@ Event _event({
 Widget _wrap({
   required MockGroupRankingRepository rankingRepository,
   required MockEventRepository eventRepository,
+  int initialTabIndex = 0,
 }) {
   return ProviderScope(
     overrides: [
       groupRankingRepositoryProvider.overrideWithValue(rankingRepository),
       eventRepositoryProvider.overrideWithValue(eventRepository),
     ],
-    child: const MaterialApp(home: GroupHubPage(groupId: 'g-1')),
+    child: MaterialApp(
+      home: GroupHubPage(groupId: 'g-1', initialTabIndex: initialTabIndex),
+    ),
   );
 }
 
@@ -105,6 +108,32 @@ void main() {
     expect(find.text('Ana Silva'), findsOneWidget);
     expect(find.text('Bia Costa'), findsOneWidget);
   });
+
+  testWidgets(
+    'initialTabIndex abre direto na aba correspondente (FASE B, Entrega 5)',
+    (tester) async {
+      when(
+        () => rankingRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => [_entry()]);
+      when(
+        () => eventRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => [_event()]);
+
+      await tester.pumpWidget(
+        _wrap(
+          rankingRepository: rankingRepository,
+          eventRepository: eventRepository,
+          initialTabIndex: 1,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Conteúdo da aba Estatísticas já visível sem precisar tocar em
+      // nada - prova que a aba inicial é a 1 (Estatísticas), não a
+      // 0 (Ranking, default).
+      expect(find.text('Total de rolês'), findsOneWidget);
+    },
+  );
 
   testWidgets('aba Estatísticas mostra os totais do grupo', (tester) async {
     // Valores escolhidos para que nenhum número se repita entre os

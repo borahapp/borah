@@ -83,8 +83,8 @@ abstract final class EventMemoryCards {
 
     // QA-13 (RC): "Campeão" é o RESTAURANTE com a melhor nota - não o
     // rolê individual mais bem avaliado. Agrega por restaurante antes
-    // de decidir o campeão - mesmo padrão de `group_hub_page.dart`
-    // (aba Estatísticas)/`group_stats_page.dart`.
+    // de decidir o campeão - mesmo padrão da aba Estatísticas de
+    // `group_hub_page.dart`.
     final ratingByRestaurant =
         <String, ({String name, double ratingSum, int ratingCount})>{};
     for (final event in realized) {
