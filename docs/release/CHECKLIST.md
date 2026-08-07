@@ -23,6 +23,7 @@ Checklist reutilizável de engenharia de build/release — usar antes de **toda*
 - [ ] `android/key.properties` presente e correto (só em ambiente local — nunca comitado)
 - [ ] `flutter build apk --release`/`appbundle --release` sem erros
 - [ ] AAB assinado com a keystore real (não a de debug) antes de subir à Play Console
+- [ ] **Pendência registrada, não bloqueante hoje** — Deep Link de convite de grupo (`core/deep_link/`) usa esquema customizado (`borah://group/join`) até aqui; migrar para Android App Links reais (`https://appborah.com.br/...`, verificado via `assetlinks.json`) depende do fingerprint SHA-256 da keystore de release acima — só é possível gerar o `assetlinks.json` final depois que essa keystore existir. Mesma dependência já vale para iOS Universal Links (`apple-app-site-association`, depende do Team ID do Apple Developer Program).
 
 ## iOS (ver `IOS_RELEASE.md`)
 
