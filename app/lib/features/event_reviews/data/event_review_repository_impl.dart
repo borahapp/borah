@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
+import '../../../core/logger/app_logger.dart';
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/event_review.dart';
 import '../domain/event_review_repository.dart';
@@ -127,7 +128,7 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
     final photoPath = row['photo_path'] as String?;
     final photoUrl = photoPath == null
         ? null
-        : await _datasource.getPhotoUrl(photoPath);
+        : await _resolvePhotoUrl(photoPath);
     return EventReview(
       id: row['id'] as String,
       eventId: row['event_id'] as String,
@@ -143,6 +144,30 @@ class EventReviewRepositoryImpl implements EventReviewRepository {
       fullName: profile?['full_name'] as String?,
       avatarUrl: profile?['avatar_url'] as String?,
     );
+  }
+
+  /// Resolver a URL assinada de uma foto já existente nunca pode
+  /// derrubar a leitura/gravação da avaliação em si - a foto é sempre
+  /// opcional e nunca pode bloquear o gesto principal
+  /// (`BORAH_VISION_v2.0.md`, Capítulo 12, decisão 3). Diferente de
+  /// `attachPhoto`/`removePhoto` (onde a foto é o próprio alvo da ação
+  /// e a falha vira `photoWarning` na tela), aqui a foto é só um dado
+  /// acessório sendo exibido de novo - uma falha aqui degrada para
+  /// "sem foto visível por ora", nunca para um erro de
+  /// `submit`/`update`/`listByEvent` inteiros.
+  Future<String?> _resolvePhotoUrl(String photoPath) async {
+    try {
+      return await _datasource.getPhotoUrl(photoPath);
+    } catch (e, stackTrace) {
+      AppLogger.warning(
+        'Falha ao resolver URL assinada da foto - avaliação segue sem foto '
+        'visível nesta leitura.',
+        tag: 'event_reviews/EventReviewRepositoryImpl',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 
   Future<T> _guard<T>(Future<T> Function() action) async {
