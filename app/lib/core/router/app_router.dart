@@ -35,6 +35,7 @@ import '../../features/events/domain/event.dart';
 import '../../features/events/presentation/pages/create_event_page.dart';
 import '../../features/events/presentation/pages/event_detail_page.dart';
 import '../../features/events/presentation/pages/events_list_page.dart';
+import '../../features/groups/application/pending_invite_controller.dart';
 import '../../features/groups/domain/group.dart';
 import '../../features/groups/presentation/pages/create_group_page.dart';
 import '../../features/groups/presentation/pages/edit_group_page.dart';
@@ -173,6 +174,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
       if (location == '/password-recovery') {
         return status is Authenticated ? '/home' : '/login';
+      }
+
+      // Deep Link de convite de grupo: mesmo padrão de
+      // `PasswordRecoveryInProgress` acima - o Router só consulta
+      // "existe convite pendente?" (`PendingInviteController.existe`),
+      // nunca interpreta a Uri que originou isso (já foi interpretada
+      // antes, por `DeepLinkParser`/`DeepLinkDispatcher`). Checado antes
+      // do redirecionamento padrão de rota de auth para `/home`, para
+      // que um login/cadastro feito a partir de um link de convite vá
+      // direto para "Entrar em grupo", não para a Home primeiro.
+      if (status is Authenticated &&
+          ref.read(pendingInviteControllerProvider.notifier).existe &&
+          location != '/groups/join') {
+        return '/groups/join';
       }
 
       if (status is Authenticated && isAuthRoute) return '/home';

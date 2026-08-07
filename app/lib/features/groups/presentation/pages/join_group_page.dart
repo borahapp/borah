@@ -9,6 +9,7 @@ import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../application/join_group_controller.dart';
+import '../../application/pending_invite_controller.dart';
 import '../states/join_group_status.dart';
 
 /// Tela de "entrar em grupo por código" (ONBOARDING-01) - formulário
@@ -18,6 +19,12 @@ import '../states/join_group_status.dart';
 /// recebeu o convite de outra pessoa, não precisa compartilhar o
 /// próprio). A lista de grupos recarrega ao voltar (mesmo padrão de
 /// `GroupsListPage._createGroup`).
+///
+/// Deep Link de convite (`borah://group/join?code=X`): o código, se
+/// houver, já chega pronto via `PendingInviteController.consumir()` -
+/// pré-preenche o campo, mas **nunca envia sozinho** - o toque em
+/// "Entrar" continua sendo a confirmação explícita, mesmo padrão de
+/// toda ação de grupo no app.
 class JoinGroupPage extends ConsumerStatefulWidget {
   const JoinGroupPage({super.key});
 
@@ -28,6 +35,25 @@ class JoinGroupPage extends ConsumerStatefulWidget {
 class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Riverpod não permite modificar um provider durante a construção
+    // da árvore de widgets (`initState` conta como parte disso) - o
+    // `consumir()` (que muda o estado de `PendingInviteController`) só
+    // pode rodar depois do primeiro frame já montado. Mesmo padrão já
+    // usado em `SplashPage._restoreAndRedirect`.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pendingCode = ref
+          .read(pendingInviteControllerProvider.notifier)
+          .consumir();
+      if (pendingCode != null) {
+        setState(() => _codeController.text = pendingCode);
+      }
+    });
+  }
 
   @override
   void dispose() {

@@ -1,13 +1,31 @@
 import 'package:app/app.dart';
+import 'package:app/core/deep_link/deep_link.dart';
 import 'package:app/core/router/app_router.dart';
+import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/authentication/data/auth_repository_impl.dart';
 import 'package:app/features/authentication/domain/auth_repository.dart';
+import 'package:app/features/authentication/presentation/states/auth_status.dart';
+import 'package:app/features/groups/application/pending_invite_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+/// Simula um usuário já autenticado sem depender de nenhum repositório
+/// real - `build()`/`restoreSession()` sobrescritos, mesmo padrão de
+/// dublê já usado para `MockAuthRepository`, só que substituindo o
+/// controller inteiro (mais simples aqui, onde o único interesse é o
+/// `AuthStatus` resultante, não o fluxo de restauração em si).
+class _FakeAuthenticatedController extends AuthController {
+  @override
+  AuthStatus build() =>
+      const Authenticated(userId: 'user-1', email: 'user@teste.com');
+
+  @override
+  Future<void> restoreSession() async {}
+}
 
 void main() {
   testWidgets('Sem sessão salva, a Splash redireciona para o Login', (
@@ -59,6 +77,36 @@ void main() {
 
       expect(find.text('Não foi possível abrir esta tela.'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Login com convite pendente redireciona para "Entrar em grupo", não Home',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(_FakeAuthenticatedController.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Mesmo efeito de DeepLinkDispatcher chamando receive() - sem
+      // precisar de nenhum transporte real neste teste, só o resultado
+      // que ele produziria.
+      container
+          .read(pendingInviteControllerProvider.notifier)
+          .receive(const GroupJoinDeepLink(inviteCode: 'ABCD1234'));
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const BorahApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Entrar em grupo'), findsOneWidget);
+      expect(find.text('ABCD1234'), findsOneWidget);
     },
   );
 }
