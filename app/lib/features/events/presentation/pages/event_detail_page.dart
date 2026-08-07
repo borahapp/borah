@@ -13,6 +13,7 @@ import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
+import '../../../../design_system/tokens/app_radius.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../event_reviews/application/event_reviews_controller.dart';
@@ -452,10 +453,39 @@ class _ReviewsSection extends ConsumerWidget {
                           radius: 20,
                         ),
                         title: Text(entry.$2.fullName ?? ''),
+                        // FASE B0: a foto opcional da FASE A2 não tinha,
+                        // até agora, nenhuma tela que a exibisse para
+                        // outros membros do grupo - miniatura abaixo do
+                        // comentário, nunca substituindo o avatar de
+                        // quem avaliou (continua sendo a informação
+                        // primária da linha). Fica no `subtitle` (não
+                        // em `trailing`, orçamento de largura apertado
+                        // ao lado do selo de nota) para não competir por
+                        // espaço com o `AppBadge`.
                         subtitle:
-                            entry.$2.comment != null &&
-                                entry.$2.comment!.isNotEmpty
-                            ? Text(entry.$2.comment!)
+                            (entry.$2.comment != null &&
+                                    entry.$2.comment!.isNotEmpty) ||
+                                entry.$2.photoUrl != null
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (entry.$2.comment != null &&
+                                      entry.$2.comment!.isNotEmpty)
+                                    Text(entry.$2.comment!),
+                                  if (entry.$2.photoUrl != null) ...[
+                                    const SizedBox(height: AppSpacing.xs),
+                                    ClipRRect(
+                                      borderRadius: AppRadius.radiusSm,
+                                      child: Image.network(
+                                        entry.$2.photoUrl!,
+                                        width: 56,
+                                        height: 56,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              )
                             : null,
                         trailing: AppBadge(
                           label: entry.$2.averageScore.toStringAsFixed(1),
