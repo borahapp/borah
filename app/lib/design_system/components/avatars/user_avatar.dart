@@ -17,14 +17,14 @@ import 'package:flutter/material.dart';
 /// nesta rodada — migrá-las para `UserAvatar` fica para uma rodada
 /// futura (nenhuma tela é alterada no UI-02).
 ///
-/// [imageBytes] (RC-03 Sprint 1, `RC03_DESIGN_GAP.md §1.4`) fecha a
-/// unificação de avatar identificada no `RC03_UI_AUDIT.md §6` — antes
-/// desta extensão, `change_avatar_page.dart` precisava de um
-/// `CircleAvatar` cru à parte para mostrar o preview local (recém
-/// selecionado, ainda sem URL) porque `UserAvatar` só aceitava
-/// `NetworkImage`. A fusão de `change_avatar_page.dart` em
-/// `edit_profile_page.dart` (Sprint 6) é quem efetivamente passa a usar
-/// isso - nenhuma tela é alterada nesta rodada.
+/// [imageBytes] (`RC03_DESIGN_GAP.md §1.4`) fecha a unificação de
+/// avatar identificada no `RC03_UI_AUDIT.md §6` — antes desta extensão,
+/// `change_avatar_page.dart` precisava de um `CircleAvatar` cru à parte
+/// para mostrar o preview local (recém selecionado, ainda sem URL)
+/// porque `UserAvatar` só aceitava `NetworkImage`. Quem efetivamente
+/// passa a usar isso é a futura fusão de `change_avatar_page.dart` em
+/// `edit_profile_page.dart` (Perfil reformulado, ainda não planejada
+/// como fase própria) - nenhuma tela é alterada nesta rodada.
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,

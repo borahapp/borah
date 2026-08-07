@@ -11,7 +11,10 @@ import '../../animations/app_motion.dart';
 /// tipo serve (bool, enum, etc.), só precisa mudar de valor exatamente
 /// quando o ícone deve pulsar.
 ///
-/// Ainda não conectado a nenhuma tela (UI-08A é só a fundação).
+/// Conectado a 3 telas (auditoria de componentes RC-03, FASE B0):
+/// favoritar restaurante (`restaurant_detail_page.dart`), curtir
+/// avaliação (`review_detail_page.dart`) e badge conquistado
+/// (`gamification_profile_page.dart`).
 class AppPulseIcon extends StatefulWidget {
   const AppPulseIcon({super.key, required this.trigger, required this.child});
 

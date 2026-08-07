@@ -4,10 +4,9 @@
 /// de ícone hardcoded, valores 14/16/18/36/48/64px espalhados sem token
 /// comum).
 ///
-/// Esta rodada (Sprint 1) só cria o token — retrofit nas telas com
-/// tamanho hardcoded fica para a sprint que já toca cada tela
-/// (majoritariamente Sprint 9/Polimento), conforme
-/// `RC03_IMPLEMENTATION_PLAN.md`.
+/// Esta rodada só criou o token — retrofit nas ~9 telas com tamanho
+/// ainda hardcoded fica para quando cada uma dessas telas for tocada
+/// por sua própria fase de trabalho, não uma varredura dedicada.
 abstract final class AppIconSize {
   static const xs = 16.0;
   static const sm = 20.0;

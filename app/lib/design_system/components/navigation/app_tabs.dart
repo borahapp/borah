@@ -5,12 +5,17 @@ import 'package:flutter/material.dart';
 /// hardcoded), mesma regra de todo componente do design system.
 ///
 /// Único uso previsto hoje é a tela unificada "Meu Grupo" (F23,
-/// `RC03_DESIGN_GAP.md §1.3`, Sprint 8: Ranking/Estatísticas/Memórias em
-/// abas) - construído genérico o suficiente (lista de rótulo+conteúdo)
-/// para servir qualquer tela futura com abas, sem parâmetros
-/// especulativos além do que uma implementação simples exige.
+/// `RC03_DESIGN_GAP.md §1.3`: Ranking/Estatísticas/Memórias em abas) -
+/// construído genérico o suficiente (lista de rótulo+conteúdo) para
+/// servir qualquer tela futura com abas, sem parâmetros especulativos
+/// além do que uma implementação simples exige.
 ///
-/// Não é consumido em nenhuma tela nesta rodada (Sprint 1).
+/// Ainda sem consumidor real (auditoria de componentes RC-03, FASE B0)
+/// - **não é dívida técnica**: "Meu Grupo" continua sendo item Core
+/// (`BORAH_VISION_v2.0.md`, Capítulo 11) e sua própria fase de
+/// implementação ainda não foi aberta. Este componente é infraestrutura
+/// construída deliberadamente adiantada para essa fase futura, não um
+/// componente esquecido ou sem propósito.
 class AppTabs extends StatelessWidget {
   const AppTabs({super.key, required this.tabs, this.initialIndex = 0});
 

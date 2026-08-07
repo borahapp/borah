@@ -13,8 +13,11 @@ import '../../animations/app_motion.dart';
 /// widget padrão do Flutter, só documentada aqui porque é o ponto mais
 /// fácil de esquecer ao adotar este componente.
 ///
-/// Ainda não conectado a nenhuma tela (UI-08A é só a fundação — a
-/// aplicação nas telas fica para o UI-08B).
+/// Amplamente adotado (auditoria de componentes RC-03, FASE B0): mais
+/// de 20 telas, do `groups_list_page.dart` ao `feed_page.dart`, sempre
+/// com `duration`/`curve` no valor padrão até hoje - os dois parâmetros
+/// continuam existindo para o caso de uma tela futura precisar de um
+/// ritmo diferente, não por já terem sido usados.
 class AppAnimatedSwitcher extends StatelessWidget {
   const AppAnimatedSwitcher({
     super.key,

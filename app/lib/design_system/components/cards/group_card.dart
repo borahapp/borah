@@ -7,16 +7,18 @@ import 'app_card.dart';
 /// Card de grupo do BORAH.
 ///
 /// Especificado em `RC03_DESIGN_GAP.md §1.3`/`§3` (item Core do
-/// `RC03_FEATURE_GAP.md`, F46) para substituir o `ListTile` cru de
-/// `groups_list_page.dart` (Sprint 3) — hoje a Home do app não tem
-/// nenhum card dedicado a grupo, apesar de `RestaurantCard`/`RankingCard`
-/// já existirem para os outros casos. Recebe dados primitivos (não a
-/// entidade `Group`), mesma regra de desacoplamento já aplicada a
-/// `RestaurantCard` (UI-06 §16.6: "nenhum componente importa uma
-/// entidade de domínio de `features/`").
+/// `RC03_FEATURE_GAP.md`, F46) para substituir o `ListTile` cru que a
+/// Home do app (`groups_list_page.dart`) usava para cada grupo, quando
+/// `RestaurantCard`/`RankingCard` já existiam para os outros casos.
+/// Recebe dados primitivos (não a entidade `Group`), mesma regra de
+/// desacoplamento já aplicada a `RestaurantCard` (UI-06 §16.6: "nenhum
+/// componente importa uma entidade de domínio de `features/`").
 ///
-/// Não é consumido em nenhuma tela nesta rodada (Sprint 1) - a aplicação
-/// em `groups_list_page.dart` é escopo da Sprint 3.
+/// Consumido em `groups_list_page.dart` (Home) desde que o `ListTile`
+/// acima foi substituído - `accentColor` segue sem nenhum consumidor
+/// real até hoje (auditoria de componentes RC-03, FASE B0), já que
+/// `Group` não tem hoje um campo de cor própria; mantido como ponto de
+/// extensão de baixo custo, não removido.
 class GroupCard extends StatelessWidget {
   const GroupCard({
     super.key,

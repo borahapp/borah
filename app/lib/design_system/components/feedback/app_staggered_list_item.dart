@@ -17,7 +17,9 @@ import '../../animations/app_motion.dart';
 /// Envolvido em `RepaintBoundary` (UI-08 §7) para isolar o repaint da
 /// animação do resto da lista.
 ///
-/// Ainda não conectado a nenhuma tela (UI-08A é só a fundação).
+/// Amplamente adotado (auditoria de componentes RC-03, FASE B0): mais
+/// de 16 telas de lista, sempre com `maxStaggeredIndex` no valor
+/// padrão (8) até hoje.
 class AppStaggeredListItem extends StatelessWidget {
   const AppStaggeredListItem({
     super.key,

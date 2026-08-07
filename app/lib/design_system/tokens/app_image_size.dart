@@ -5,9 +5,9 @@
 /// `review_detail_page.dart` com `width`/`height` de 96px hardcoded).
 ///
 /// Valores abaixo são os já observados em uso real (não uma escala nova
-/// inventada) — esta rodada (Sprint 1) só cria o token; consolidar as
-/// telas existentes para usá-lo é retrofit de outra sprint (majoritariamente
-/// Sprint 9/Polimento), conforme `RC03_IMPLEMENTATION_PLAN.md`.
+/// inventada) — esta rodada só criou o token; consolidar as telas
+/// existentes para usá-lo fica para quando cada uma for tocada por sua
+/// própria fase de trabalho, não uma varredura dedicada.
 abstract final class AppImageSize {
   /// Raio de avatar em contexto de lista (ex.: linha de seguidor).
   static const avatarSmall = 20.0;
