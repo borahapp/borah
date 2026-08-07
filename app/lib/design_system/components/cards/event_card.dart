@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../tokens/app_spacing.dart';
+import '../avatars/user_avatar.dart';
 import '../badges/app_badge.dart';
 import 'app_card.dart';
 
 /// Card de rolê (evento) do BORAH.
 ///
 /// Especificado em `RC03_DESIGN_GAP.md §1.3`/`§3` (item Core do
-/// `RC03_FEATURE_GAP.md`, F46) para substituir o `ListTile` cru de
-/// `events_list_page.dart` (Sprint 5) — a mesma tela já usa `AppCard`
-/// para os cards de Memórias, então a lista de rolês abaixo deles hoje
-/// destoa visualmente por comparação. Recebe dados primitivos, mesma
-/// regra de `RestaurantCard`/`GroupCard`.
+/// `RC03_FEATURE_GAP.md`, F46) para substituir o `ListTile` cru que
+/// `events_list_page.dart` usava para cada rolê — a mesma tela já usa
+/// `AppCard` para os cards de Memórias, então a lista de rolês abaixo
+/// deles destoava visualmente por comparação. Recebe dados primitivos,
+/// mesma regra de `RestaurantCard`/`GroupCard`.
 ///
 /// O selo de status reaproveita [AppBadge] (não um componente novo),
 /// seguindo exatamente o padrão já em produção em
 /// `event_detail_page.dart:238` (`AppBadge(label: event.statusLabel,
 /// earned: false)`, oculto quando `status == 'scheduled'`).
 ///
-/// Não é consumido em nenhuma tela nesta rodada (Sprint 1) - a aplicação
-/// em `events_list_page.dart` é escopo da Sprint 5.
+/// Consumido em `events_list_page.dart` desde a FASE B0 (auditoria de
+/// componentes RC-03) - `restaurantPhotoUrl` foi adicionado na mesma
+/// rodada, ao notar que `GroupCard`, o componente irmão desta mesma
+/// leva (F46), já tinha identidade visual própria e este não.
 class EventCard extends StatelessWidget {
   const EventCard({
     super.key,
@@ -28,10 +31,20 @@ class EventCard extends StatelessWidget {
     required this.confirmedCount,
     required this.status,
     required this.statusLabel,
+    this.restaurantPhotoUrl,
     this.onTap,
   });
 
   final String restaurantName;
+
+  /// URL já resolvida da foto de capa do restaurante (mesmo dado de
+  /// `Event.restaurantCoverImage`, FASE A1) — `null`/vazia mostra o
+  /// ícone padrão de [UserAvatar]. Adicionado na auditoria do primeiro
+  /// consumidor real (FASE B0): `GroupCard`, o componente irmão desta
+  /// mesma leva (F46), já tinha essa identidade visual desde a Sprint
+  /// 1 — sem ela aqui, `EventCard` era a única das duas "cards de
+  /// identidade" do loop central sem nenhuma foto.
+  final String? restaurantPhotoUrl;
 
   /// Já formatado pelo chamador (ex.: "12/08 às 20h").
   final String dateTimeLabel;
@@ -60,6 +73,12 @@ class EventCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          UserAvatar(
+            imageUrl: restaurantPhotoUrl,
+            radius: 24,
+            fallbackIcon: Icons.restaurant,
+          ),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

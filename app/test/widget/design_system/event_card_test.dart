@@ -73,6 +73,44 @@ void main() {
     expect(find.text('Realizado'), findsOneWidget);
   });
 
+  testWidgets('sem foto do restaurante, mostra o ícone padrão', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const EventCard(
+          restaurantName: 'Cantina do Bairro',
+          dateTimeLabel: '12/08 às 20h',
+          confirmedCount: 3,
+          status: 'scheduled',
+          statusLabel: 'Agendado',
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.restaurant), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
+  });
+
+  testWidgets('com foto do restaurante, mostra a imagem em vez do ícone', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        const EventCard(
+          restaurantName: 'Cantina do Bairro',
+          dateTimeLabel: '12/08 às 20h',
+          confirmedCount: 3,
+          status: 'scheduled',
+          statusLabel: 'Agendado',
+          restaurantPhotoUrl: 'https://x/restaurant.jpg',
+        ),
+      ),
+    );
+    while (tester.takeException() != null) {}
+
+    expect(find.byIcon(Icons.restaurant), findsNothing);
+    expect(find.byType(CircleAvatar), findsOneWidget);
+  });
+
   testWidgets('toque dispara onTap', (tester) async {
     var tapped = false;
     await tester.pumpWidget(
