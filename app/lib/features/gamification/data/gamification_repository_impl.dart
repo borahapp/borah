@@ -5,6 +5,7 @@ import '../../../core/models/paged_result.dart';
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/gamification_badge.dart';
 import '../domain/gamification_repository.dart';
+import '../domain/groups_activity_summary.dart';
 import '../domain/ranking_entry.dart';
 import '../domain/user_progress.dart';
 import 'gamification_remote_datasource.dart';
@@ -110,6 +111,23 @@ class GamificationRepositoryImpl implements GamificationRepository {
       limit: limit,
       hasNextPage: hasNextPage,
     );
+  }
+
+  @override
+  Future<GroupsActivitySummary> getGroupsActivitySummary(String userId) {
+    return _guard(() async {
+      final rows = await _datasource.fetchGroupMembershipCounts(userId);
+      var eventsCount = 0;
+      var reviewsCount = 0;
+      for (final row in rows) {
+        eventsCount += row['events_count'] as int;
+        reviewsCount += row['reviews_count'] as int;
+      }
+      return GroupsActivitySummary(
+        eventsCount: eventsCount,
+        reviewsCount: reviewsCount,
+      );
+    });
   }
 
   UserProgress _mapProgressRow(Map<String, dynamic> row) {

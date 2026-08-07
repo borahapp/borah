@@ -1,5 +1,6 @@
 import '../../../core/models/paged_result.dart';
 import 'gamification_badge.dart';
+import 'groups_activity_summary.dart';
 import 'ranking_entry.dart';
 import 'user_progress.dart';
 
@@ -34,4 +35,11 @@ abstract interface class GamificationRepository {
     required int page,
     required int limit,
   });
+
+  /// Soma `events_count`/`reviews_count` de `group_members` entre TODOS
+  /// os grupos do usuário (FASE B, Entrega 4) - diferente de
+  /// `GroupRankingRepository.listByGroup`, que é escopado a 1 grupo.
+  /// Mesmas colunas denormalizadas já usadas pelo Ranking do Grupo,
+  /// nenhuma tabela/coluna nova.
+  Future<GroupsActivitySummary> getGroupsActivitySummary(String userId);
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/badges/app_badge.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/app_animated_fraction.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
@@ -17,6 +18,7 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/gamification_profile_controller.dart';
 import '../../domain/gamification_badge.dart';
+import '../../domain/groups_activity_summary.dart';
 import '../../domain/user_progress.dart';
 import '../states/gamification_profile_status.dart';
 
@@ -79,12 +81,14 @@ class _GamificationProfilePageState
             :final progress,
             :final allBadges,
             :final earnedBadgeIds,
+            :final groupsActivity,
           ) =>
             _ProfileView(
               key: const ValueKey('loaded'),
               progress: progress,
               allBadges: allBadges,
               earnedBadgeIds: earnedBadgeIds,
+              groupsActivity: groupsActivity,
             ),
         },
       ),
@@ -98,11 +102,22 @@ class _ProfileView extends StatelessWidget {
     required this.progress,
     required this.allBadges,
     required this.earnedBadgeIds,
+    required this.groupsActivity,
   });
 
   final UserProgress progress;
   final List<GamificationBadge> allBadges;
   final Set<String> earnedBadgeIds;
+  final GroupsActivitySummary groupsActivity;
+
+  /// XP por ação em Grupos/Rolês (Sprint 0, mesmos valores de
+  /// `20260804170000_add_gamification_group_triggers.sql`) - mirror
+  /// deliberado só para exibição; a fonte de verdade continua sendo o
+  /// trigger do banco (`award_gamification_points`), nunca esta
+  /// constante. Se os valores lá mudarem, este mirror precisa ser
+  /// atualizado manualmente.
+  static const _xpPerConfirmedEvent = 20;
+  static const _xpPerEventReview = 40;
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +193,25 @@ class _ProfileView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
+        Text('XP de rolês', style: theme.textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _statRow('Rolês confirmados', '${groupsActivity.eventsCount}'),
+              _statRow(
+                'Avaliações coletivas',
+                '${groupsActivity.reviewsCount}',
+              ),
+              _statRow(
+                'XP ganho em rolês',
+                '${groupsActivity.eventsCount * _xpPerConfirmedEvent + groupsActivity.reviewsCount * _xpPerEventReview} XP',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
         Text('Conquistas', style: theme.textTheme.titleMedium),
         const SizedBox(height: AppSpacing.sm),
         ...allBadges.indexed.map((entry) {
@@ -203,6 +237,19 @@ class _ProfileView extends StatelessWidget {
           );
         }),
       ],
+    );
+  }
+
+  Widget _statRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 }

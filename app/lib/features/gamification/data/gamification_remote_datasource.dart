@@ -95,4 +95,25 @@ class GamificationRemoteDatasource {
         row['id'] as String: row['full_name'] as String?,
     };
   }
+
+  /// Consulta `group_members` direto, sem passar por `GroupRankingRepository`
+  /// (FASE B, Entrega 4) - mesma decisão já tomada em
+  /// `EventRemoteDatasource.fetchOwnGroupRole` (cada feature acessa as
+  /// tabelas compartilhadas de que precisa, sem acoplar ao repositório
+  /// de outra feature). Sem `sum()`/`GROUP BY` do lado do Postgres -
+  /// mesmo padrão já usado em toda consulta do projeto (agregação
+  /// sempre em Dart, nunca em subquery de relatório) - a soma real
+  /// acontece em `GamificationRepositoryImpl.getGroupsActivitySummary`.
+  /// `group_members_user_id_idx` (GROUP-01) já cobre esta consulta, sem
+  /// índice novo. RLS (`group_members_select_members`) já permite ler a
+  /// própria linha em qualquer grupo que o usuário participa.
+  Future<List<Map<String, dynamic>>> fetchGroupMembershipCounts(
+    String userId,
+  ) async {
+    final rows = await _client
+        .from('group_members')
+        .select('events_count,reviews_count')
+        .eq('user_id', userId);
+    return List<Map<String, dynamic>>.from(rows);
+  }
 }

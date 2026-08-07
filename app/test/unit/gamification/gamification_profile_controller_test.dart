@@ -2,6 +2,7 @@ import 'package:app/features/gamification/application/gamification_profile_contr
 import 'package:app/features/gamification/data/gamification_repository_impl.dart';
 import 'package:app/features/gamification/domain/gamification_badge.dart';
 import 'package:app/features/gamification/domain/gamification_repository.dart';
+import 'package:app/features/gamification/domain/groups_activity_summary.dart';
 import 'package:app/features/gamification/domain/user_progress.dart';
 import 'package:app/features/gamification/presentation/states/gamification_profile_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,6 +56,9 @@ void main() {
     when(() => repository.listEarnedBadges('user-1')).thenAnswer(
       (_) async => [EarnedBadge(badge: _badge, earnedAt: DateTime(2026, 1, 1))],
     );
+    when(() => repository.getGroupsActivitySummary('user-1')).thenAnswer(
+      (_) async => const GroupsActivitySummary(eventsCount: 5, reviewsCount: 3),
+    );
 
     await container
         .read(gamificationProfileControllerProvider.notifier)
@@ -66,6 +70,8 @@ void main() {
       (status as GamificationProfileLoaded).earnedBadgeIds,
       contains('b-1'),
     );
+    expect(status.groupsActivity.eventsCount, 5);
+    expect(status.groupsActivity.reviewsCount, 3);
   });
 
   test('loadForUser falha -> GamificationProfileError', () async {

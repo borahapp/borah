@@ -22,11 +22,13 @@ class GamificationProfileController
       final progress = await _repository.getProgress(userId);
       final allBadges = await _repository.listAllBadges();
       final earnedBadges = await _repository.listEarnedBadges(userId);
+      final groupsActivity = await _repository.getGroupsActivitySummary(userId);
 
       state = GamificationProfileLoaded(
         progress: progress,
         allBadges: allBadges,
         earnedBadgeIds: earnedBadges.map((e) => e.badge.id).toSet(),
+        groupsActivity: groupsActivity,
       );
     } on GamificationRepositoryException catch (e) {
       state = GamificationProfileError(e.message);
