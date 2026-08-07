@@ -109,4 +109,46 @@ void main() {
       expect(find.text('ABCD1234'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'Convite pendente chegando depois do app já assentado na Home também redireciona',
+    (tester) async {
+      // Regressão do achado nº1 da auditoria de infraestrutura de Deep
+      // Link: diferente do teste acima (que já pré-carrega o convite
+      // antes do primeiro pump), este simula a chegada tardia de um
+      // Deep Link - app já parado numa tela, sem nenhuma navegação
+      // explícita acontecendo. Sem _GoRouterRefreshNotifier escutar
+      // pendingInviteControllerProvider, esta mudança de estado nunca
+      // reavaliaria o redirect - o teste falharia antes da correção.
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(_FakeAuthenticatedController.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const BorahApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Assentado em algum lugar que não é "Entrar em grupo" - sem
+      // nenhum convite pendente ainda.
+      expect(find.text('Entrar em grupo'), findsNothing);
+
+      // Mesmo efeito de um Deep Link chegando agora, com o app já
+      // aberto e parado (uriLinkStream, não getInitialLink) - nenhuma
+      // chamada de navegação explícita a seguir.
+      container
+          .read(pendingInviteControllerProvider.notifier)
+          .receive(const GroupJoinDeepLink(inviteCode: 'LATE1234'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Entrar em grupo'), findsOneWidget);
+      expect(find.text('LATE1234'), findsOneWidget);
+    },
+  );
 }

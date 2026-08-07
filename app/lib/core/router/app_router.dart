@@ -103,6 +103,19 @@ bool _isProtectedRoute(String location) {
 /// inteiro (evita reset da pilha de navegação a cada mudança de estado).
 class _GoRouterRefreshNotifier extends ChangeNotifier {
   _GoRouterRefreshNotifier(Ref ref) {
+    // Deep Link (auditoria de infraestrutura, achado nº1): sem isto, um
+    // convite pendente que chega depois da decisão inicial de
+    // navegação (corrida real entre `getInitialLink()` e
+    // `SplashPage._restoreAndRedirect`, ou qualquer link recebido com o
+    // app já parado numa tela) nunca reavalia `redirect` - o estado de
+    // `PendingInviteController` mudava, mas nada mandava o GoRouter
+    // olhar de novo. Mesmo padrão de `authControllerProvider` abaixo,
+    // só que aqui não há nenhuma limpeza adicional a fazer - `redirect`
+    // já sabe ler `PendingInviteController.existe` sozinho.
+    ref.listen(pendingInviteControllerProvider, (previous, next) {
+      notifyListeners();
+    });
+
     ref.listen(authControllerProvider, (previous, next) {
       notifyListeners();
       // QA-14 (RC): esses providers não são `autoDispose` - trocar de
