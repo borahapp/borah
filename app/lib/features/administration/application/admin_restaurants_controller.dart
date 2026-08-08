@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/logger/app_logger.dart';
 import '../../../core/models/paged_result.dart';
 import '../../restaurants/data/restaurant_repository_impl.dart';
 import '../../restaurants/domain/restaurant.dart';
@@ -60,15 +61,32 @@ class AdminRestaurantsController extends Notifier<AdminRestaurantsStatus> {
     }
     try {
       await _restaurantRepository.updateAsAdmin(restaurantId, status: status);
-      await _auditLogRepository.log(
-        actorId: actorId,
-        action: status == 'archived'
-            ? 'archive_restaurant'
-            : 'reactivate_restaurant',
-        entity: 'restaurant',
-        entityId: restaurantId,
-        metadata: {'status': status},
-      );
+      try {
+        await _auditLogRepository.log(
+          actorId: actorId,
+          action: status == 'archived'
+              ? 'archive_restaurant'
+              : 'reactivate_restaurant',
+          entity: 'restaurant',
+          entityId: restaurantId,
+          metadata: {'status': status},
+        );
+      } catch (e, stackTrace) {
+        // FASE C.2.2: best-effort - a ação principal (linha acima) já foi
+        // persistida; uma falha só no registro de auditoria não pode
+        // fazer a operação inteira parecer um erro para quem está
+        // administrando (seria induzido a repetir algo que já
+        // aconteceu). Mesmo padrão de
+        // `AccountDeletionController.deleteAccount` - "best-effort não é
+        // sinônimo de silencioso".
+        AppLogger.warning(
+          'Falha ao registrar auditoria de atualização de status de '
+          'restaurante.',
+          tag: 'administration/AdminRestaurantsController.updateStatus',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       // Se uma operação mais nova já assumiu enquanto a mutação estava em
       // voo, a mutação em si já foi persistida (efeito real, sempre
       // executado) - só o refresh de tela é descartado, para não

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app/core/logger/app_log_level.dart';
+import 'package:app/core/logger/app_logger.dart';
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/administration/application/moderation_controller.dart';
 import 'package:app/features/administration/data/audit_log_repository_impl.dart';
@@ -35,6 +37,7 @@ void main() {
   late MockReviewRepository reviewRepository;
   late MockAuditLogRepository auditLogRepository;
   late ProviderContainer container;
+  late List<Map<String, dynamic>> crashCalls;
 
   setUp(() {
     commentRepository = MockCommentRepository();
@@ -48,6 +51,18 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+
+    crashCalls = [];
+    AppLogger.debugMinimumLevelOverride = AppLogLevel.trace;
+    AppLogger.debugCrashReportingSinkOverride =
+        (level, message, {tag, userId, error, stackTrace}) async {
+          crashCalls.add({'level': level, 'message': message, 'tag': tag});
+        };
+  });
+
+  tearDown(() {
+    AppLogger.debugMinimumLevelOverride = null;
+    AppLogger.debugCrashReportingSinkOverride = null;
   });
 
   test('estado inicial é ModerationInitial', () {
@@ -107,6 +122,175 @@ void main() {
         entityId: 'c-1',
       ),
     ).called(1);
+  });
+
+  group('FASE C.2.2 - falha de auditoria não bloqueia a ação principal', () {
+    test('hideComment: auditoria falha -> operação continua concluída '
+        '(ModerationLoaded/ModerationEmpty, não ModerationError), falha só '
+        'registrada via AppLogger', () async {
+      when(
+        () => commentRepository.listAllReports(page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => commentRepository.hideAsAdmin('c-1')).thenAnswer((_) async {});
+      when(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      ).thenThrow(const AuditLogRepositoryException('Falha ao gravar log.'));
+
+      final notifier = container.read(moderationControllerProvider.notifier);
+      await notifier.hideComment('c-1', actorId: 'admin-1');
+
+      expect(
+        container.read(moderationControllerProvider),
+        isA<ModerationEmpty>(),
+      );
+      expect(crashCalls, hasLength(1));
+      expect(crashCalls.single['level'], AppLogLevel.warning);
+      expect(
+        crashCalls.single['tag'],
+        'administration/ModerationController.hideComment',
+      );
+    });
+
+    test(
+      'hideComment: ação principal falha -> ModerationError, auditoria nunca '
+      'chamada',
+      () async {
+        when(() => commentRepository.hideAsAdmin('c-1')).thenThrow(
+          const CommentRepositoryException('Comentário não encontrado.'),
+        );
+
+        final notifier = container.read(moderationControllerProvider.notifier);
+        await notifier.hideComment('c-1', actorId: 'admin-1');
+
+        final status = container.read(moderationControllerProvider);
+        expect(status, isA<ModerationError>());
+        expect(
+          (status as ModerationError).message,
+          'Comentário não encontrado.',
+        );
+        verifyNever(
+          () => auditLogRepository.log(
+            actorId: any(named: 'actorId'),
+            action: any(named: 'action'),
+            entity: any(named: 'entity'),
+            entityId: any(named: 'entityId'),
+          ),
+        );
+        expect(crashCalls, isEmpty);
+      },
+    );
+
+    test('hideReview: ação e auditoria funcionando', () async {
+      when(
+        () => commentRepository.listAllReports(page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => reviewRepository.hideAsAdmin('rv-1')).thenAnswer((_) async {});
+      when(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final notifier = container.read(moderationControllerProvider.notifier);
+      await notifier.hideReview('rv-1', actorId: 'admin-1');
+
+      verify(() => reviewRepository.hideAsAdmin('rv-1')).called(1);
+      verify(
+        () => auditLogRepository.log(
+          actorId: 'admin-1',
+          action: 'hide_review',
+          entity: 'review',
+          entityId: 'rv-1',
+        ),
+      ).called(1);
+      expect(
+        container.read(moderationControllerProvider),
+        isA<ModerationEmpty>(),
+      );
+      expect(crashCalls, isEmpty);
+    });
+
+    test('hideReview: auditoria falha -> operação continua concluída, falha só '
+        'registrada via AppLogger', () async {
+      when(
+        () => commentRepository.listAllReports(page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => reviewRepository.hideAsAdmin('rv-1')).thenAnswer((_) async {});
+      when(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      ).thenThrow(const AuditLogRepositoryException('Falha ao gravar log.'));
+
+      final notifier = container.read(moderationControllerProvider.notifier);
+      await notifier.hideReview('rv-1', actorId: 'admin-1');
+
+      expect(
+        container.read(moderationControllerProvider),
+        isA<ModerationEmpty>(),
+      );
+      expect(crashCalls, hasLength(1));
+      expect(crashCalls.single['level'], AppLogLevel.warning);
+      expect(
+        crashCalls.single['tag'],
+        'administration/ModerationController.hideReview',
+      );
+    });
+
+    test('hideReview: ação principal falha -> ModerationError, auditoria nunca '
+        'chamada', () async {
+      when(
+        () => reviewRepository.hideAsAdmin('rv-1'),
+      ).thenThrow(const ReviewRepositoryException('Avaliação não encontrada.'));
+
+      final notifier = container.read(moderationControllerProvider.notifier);
+      await notifier.hideReview('rv-1', actorId: 'admin-1');
+
+      final status = container.read(moderationControllerProvider);
+      expect(status, isA<ModerationError>());
+      expect((status as ModerationError).message, 'Avaliação não encontrada.');
+      verifyNever(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      );
+      expect(crashCalls, isEmpty);
+    });
   });
 
   test('loadNextPage concatena os itens da nova página aos já carregados em '

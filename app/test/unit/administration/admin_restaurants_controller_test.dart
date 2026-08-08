@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app/core/logger/app_log_level.dart';
+import 'package:app/core/logger/app_logger.dart';
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/administration/application/admin_restaurants_controller.dart';
 import 'package:app/features/administration/data/audit_log_repository_impl.dart';
@@ -33,6 +35,7 @@ void main() {
   late MockRestaurantRepository restaurantRepository;
   late MockAuditLogRepository auditLogRepository;
   late ProviderContainer container;
+  late List<Map<String, dynamic>> crashCalls;
 
   setUpAll(() {
     registerFallbackValue(<String, dynamic>{});
@@ -48,6 +51,18 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+
+    crashCalls = [];
+    AppLogger.debugMinimumLevelOverride = AppLogLevel.trace;
+    AppLogger.debugCrashReportingSinkOverride =
+        (level, message, {tag, userId, error, stackTrace}) async {
+          crashCalls.add({'level': level, 'message': message, 'tag': tag});
+        };
+  });
+
+  tearDown(() {
+    AppLogger.debugMinimumLevelOverride = null;
+    AppLogger.debugCrashReportingSinkOverride = null;
   });
 
   test('estado inicial é AdminRestaurantsInitial', () {
@@ -121,6 +136,98 @@ void main() {
         metadata: {'status': 'archived'},
       ),
     ).called(1);
+  });
+
+  group('FASE C.2.2 - falha de auditoria não bloqueia a ação principal', () {
+    test(
+      'auditoria falha -> operação continua concluída (AdminRestaurantsLoaded, '
+      'não AdminRestaurantsError), falha só registrada via AppLogger',
+      () async {
+        when(
+          () => restaurantRepository.listAllForAdmin(
+            query: null,
+            page: 1,
+            limit: 20,
+          ),
+        ).thenAnswer(
+          (_) async => PagedResult(
+            items: [_restaurant(status: 'archived')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+        when(
+          () => restaurantRepository.updateAsAdmin('r-1', status: 'archived'),
+        ).thenAnswer((_) async => _restaurant(status: 'archived'));
+        when(
+          () => auditLogRepository.log(
+            actorId: any(named: 'actorId'),
+            action: any(named: 'action'),
+            entity: any(named: 'entity'),
+            entityId: any(named: 'entityId'),
+            metadata: any(named: 'metadata'),
+          ),
+        ).thenThrow(const AuditLogRepositoryException('Falha ao gravar log.'));
+
+        final notifier = container.read(
+          adminRestaurantsControllerProvider.notifier,
+        );
+        await notifier.updateStatus(
+          'r-1',
+          status: 'archived',
+          actorId: 'admin-1',
+        );
+
+        expect(
+          container.read(adminRestaurantsControllerProvider),
+          isA<AdminRestaurantsLoaded>(),
+        );
+        expect(crashCalls, hasLength(1));
+        expect(crashCalls.single['level'], AppLogLevel.warning);
+        expect(
+          crashCalls.single['tag'],
+          'administration/AdminRestaurantsController.updateStatus',
+        );
+      },
+    );
+
+    test(
+      'ação principal falha -> AdminRestaurantsError, auditoria nunca chamada',
+      () async {
+        when(
+          () => restaurantRepository.updateAsAdmin('r-1', status: 'archived'),
+        ).thenThrow(
+          const RestaurantRepositoryException('Sem permissão para editar.'),
+        );
+
+        final notifier = container.read(
+          adminRestaurantsControllerProvider.notifier,
+        );
+        await notifier.updateStatus(
+          'r-1',
+          status: 'archived',
+          actorId: 'admin-1',
+        );
+
+        final status = container.read(adminRestaurantsControllerProvider);
+        expect(status, isA<AdminRestaurantsError>());
+        expect(
+          (status as AdminRestaurantsError).message,
+          'Sem permissão para editar.',
+        );
+        verifyNever(
+          () => auditLogRepository.log(
+            actorId: any(named: 'actorId'),
+            action: any(named: 'action'),
+            entity: any(named: 'entity'),
+            entityId: any(named: 'entityId'),
+            metadata: any(named: 'metadata'),
+          ),
+        );
+        expect(crashCalls, isEmpty);
+      },
+    );
   });
 
   test('loadNextPage concatena os itens da nova página aos já carregados em '

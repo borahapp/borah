@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app/core/logger/app_log_level.dart';
+import 'package:app/core/logger/app_logger.dart';
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/administration/application/admin_roles_controller.dart';
 import 'package:app/features/administration/data/admin_role_repository_impl.dart';
@@ -19,6 +21,7 @@ void main() {
   late MockAdminRoleRepository roleRepository;
   late MockAuditLogRepository auditLogRepository;
   late ProviderContainer container;
+  late List<Map<String, dynamic>> crashCalls;
 
   setUp(() {
     roleRepository = MockAdminRoleRepository();
@@ -30,6 +33,18 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+
+    crashCalls = [];
+    AppLogger.debugMinimumLevelOverride = AppLogLevel.trace;
+    AppLogger.debugCrashReportingSinkOverride =
+        (level, message, {tag, userId, error, stackTrace}) async {
+          crashCalls.add({'level': level, 'message': message, 'tag': tag});
+        };
+  });
+
+  tearDown(() {
+    AppLogger.debugMinimumLevelOverride = null;
+    AppLogger.debugCrashReportingSinkOverride = null;
   });
 
   test('estado inicial é AdminRolesInitial', () {
@@ -114,6 +129,149 @@ void main() {
       container.read(adminRolesControllerProvider),
       isA<AdminRolesError>(),
     );
+  });
+
+  group('FASE C.2.2 - falha de auditoria não bloqueia a ação principal', () {
+    test('grantRole: auditoria falha -> operação continua concluída '
+        '(AdminRolesLoaded, não AdminRolesError), falha só registrada via '
+        'AppLogger', () async {
+      when(() => roleRepository.listAdmins(page: 1, limit: 20)).thenAnswer(
+        (_) async => const PagedResult(
+          items: [
+            AdminRoleEntry(
+              userId: 'user-1',
+              role: 'moderator',
+              fullName: 'Ana',
+            ),
+          ],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => roleRepository.grantRole('user-1', 'moderator'),
+      ).thenAnswer((_) async {});
+      when(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+          metadata: any(named: 'metadata'),
+        ),
+      ).thenThrow(const AuditLogRepositoryException('Falha ao gravar log.'));
+
+      final notifier = container.read(adminRolesControllerProvider.notifier);
+      await notifier.grantRole('user-1', 'moderator', actorId: 'super-1');
+
+      expect(
+        container.read(adminRolesControllerProvider),
+        isA<AdminRolesLoaded>(),
+      );
+      expect(crashCalls, hasLength(1));
+      expect(crashCalls.single['level'], AppLogLevel.warning);
+      expect(
+        crashCalls.single['tag'],
+        'administration/AdminRolesController.grantRole',
+      );
+    });
+
+    test('revokeRole: ação e auditoria funcionando', () async {
+      when(() => roleRepository.listAdmins(page: 1, limit: 20)).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => roleRepository.revokeRole('user-1')).thenAnswer((_) async {});
+      when(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final notifier = container.read(adminRolesControllerProvider.notifier);
+      await notifier.revokeRole('user-1', actorId: 'super-1');
+
+      verify(() => roleRepository.revokeRole('user-1')).called(1);
+      verify(
+        () => auditLogRepository.log(
+          actorId: 'super-1',
+          action: 'revoke_admin_role',
+          entity: 'user',
+          entityId: 'user-1',
+        ),
+      ).called(1);
+      expect(
+        container.read(adminRolesControllerProvider),
+        isA<AdminRolesEmpty>(),
+      );
+      expect(crashCalls, isEmpty);
+    });
+
+    test('revokeRole: auditoria falha -> operação continua concluída, falha só '
+        'registrada via AppLogger', () async {
+      when(() => roleRepository.listAdmins(page: 1, limit: 20)).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => roleRepository.revokeRole('user-1')).thenAnswer((_) async {});
+      when(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      ).thenThrow(const AuditLogRepositoryException('Falha ao gravar log.'));
+
+      final notifier = container.read(adminRolesControllerProvider.notifier);
+      await notifier.revokeRole('user-1', actorId: 'super-1');
+
+      expect(
+        container.read(adminRolesControllerProvider),
+        isA<AdminRolesEmpty>(),
+      );
+      expect(crashCalls, hasLength(1));
+      expect(crashCalls.single['level'], AppLogLevel.warning);
+      expect(
+        crashCalls.single['tag'],
+        'administration/AdminRolesController.revokeRole',
+      );
+    });
+
+    test('revokeRole: ação principal falha -> AdminRolesError, auditoria nunca '
+        'chamada', () async {
+      when(() => roleRepository.revokeRole('user-1')).thenThrow(
+        const AdminRoleRepositoryException('Permissão insuficiente.'),
+      );
+
+      final notifier = container.read(adminRolesControllerProvider.notifier);
+      await notifier.revokeRole('user-1', actorId: 'user-2');
+
+      final status = container.read(adminRolesControllerProvider);
+      expect(status, isA<AdminRolesError>());
+      expect((status as AdminRolesError).message, 'Permissão insuficiente.');
+      verifyNever(
+        () => auditLogRepository.log(
+          actorId: any(named: 'actorId'),
+          action: any(named: 'action'),
+          entity: any(named: 'entity'),
+          entityId: any(named: 'entityId'),
+        ),
+      );
+      expect(crashCalls, isEmpty);
+    });
   });
 
   test('loadNextPage concatena os itens da nova página aos já carregados em '

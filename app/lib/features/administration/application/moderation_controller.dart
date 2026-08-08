@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/logger/app_logger.dart';
 import '../../../core/models/paged_result.dart';
 import '../../reviews/data/review_repository_impl.dart';
 import '../../reviews/domain/review_repository.dart';
@@ -48,24 +49,48 @@ class ModerationController extends Notifier<ModerationStatus> {
   Future<void> hideComment(String commentId, {required String actorId}) {
     return _mutate(() async {
       await _commentRepository.hideAsAdmin(commentId);
-      await _auditLogRepository.log(
-        actorId: actorId,
-        action: 'hide_comment',
-        entity: 'comment',
-        entityId: commentId,
-      );
+      try {
+        await _auditLogRepository.log(
+          actorId: actorId,
+          action: 'hide_comment',
+          entity: 'comment',
+          entityId: commentId,
+        );
+      } catch (e, stackTrace) {
+        // FASE C.2.2: best-effort - ver
+        // AdminRestaurantsController.updateStatus para o racional
+        // completo.
+        AppLogger.warning(
+          'Falha ao registrar auditoria de ocultação de comentário.',
+          tag: 'administration/ModerationController.hideComment',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     });
   }
 
   Future<void> hideReview(String reviewId, {required String actorId}) {
     return _mutate(() async {
       await _reviewRepository.hideAsAdmin(reviewId);
-      await _auditLogRepository.log(
-        actorId: actorId,
-        action: 'hide_review',
-        entity: 'review',
-        entityId: reviewId,
-      );
+      try {
+        await _auditLogRepository.log(
+          actorId: actorId,
+          action: 'hide_review',
+          entity: 'review',
+          entityId: reviewId,
+        );
+      } catch (e, stackTrace) {
+        // FASE C.2.2: best-effort - ver
+        // AdminRestaurantsController.updateStatus para o racional
+        // completo.
+        AppLogger.warning(
+          'Falha ao registrar auditoria de ocultação de avaliação.',
+          tag: 'administration/ModerationController.hideReview',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     });
   }
 

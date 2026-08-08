@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/logger/app_logger.dart';
 import '../../../core/models/paged_result.dart';
 import '../data/admin_role_repository_impl.dart';
 import '../data/audit_log_repository_impl.dart';
@@ -48,25 +49,49 @@ class AdminRolesController extends Notifier<AdminRolesStatus> {
   }) {
     return _mutate(() async {
       await _repository.grantRole(userId, role);
-      await _auditLogRepository.log(
-        actorId: actorId,
-        action: 'grant_admin_role',
-        entity: 'user',
-        entityId: userId,
-        metadata: {'role': role},
-      );
+      try {
+        await _auditLogRepository.log(
+          actorId: actorId,
+          action: 'grant_admin_role',
+          entity: 'user',
+          entityId: userId,
+          metadata: {'role': role},
+        );
+      } catch (e, stackTrace) {
+        // FASE C.2.2: best-effort - ver
+        // AdminRestaurantsController.updateStatus para o racional
+        // completo.
+        AppLogger.warning(
+          'Falha ao registrar auditoria de concessão de papel.',
+          tag: 'administration/AdminRolesController.grantRole',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     });
   }
 
   Future<void> revokeRole(String userId, {required String actorId}) {
     return _mutate(() async {
       await _repository.revokeRole(userId);
-      await _auditLogRepository.log(
-        actorId: actorId,
-        action: 'revoke_admin_role',
-        entity: 'user',
-        entityId: userId,
-      );
+      try {
+        await _auditLogRepository.log(
+          actorId: actorId,
+          action: 'revoke_admin_role',
+          entity: 'user',
+          entityId: userId,
+        );
+      } catch (e, stackTrace) {
+        // FASE C.2.2: best-effort - ver
+        // AdminRestaurantsController.updateStatus para o racional
+        // completo.
+        AppLogger.warning(
+          'Falha ao registrar auditoria de revogação de papel.',
+          tag: 'administration/AdminRolesController.revokeRole',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     });
   }
 
