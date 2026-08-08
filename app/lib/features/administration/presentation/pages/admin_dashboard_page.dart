@@ -8,6 +8,7 @@ import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../application/admin_dashboard_controller.dart';
+import '../../application/current_user_role_provider.dart';
 import '../states/dashboard_status.dart';
 import '../widgets/admin_guard.dart';
 
@@ -24,9 +25,24 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(adminDashboardControllerProvider.notifier).load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadIfAuthorized());
+  }
+
+  /// FASE C.2.1: segunda camada de defesa - sem isto, a carga inicial
+  /// disparava antes de `AdminGuard` confirmar o papel do usuário (a RLS
+  /// já protegia os dados, mas a consulta saía do cliente de qualquer
+  /// forma). Reaproveita o mesmo `Future` que `AdminGuard` já observa
+  /// (`currentUserRoleProvider` não é `autoDispose` - não gera uma
+  /// segunda consulta de papel).
+  Future<void> _loadIfAuthorized() async {
+    final String? role;
+    try {
+      role = await ref.read(currentUserRoleProvider.future);
+    } catch (_) {
+      return;
+    }
+    if (!mounted || role == null) return;
+    ref.read(adminDashboardControllerProvider.notifier).load();
   }
 
   @override
