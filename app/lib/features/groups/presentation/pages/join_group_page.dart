@@ -13,12 +13,15 @@ import '../../application/pending_invite_controller.dart';
 import '../states/join_group_status.dart';
 
 /// Tela de "entrar em grupo por código" (ONBOARDING-01) - formulário
-/// único, `context.pop()` sem valor de retorno ao concluir (entrar num
-/// grupo já existente não tem o mesmo motivo que `CreateGroupPage` tem,
-/// desde a UX-01, para ir direto ao Detalhe: quem entra por código já
-/// recebeu o convite de outra pessoa, não precisa compartilhar o
-/// próprio). A lista de grupos recarrega ao voltar (mesmo padrão de
-/// `GroupsListPage._createGroup`).
+/// único, fecha ao concluir com sucesso (entrar num grupo já existente
+/// não tem o mesmo motivo que `CreateGroupPage` tem, desde a UX-01,
+/// para ir direto ao Detalhe: quem entra por código já recebeu o
+/// convite de outra pessoa, não precisa compartilhar o próprio). Fecha
+/// com `context.pop()` quando alcançada por navegação interna (a lista
+/// de grupos recarrega ao voltar, mesmo padrão de
+/// `GroupsListPage._createGroup`); quando alcançada por Deep Link (sem
+/// nenhuma rota anterior - ver `redirect` em `app_router.dart`), usa
+/// `/home` como destino (FASE C.3).
 ///
 /// Deep Link de convite (`borah://group/join?invite=X`): o código, se
 /// houver, já chega pronto via `PendingInviteController.consumir()` -
@@ -85,7 +88,23 @@ class _JoinGroupPageState extends ConsumerState<JoinGroupPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Você entrou no grupo "${next.group.name}".')),
         );
-        context.pop();
+        // FASE C.3: quando a tela é alcançada por Deep Link (cold start ou
+        // app já aberto - ver `redirect` em app_router.dart), o GoRouter
+        // resolve a rota do zero e não há nada abaixo para voltar;
+        // `context.pop()` lançaria `GoError('There is nothing to pop')`
+        // (confirmado lendo go_router 14.8.1, lib/src/delegate.dart). Só a
+        // entrada via navegação interna (`GroupsListPage`, `context.push`)
+        // tem uma rota anterior de verdade. `/home` é o mesmo destino que
+        // `SplashPage`/login já usam para qualquer usuário autenticado -
+        // não existe nenhum destino mais específico já estabelecido para
+        // "acabou de entrar num grupo" (diferente de `CreateGroupPage`,
+        // que vai direto ao Detalhe do grupo recém-criado por um motivo
+        // que não se aplica aqui - ver doc-comment desta classe).
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
       }
     });
 

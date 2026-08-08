@@ -113,4 +113,82 @@ void main() {
       );
     },
   );
+
+  group('FASE C.3 - navegação ao concluir (pop() sem rota anterior)', () {
+    testWidgets(
+      'entrada via push (navegação interna): sucesso usa pop() e volta '
+      'para a tela anterior',
+      (tester) async {
+        when(() => repository.joinByInviteCode('ABCD1234')).thenAnswer(
+          (_) async => const Group(
+            id: 'g-1',
+            name: 'Galera do Rolê',
+            description: null,
+            photoUrl: null,
+            inviteCode: 'ABCD1234',
+          ),
+        );
+
+        await _pumpAndOpen(tester, _wrap(repository));
+        expect(find.text('Abrir entrar em grupo'), findsNothing);
+
+        await tester.enterText(find.byType(TextFormField), 'ABCD1234');
+        await tester.tap(find.text('Entrar'));
+        await tester.pumpAndSettle();
+
+        // pop() de volta à tela que empilhou `/groups/join` - prova de
+        // que a navegação por push continua intacta, sem regressão.
+        expect(find.text('Abrir entrar em grupo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'entrada via Deep Link (pilha vazia): sucesso não lança exceção e '
+      'usa o fallback (/home) em vez de pop()',
+      (tester) async {
+        when(() => repository.joinByInviteCode('ABCD1234')).thenAnswer(
+          (_) async => const Group(
+            id: 'g-1',
+            name: 'Galera do Rolê',
+            description: null,
+            photoUrl: null,
+            inviteCode: 'ABCD1234',
+          ),
+        );
+
+        // Mesmo formato que o `redirect` de app_router.dart produz para
+        // quem chega por Deep Link: `/groups/join` é a ÚNICA rota - sem
+        // nenhuma rota anterior para `pop()` voltar.
+        final router = GoRouter(
+          initialLocation: '/groups/join',
+          routes: [
+            GoRoute(
+              path: '/groups/join',
+              builder: (_, _) => const JoinGroupPage(),
+            ),
+            GoRoute(
+              path: '/home',
+              builder: (context, _) =>
+                  const Scaffold(body: Text('Home (fallback)')),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [groupRepositoryProvider.overrideWithValue(repository)],
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField), 'ABCD1234');
+        await tester.tap(find.text('Entrar'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Home (fallback)'), findsOneWidget);
+      },
+    );
+  });
 }
