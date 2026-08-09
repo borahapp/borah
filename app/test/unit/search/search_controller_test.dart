@@ -23,10 +23,13 @@ UserProfile _person() {
   return UserProfile(
     id: 'user-2',
     fullName: 'Bruno Costa',
+    username: 'brunocosta',
     bio: null,
     avatarUrl: null,
     city: null,
     state: null,
+    followersCount: 0,
+    followingCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );

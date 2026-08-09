@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
@@ -11,20 +12,27 @@ import '../../../../design_system/components/inputs/app_search_field.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
+import '../../../authentication/application/auth_controller.dart';
 import '../../../restaurants/domain/restaurant.dart';
+import '../../../social/data/follower_repository_impl.dart';
+import '../../../social/presentation/widgets/person_list_tile.dart';
 import '../../../users/domain/user_profile.dart';
-import '../../../users/presentation/widgets/profile_avatar.dart';
+import '../../application/discovery_controller.dart';
 import '../../application/search_controller.dart';
+import '../states/discovery_status.dart';
 import '../states/search_status.dart';
 
-/// Tela de Pesquisa social (FASE SOCIAL 1) - Pessoas, Grupos e
-/// Restaurantes numa única tela com seções, mesmo padrão de busca-no-
-/// submit já usado em `restaurants_search_page.dart`.
+/// Tela de Pesquisa/Explorar social (FASE SOCIAL 1 + 2) - Pessoas,
+/// Grupos e Restaurantes numa única tela com seções, mesmo padrão de
+/// busca-no-submit já usado em `restaurants_search_page.dart`. Antes de
+/// qualquer busca, mostra "Você pode conhecer" (FASE SOCIAL 2) em vez
+/// de uma tela vazia - a decisão de UX aprovada foi manter Explorar
+/// como o estado inicial desta tela, não como abas novas.
 ///
 /// A seção Grupos é fixa/explicativa, não uma busca real: grupos são
 /// 100% privados hoje (RLS bloqueia SELECT para não-membros) - buscar
-/// grupos públicos exige `groups.visibility` + policy nova, fora do
-/// escopo desta fase (ver PLANO UX/TÉCNICO — Fluxo da Pesquisa).
+/// grupos públicos exige `groups.visibility` + policy nova, escopo da
+/// FASE SOCIAL 3.
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -34,6 +42,24 @@ class SearchPage extends ConsumerStatefulWidget {
 
 class _SearchPageState extends ConsumerState<SearchPage> {
   final _queryController = TextEditingController();
+
+  // FASE SOCIAL 2 - status de Seguir/Seguindo por pessoa, buscado em
+  // lote (`listFollowingAmong`) conforme novos ids aparecem em qualquer
+  // uma das 2 fontes desta tela (busca de pessoas, Você pode conhecer) -
+  // nunca 1 consulta por linha.
+  Set<String> _followingIds = {};
+  final Set<String> _followingStatusKnownIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userId = ref.read(currentUserIdProvider);
+      if (userId != null) {
+        ref.read(discoveryControllerProvider.notifier).load(userId);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -45,9 +71,58 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     ref.read(searchControllerProvider.notifier).search(value ?? '');
   }
 
+  Future<void> _syncFollowingStatus(List<UserProfile> people) async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null || people.isEmpty) return;
+
+    final newIds = people
+        .map((p) => p.id)
+        .where((id) => !_followingStatusKnownIds.contains(id))
+        .toList();
+    if (newIds.isEmpty) return;
+
+    try {
+      final result = await ref
+          .read(followerRepositoryProvider)
+          .listFollowingAmong(currentUserId, newIds);
+      if (!mounted) return;
+      setState(() {
+        _followingIds = {..._followingIds, ...result};
+        _followingStatusKnownIds.addAll(newIds);
+      });
+    } catch (_) {
+      // Falha silenciosa: os botões ficam como "Seguir" até a próxima
+      // tentativa - não é grave o suficiente para bloquear a tela.
+    }
+  }
+
+  Future<void> _loadMoreSuggestions() async {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    final success = await ref
+        .read(discoveryControllerProvider.notifier)
+        .loadMore(userId);
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível carregar mais sugestões.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(searchControllerProvider);
+    final discoveryStatus = ref.watch(discoveryControllerProvider);
+    final currentUserId = ref.watch(currentUserIdProvider);
+
+    ref.listen<SearchStatus>(searchControllerProvider, (previous, next) {
+      if (next is SearchLoaded) _syncFollowingStatus(next.people.items);
+    });
+    ref.listen<DiscoveryStatus>(discoveryControllerProvider, (previous, next) {
+      if (next is DiscoveryLoaded) _syncFollowingStatus(next.people);
+    });
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Pesquisar'),
@@ -64,9 +139,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           Expanded(
             child: AppAnimatedSwitcher(
               child: switch (status) {
-                SearchInitial() => const EmptyState(
-                  key: ValueKey('initial'),
-                  message: 'Busque por pessoas ou restaurantes.',
+                SearchInitial() => _ExploreView(
+                  key: const ValueKey('explore'),
+                  discoveryStatus: discoveryStatus,
+                  currentUserId: currentUserId,
+                  followingIds: _followingIds,
+                  onLoadMore: _loadMoreSuggestions,
                 ),
                 SearchLoading() => const LoadingScreen(
                   key: ValueKey('loading'),
@@ -81,6 +159,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     key: const ValueKey('loaded'),
                     people: people.items,
                     restaurants: restaurants.items,
+                    currentUserId: currentUserId,
+                    followingIds: _followingIds,
                   ),
               },
             ),
@@ -91,15 +171,103 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 }
 
+/// Estado inicial da tela (antes de qualquer busca) - "Você pode
+/// conhecer" (FASE SOCIAL 2 §12). `Grupos em destaque` fica para a FASE
+/// SOCIAL 3 (grupos públicos ainda não existem).
+class _ExploreView extends StatelessWidget {
+  const _ExploreView({
+    super.key,
+    required this.discoveryStatus,
+    required this.currentUserId,
+    required this.followingIds,
+    required this.onLoadMore,
+  });
+
+  final DiscoveryStatus discoveryStatus;
+  final String? currentUserId;
+  final Set<String> followingIds;
+  final Future<void> Function() onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Text('Busque por pessoas ou restaurantes.'),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: SectionHeader(title: 'Você pode conhecer'),
+        ),
+        switch (discoveryStatus) {
+          DiscoveryInitial() || DiscoveryLoading() => const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Center(
+              key: ValueKey('discovery-loading'),
+              child: LoadingIndicator(size: 28),
+            ),
+          ),
+          DiscoveryError(:final message) => Padding(
+            key: const ValueKey('discovery-error'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            child: Text(message),
+          ),
+          DiscoveryEmpty() => const Padding(
+            key: ValueKey('discovery-empty'),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            child: Text('Nenhuma sugestão disponível no momento.'),
+          ),
+          DiscoveryLoaded(:final people, :final hasMore) => Column(
+            key: const ValueKey('discovery-loaded'),
+            children: [
+              for (final person in people)
+                PersonListTile(
+                  person: person,
+                  currentUserId: currentUserId,
+                  initialIsFollowing: followingIds.contains(person.id),
+                  onTap: () => context.push('/users/${person.id}'),
+                ),
+              if (hasMore)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: AppTextButton(
+                    label: 'Ver mais',
+                    onPressed: onLoadMore,
+                  ),
+                ),
+            ],
+          ),
+        },
+      ],
+    );
+  }
+}
+
 class _SearchResults extends StatelessWidget {
   const _SearchResults({
     super.key,
     required this.people,
     required this.restaurants,
+    required this.currentUserId,
+    required this.followingIds,
   });
 
   final List<UserProfile> people;
   final List<Restaurant> restaurants;
+  final String? currentUserId;
+  final Set<String> followingIds;
 
   @override
   Widget build(BuildContext context) {
@@ -124,20 +292,10 @@ class _SearchResults extends StatelessWidget {
           )
         else
           for (final person in people)
-            ListTile(
-              leading: ProfileAvatar(avatarPath: person.avatarUrl, radius: 20),
-              title: Text(
-                person.fullName?.isNotEmpty == true
-                    ? person.fullName!
-                    : 'Sem nome',
-              ),
-              subtitle: person.bio != null && person.bio!.isNotEmpty
-                  ? Text(
-                      person.bio!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : null,
+            PersonListTile(
+              person: person,
+              currentUserId: currentUserId,
+              initialIsFollowing: followingIds.contains(person.id),
               onTap: () => context.push('/users/${person.id}'),
             ),
         const Padding(
@@ -154,9 +312,9 @@ class _SearchResults extends StatelessWidget {
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
           ),
-          // FASE SOCIAL 1: busca de grupos públicos ainda não é possível
-          // (ver doc-comment de SearchPage) - mensagem explicativa, não
-          // um estado de carregamento/erro.
+          // FASE SOCIAL 1/2: busca de grupos públicos ainda não é
+          // possível (ver doc-comment de SearchPage) - mensagem
+          // explicativa, não um estado de carregamento/erro.
           child: Text('Busca de grupos públicos chega em breve.'),
         ),
         const Padding(
