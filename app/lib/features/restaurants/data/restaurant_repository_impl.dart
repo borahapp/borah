@@ -171,6 +171,14 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
     });
   }
 
+  @override
+  Future<List<Restaurant>> suggestForGroup(String groupId) {
+    return _guard(() async {
+      final rows = await _datasource.suggestForGroup(groupId);
+      return rows.map(_mapRow).toList();
+    });
+  }
+
   Restaurant _mapRow(Map<String, dynamic> row) {
     return Restaurant(
       id: row['id'] as String,

@@ -137,4 +137,16 @@ class RestaurantRemoteDatasource {
   String getPublicCoverImageUrl(String path) {
     return _client.storage.from(_bucket).getPublicUrl(path);
   }
+
+  /// RC-03 F13 - RPC porque `favorites` só é legível pelo próprio dono
+  /// (mesmo motivo de `join_group_by_invite_code`/`transfer_group_ownership`
+  /// serem RPCs em vez de consulta direta - agregação entre usuários
+  /// exige `security definer` do lado do banco).
+  Future<List<Map<String, dynamic>>> suggestForGroup(String groupId) async {
+    final rows = await _client.rpc(
+      'suggest_group_restaurants',
+      params: {'p_group_id': groupId},
+    );
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
 }

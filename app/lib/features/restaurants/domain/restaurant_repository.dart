@@ -74,4 +74,11 @@ abstract interface class RestaurantRepository {
     required Uint8List bytes,
     required String fileExtension,
   });
+
+  /// RC-03 F13 - restaurantes favoritados por pelo menos 1 membro do
+  /// grupo, ainda não visitados pelo grupo (nenhum rolê para eles ainda).
+  /// Via RPC (`suggest_group_restaurants`) porque `favorites` só é
+  /// legível pelo próprio dono - o cliente não pode agregar favoritos de
+  /// outros membros diretamente.
+  Future<List<Restaurant>> suggestForGroup(String groupId);
 }
