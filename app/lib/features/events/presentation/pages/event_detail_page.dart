@@ -400,10 +400,40 @@ class _ReviewsSection extends ConsumerWidget {
         ? status.reviews
         : const <EventReview>[];
     final ownReview = _findOwnReview(reviews, currentUserId);
+    // RC-03 F39 - Álbum do rolê: grade das fotos já anexadas às
+    // avaliações coletivas (FASE A2), sem consulta nova - `reviews` já
+    // está carregada por `EventReviewsController` para a lista abaixo, a
+    // grade só filtra as que têm `photoUrl`.
+    final albumPhotos = reviews
+        .where((r) => r.photoUrl != null)
+        .map((r) => r.photoUrl!)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (albumPhotos.isNotEmpty) ...[
+          const SectionHeader(title: 'Álbum do rolê'),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 96,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: albumPhotos.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) => ClipRRect(
+                borderRadius: AppRadius.radiusMd,
+                child: Image.network(
+                  albumPhotos[index],
+                  width: 96,
+                  height: 96,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
         const SectionHeader(title: 'Avaliação coletiva'),
         const SizedBox(height: AppSpacing.sm),
         // "Nota final" (pedido do produto): média simples dos 5

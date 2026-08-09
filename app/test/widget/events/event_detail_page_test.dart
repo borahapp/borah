@@ -101,6 +101,7 @@ void main() {
 
     expect(find.text('Amigo do grupo'), findsOneWidget);
     expect(find.byType(Image), findsNothing);
+    expect(find.text('Álbum do rolê'), findsNothing);
   });
 
   testWidgets(
@@ -121,7 +122,10 @@ void main() {
       // a foto é um acréscimo, nunca uma substituição.
       expect(find.text('Amigo do grupo'), findsOneWidget);
       expect(find.text('5.0'), findsOneWidget);
-      expect(find.byType(Image), findsOneWidget);
+      // RC-03 F39: a mesma foto agora também aparece na grade "Álbum do
+      // rolê" além da miniatura inline - 2 `Image` no total, não 1.
+      expect(find.text('Álbum do rolê'), findsOneWidget);
+      expect(find.byType(Image), findsNWidgets(2));
     },
   );
 

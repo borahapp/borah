@@ -7,6 +7,8 @@ import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
 import 'package:app/features/restaurants/domain/restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant_repository.dart';
 import 'package:app/features/restaurants/presentation/pages/restaurant_detail_page.dart';
+import 'package:app/features/reviews/data/review_repository_impl.dart';
+import 'package:app/features/reviews/domain/review_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +18,8 @@ import 'package:mocktail/mocktail.dart';
 class MockRestaurantRepository extends Mock implements RestaurantRepository {}
 
 class MockFavoriteRepository extends Mock implements FavoriteRepository {}
+
+class MockReviewRepository extends Mock implements ReviewRepository {}
 
 Restaurant _restaurant({
   String id = 'r-1',
@@ -42,6 +46,7 @@ Restaurant _restaurant({
 Widget _wrap(
   MockRestaurantRepository restaurantRepository,
   MockFavoriteRepository favoriteRepository,
+  MockReviewRepository reviewRepository,
 ) {
   final router = GoRouter(
     initialLocation: '/',
@@ -62,6 +67,7 @@ Widget _wrap(
     overrides: [
       restaurantRepositoryProvider.overrideWithValue(restaurantRepository),
       favoriteRepositoryProvider.overrideWithValue(favoriteRepository),
+      reviewRepositoryProvider.overrideWithValue(reviewRepository),
       currentUserIdProvider.overrideWithValue('user-1'),
     ],
     child: MaterialApp.router(routerConfig: router),
@@ -71,10 +77,15 @@ Widget _wrap(
 void main() {
   late MockRestaurantRepository restaurantRepository;
   late MockFavoriteRepository favoriteRepository;
+  late MockReviewRepository reviewRepository;
 
   setUp(() {
     restaurantRepository = MockRestaurantRepository();
     favoriteRepository = MockFavoriteRepository();
+    reviewRepository = MockReviewRepository();
+    when(
+      () => reviewRepository.listRestaurantPhotos(any()),
+    ).thenAnswer((_) async => []);
   });
 
   testWidgets('renderização inicial mostra os dados do restaurante', (
@@ -87,7 +98,9 @@ void main() {
       () => favoriteRepository.isFavorited('user-1', 'r-1'),
     ).thenAnswer((_) async => false);
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Bar do Zé'), findsOneWidget);
@@ -114,7 +127,9 @@ void main() {
       () => favoriteRepository.isFavorited('user-1', 'r-1'),
     ).thenAnswer((_) async => false);
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -133,7 +148,9 @@ void main() {
       () => favoriteRepository.isFavorited('user-1', 'r-1'),
     ).thenAnswer((_) async => false);
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Restaurante não encontrado.'), findsOneWidget);
@@ -147,7 +164,9 @@ void main() {
       () => favoriteRepository.isFavorited('user-1', 'r-1'),
     ).thenAnswer((_) async => true);
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.favorite), findsOneWidget);
@@ -164,7 +183,9 @@ void main() {
       () => favoriteRepository.isFavorited('user-1', 'r-1'),
     ).thenAnswer((_) async => false);
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
@@ -182,7 +203,9 @@ void main() {
       () => favoriteRepository.addFavorite('user-1', 'r-1'),
     ).thenAnswer((_) async {});
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
@@ -204,7 +227,9 @@ void main() {
       () => favoriteRepository.isFavorited('user-1', 'r-1'),
     ).thenAnswer((_) async => false);
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Ver avaliações'));
@@ -235,7 +260,7 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
 
         await tester.pumpWidget(
-          _wrap(restaurantRepository, favoriteRepository),
+          _wrap(restaurantRepository, favoriteRepository, reviewRepository),
         );
         await tester.pumpAndSettle();
 
@@ -254,7 +279,9 @@ void main() {
     ).thenAnswer((_) async => false);
     final handle = tester.ensureSemantics();
 
-    await tester.pumpWidget(_wrap(restaurantRepository, favoriteRepository));
+    await tester.pumpWidget(
+      _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+    );
     await tester.pumpAndSettle();
 
     await expectLater(tester, meetsGuideline(textContrastGuideline));
@@ -262,5 +289,47 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
 
     handle.dispose();
+  });
+
+  group('F14 - galeria de fotos', () {
+    testWidgets('mostra as fotos agregadas das avaliações', (tester) async {
+      when(
+        () => restaurantRepository.getById('r-1'),
+      ).thenAnswer((_) async => _restaurant());
+      when(
+        () => favoriteRepository.isFavorited('user-1', 'r-1'),
+      ).thenAnswer((_) async => false);
+      when(() => reviewRepository.listRestaurantPhotos(any())).thenAnswer(
+        (_) async => ['https://x/photo1.jpg', 'https://x/photo2.jpg'],
+      );
+
+      await tester.pumpWidget(
+        _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+      );
+      await tester.pumpAndSettle();
+      // `Image.network` sem servidor real no ambiente de teste - mesmo
+      // padrão de drenagem de exceção já usado em
+      // `event_detail_page_test.dart`.
+      while (tester.takeException() != null) {}
+
+      expect(find.text('Fotos de quem avaliou'), findsOneWidget);
+      expect(find.byType(Image), findsWidgets);
+    });
+
+    testWidgets('sem fotos, não mostra a seção de galeria', (tester) async {
+      when(
+        () => restaurantRepository.getById('r-1'),
+      ).thenAnswer((_) async => _restaurant());
+      when(
+        () => favoriteRepository.isFavorited('user-1', 'r-1'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(
+        _wrap(restaurantRepository, favoriteRepository, reviewRepository),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fotos de quem avaliou'), findsNothing);
+    });
   });
 }

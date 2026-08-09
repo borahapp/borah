@@ -12,10 +12,12 @@ import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
+import '../../../../design_system/tokens/app_radius.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../favorites/application/favorite_toggle_controller.dart';
 import '../../../favorites/presentation/states/favorite_toggle_status.dart';
 import '../../application/restaurant_detail_controller.dart';
+import '../../application/restaurant_photos_provider.dart';
 import '../states/restaurant_detail_status.dart';
 
 /// Regras do DV-03 §12: máximo 10 MB, formatos JPG/PNG/WEBP.
@@ -151,6 +153,7 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
           // inteira - o erro chega via snackbar (ver `ref.listen`).
           RestaurantDetailError(:final restaurant?) => _DetailView(
             key: const ValueKey('loaded'),
+            restaurantId: widget.restaurantId,
             name: restaurant.name,
             category: restaurant.category,
             description: restaurant.description,
@@ -170,9 +173,10 @@ class _RestaurantDetailPageState extends ConsumerState<RestaurantDetailPage> {
   }
 }
 
-class _DetailView extends StatelessWidget {
+class _DetailView extends ConsumerWidget {
   const _DetailView({
     super.key,
+    required this.restaurantId,
     required this.name,
     required this.category,
     required this.description,
@@ -186,6 +190,7 @@ class _DetailView extends StatelessWidget {
     required this.onViewReviews,
   });
 
+  final String restaurantId;
   final String name;
   final String category;
   final String? description;
@@ -199,7 +204,10 @@ class _DetailView extends StatelessWidget {
   final VoidCallback onViewReviews;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photos =
+        ref.watch(restaurantPhotosProvider(restaurantId)).valueOrNull ??
+        const <String>[];
     final location = [
       if (address != null && address!.isNotEmpty) address,
       if (city != null && city!.isNotEmpty) city,
@@ -238,6 +246,35 @@ class _DetailView extends StatelessWidget {
           if (description != null && description!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
             AppCard(child: Text(description!)),
+          ],
+          // RC-03 F14 - Galeria: fotos agregadas de todas as avaliações
+          // individuais do restaurante, sem tabela nova (ver
+          // `restaurant_photos_provider.dart`).
+          if (photos.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Fotos de quem avaliou',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 96,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: photos.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (context, index) => ClipRRect(
+                  borderRadius: AppRadius.radiusMd,
+                  child: Image.network(
+                    photos[index],
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
           ],
           const SizedBox(height: AppSpacing.xl),
           AppOutlinedButton(
