@@ -105,6 +105,11 @@ class EventRepositoryImpl implements EventRepository {
     });
   }
 
+  @override
+  Future<void> notifyReadyForReview() {
+    return _guard(() => _datasource.notifyEventsReadyForReview());
+  }
+
   Event _mapRow(Map<String, dynamic> row) {
     final restaurant = row['restaurants'] as Map<String, dynamic>?;
     // Mesmo padrão de `GroupRepositoryImpl._mapRow`/`Group.memberCount`

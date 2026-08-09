@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/lazy_sync/lazy_sync_dispatcher.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../application/auth_controller.dart';
 import '../states/auth_status.dart';
@@ -28,6 +31,13 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     final status = ref.read(authControllerProvider);
     if (status is Authenticated) {
+      // FASE C.4: único ponto do app que aciona LazySyncDispatcher hoje
+      // - roda uma vez por cold start autenticado, sem bloquear a
+      // navegação (melhor esforço: uma falha aqui nunca deveria atrasar
+      // ou impedir o usuário de chegar à Home). Não cobre retomada de
+      // background (fora do escopo desta fase - só um novo ponto de
+      // chamada seria necessário no futuro, não uma nova tarefa).
+      unawaited(ref.read(lazySyncDispatcherProvider).runAll());
       context.go('/home');
     } else {
       context.go('/login');

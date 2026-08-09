@@ -8,10 +8,12 @@ import 'core/analytics/app_analytics.dart';
 import 'core/deep_link/deep_link_dispatcher.dart';
 import 'core/feature_flags/app_feature_flags.dart';
 import 'core/feedback/app_feedback.dart';
+import 'core/lazy_sync/lazy_sync_dispatcher.dart';
 import 'core/network/supabase_client_provider.dart';
 import 'core/observability/crash_reporting.dart';
 import 'core/observability/sentry_provider_observer.dart';
 import 'design_system/components/feedback/error_state.dart';
+import 'features/events/application/event_review_sync_task.dart';
 import 'features/groups/application/pending_invite_controller.dart';
 
 Future<void> main() async {
@@ -58,6 +60,13 @@ Future<void> main() async {
         deepLinkReceiversProvider.overrideWith(
           (ref) => [ref.read(pendingInviteControllerProvider.notifier)],
         ),
+        // FASE C.4: mesmo princípio do override acima - core/lazy_sync/
+        // nunca conhece EventReviewSyncTask (features/events/)
+        // diretamente. Diferente de deepLinkReceiversProvider,
+        // lazySyncDispatcherProvider não precisa ser lido aqui no
+        // bootstrap (não abre nenhuma Stream/subscription própria -
+        // `runAll()` é chamada sob demanda, hoje só por SplashPage).
+        lazySyncTasksProvider.overrideWith((ref) => [EventReviewSyncTask(ref)]),
       ],
     );
     container.read(deepLinkDispatcherProvider);

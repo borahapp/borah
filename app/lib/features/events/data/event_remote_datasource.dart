@@ -153,4 +153,13 @@ class EventRemoteDatasource {
         .select(_eventColumns)
         .single();
   }
+
+  /// FASE C.4 - `notify_events_ready_for_review()` é `security definer`
+  /// (migration `20260809120000`), escopada a `auth.uid()` - sem
+  /// parâmetro nenhum, mesma disciplina de `create_event`/
+  /// `transfer_group_ownership` (nomes exatos batendo com a assinatura
+  /// da função, aqui vazia).
+  Future<void> notifyEventsReadyForReview() {
+    return _client.rpc('notify_events_ready_for_review');
+  }
 }

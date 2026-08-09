@@ -61,4 +61,13 @@ abstract interface class EventRepository {
     required String eventId,
     required DateTime scheduledAt,
   });
+
+  /// FASE C.4 - gera a notificação "Avaliação liberada" para todo rolê
+  /// em que o usuário autenticado confirmou presença e cuja
+  /// `scheduled_at` já passou (mesma regra de `can_review_event()`, sem
+  /// duplicá-la - a RPC só reflete o que o banco já decide). Idempotente
+  /// (a RPC nunca notifica duas vezes o mesmo rolê para o mesmo
+  /// usuário) - chamada por `EventReviewSyncTask`
+  /// (`core/lazy_sync/`), nunca diretamente por uma tela.
+  Future<void> notifyReadyForReview();
 }
