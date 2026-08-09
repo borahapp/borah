@@ -91,6 +91,23 @@ void main() {
       verify(() => repository.unfollow('user-1', 'user-2')).called(1);
     });
 
+    test(
+      'self-follow é bloqueado sem chamar o repositório (FASE SOCIAL 2)',
+      () async {
+        final notifier = container.read(followControllerProvider.notifier);
+        await notifier.toggle('user-1', 'user-1');
+
+        final status = container.read(followControllerProvider);
+        expect(status, isA<FollowError>());
+        expect(
+          (status as FollowError).message,
+          'Você não pode seguir a si mesmo.',
+        );
+        verifyNever(() => repository.follow(any(), any()));
+        verifyNever(() => repository.unfollow(any(), any()));
+      },
+    );
+
     test('falha ao seguir -> FollowError', () async {
       when(
         () => repository.isFollowing('user-1', 'user-2'),

@@ -144,6 +144,22 @@ class GroupRepositoryImpl implements GroupRepository {
     return _guard(() => _datasource.deleteGroup(groupId));
   }
 
+  @override
+  Future<List<Group>> listCommonGroups(
+    String currentUserId,
+    String otherUserId,
+  ) {
+    return _guard(() async {
+      final groupIds = await _datasource.fetchCommonGroupIds(
+        currentUserId,
+        otherUserId,
+      );
+      if (groupIds.isEmpty) return [];
+      final rows = await _datasource.fetchGroupsByIds(groupIds);
+      return rows.map((row) => _mapRow(row)).toList();
+    });
+  }
+
   /// [nextEvent] só é conhecido por `listMine()` (única chamadora que
   /// busca `fetchNextEvents` em lote) - os demais métodos usam o valor
   /// padrão `null`. `group_members` só existe na linha quando o `select`

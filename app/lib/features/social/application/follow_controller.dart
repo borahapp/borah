@@ -29,6 +29,15 @@ class FollowController extends Notifier<FollowStatus> {
   }
 
   Future<void> toggle(String followerId, String followingId) async {
+    // FASE SOCIAL 2 - defesa em profundidade: a UI já esconde o botão
+    // Seguir no próprio perfil e o banco tem
+    // `followers_no_self_follow` (CHECK), mas este controller não deve
+    // depender só de quem o chama nunca passar os dois ids iguais.
+    if (followerId == followingId) {
+      state = const FollowError('Você não pode seguir a si mesmo.');
+      return;
+    }
+
     final current = state;
     final isFollowing = current is FollowLoaded ? current.isFollowing : false;
 

@@ -86,4 +86,15 @@ abstract interface class GroupRepository {
   /// `events`/`event_attendances`/`event_reviews`, todas `on delete
   /// cascade`) já apaga tudo relacionado ao grupo.
   Future<void> delete(String groupId);
+
+  /// FASE SOCIAL 2 - grupos que [currentUserId] e [otherUserId] têm em
+  /// comum, para a seção "Grupos em comum" do Perfil público. Sem RLS
+  /// nova: a policy `group_members_select_members` (GROUP-01) já
+  /// permite ver todas as linhas de um grupo do qual o usuário
+  /// autenticado é membro, não só a própria linha - então basta cruzar
+  /// os grupos de [currentUserId] com a presença de [otherUserId] neles.
+  Future<List<Group>> listCommonGroups(
+    String currentUserId,
+    String otherUserId,
+  );
 }

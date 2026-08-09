@@ -115,6 +115,47 @@ class GroupRemoteDatasource {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// FASE SOCIAL 2 - ids de grupo onde AMBOS os usuários são membros. 2
+  /// consultas (ids de grupo de [currentUserId], depois quais delas
+  /// também têm [otherUserId]) - a policy `group_members_select_members`
+  /// permite as duas por simetria de "quem consulta é membro do grupo
+  /// da linha" (ver AUDITORIA — FASE SOCIAL 2 §8).
+  Future<List<String>> fetchCommonGroupIds(
+    String currentUserId,
+    String otherUserId,
+  ) async {
+    final myRows = await _client
+        .from(_membersTable)
+        .select('group_id')
+        .eq('user_id', currentUserId);
+    final myGroupIds = List<Map<String, dynamic>>.from(
+      myRows,
+    ).map((row) => row['group_id'] as String).toList();
+    if (myGroupIds.isEmpty) return [];
+
+    final commonRows = await _client
+        .from(_membersTable)
+        .select('group_id')
+        .eq('user_id', otherUserId)
+        .inFilter('group_id', myGroupIds);
+    return List<Map<String, dynamic>>.from(
+      commonRows,
+    ).map((row) => row['group_id'] as String).toList();
+  }
+
+  /// FASE SOCIAL 2 - nome/foto dos grupos em [groupIds], só os campos
+  /// que a seção "Grupos em comum" do Perfil público exibe.
+  Future<List<Map<String, dynamic>>> fetchGroupsByIds(
+    List<String> groupIds,
+  ) async {
+    if (groupIds.isEmpty) return [];
+    final rows = await _client
+        .from(_groupsTable)
+        .select('id,name,photo_url,invite_code')
+        .inFilter('id', groupIds);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   /// ONBOARDING-01: `join_group_by_invite_code()` é `SECURITY DEFINER`
   /// (mesma migration do `create_group()`) - resolve o grupo pelo
   /// código e insere o chamador como `member` na mesma transação
