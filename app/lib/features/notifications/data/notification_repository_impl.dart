@@ -47,6 +47,31 @@ class NotificationRepositoryImpl implements NotificationRepository {
     return _guard(() => _datasource.markAllAsRead(userId));
   }
 
+  @override
+  Future<PagedResult<AppNotification>> listGroupActivity(
+    String groupId, {
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listGroupActivity(
+        groupId,
+        page: page,
+        limit: limit,
+      );
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      return PagedResult<AppNotification>(
+        items: pageRows.map(_mapRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
+    });
+  }
+
   AppNotification _mapRow(Map<String, dynamic> row) {
     return AppNotification(
       id: row['id'] as String,

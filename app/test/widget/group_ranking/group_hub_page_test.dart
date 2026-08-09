@@ -1,3 +1,4 @@
+import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event.dart';
 import 'package:app/features/events/domain/event_repository.dart';
@@ -5,6 +6,9 @@ import 'package:app/features/group_ranking/data/group_ranking_repository_impl.da
 import 'package:app/features/group_ranking/domain/group_ranking_entry.dart';
 import 'package:app/features/group_ranking/domain/group_ranking_repository.dart';
 import 'package:app/features/group_ranking/presentation/pages/group_hub_page.dart';
+import 'package:app/features/notifications/data/notification_repository_impl.dart';
+import 'package:app/features/notifications/domain/app_notification.dart';
+import 'package:app/features/notifications/domain/notification_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +18,27 @@ class MockGroupRankingRepository extends Mock
     implements GroupRankingRepository {}
 
 class MockEventRepository extends Mock implements EventRepository {}
+
+class MockNotificationRepository extends Mock
+    implements NotificationRepository {}
+
+AppNotification _activityItem({
+  String id = 'n-1',
+  String type = 'new_event',
+  String title = 'Novo rolê',
+  String message = 'Um novo rolê foi criado: Cantina da Vila',
+}) {
+  return AppNotification(
+    id: id,
+    userId: 'u-1',
+    type: type,
+    title: title,
+    message: message,
+    payload: const {'group_id': 'g-1'},
+    isRead: false,
+    createdAt: DateTime(2026, 1, 1),
+  );
+}
 
 GroupRankingEntry _entry({
   String userId = 'u-1',
@@ -59,12 +84,14 @@ Event _event({
 Widget _wrap({
   required MockGroupRankingRepository rankingRepository,
   required MockEventRepository eventRepository,
+  required MockNotificationRepository notificationRepository,
   int initialTabIndex = 0,
 }) {
   return ProviderScope(
     overrides: [
       groupRankingRepositoryProvider.overrideWithValue(rankingRepository),
       eventRepositoryProvider.overrideWithValue(eventRepository),
+      notificationRepositoryProvider.overrideWithValue(notificationRepository),
     ],
     child: MaterialApp(
       home: GroupHubPage(groupId: 'g-1', initialTabIndex: initialTabIndex),
@@ -75,13 +102,21 @@ Widget _wrap({
 void main() {
   late MockGroupRankingRepository rankingRepository;
   late MockEventRepository eventRepository;
+  late MockNotificationRepository notificationRepository;
 
   setUp(() {
     rankingRepository = MockGroupRankingRepository();
     eventRepository = MockEventRepository();
+    notificationRepository = MockNotificationRepository();
+    when(
+      () => notificationRepository.listGroupActivity('g-1', page: 1, limit: 20),
+    ).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+    );
   });
 
-  testWidgets('mostra as 3 abas e o Ranking carregado por padrão', (
+  testWidgets('mostra as 4 abas e o Ranking carregado por padrão', (
     tester,
   ) async {
     when(() => rankingRepository.listByGroup('g-1')).thenAnswer(
@@ -98,6 +133,7 @@ void main() {
       _wrap(
         rankingRepository: rankingRepository,
         eventRepository: eventRepository,
+        notificationRepository: notificationRepository,
       ),
     );
     await tester.pumpAndSettle();
@@ -105,6 +141,7 @@ void main() {
     expect(find.text('Ranking'), findsOneWidget);
     expect(find.text('Estatísticas'), findsOneWidget);
     expect(find.text('Memórias'), findsOneWidget);
+    expect(find.text('Atividade'), findsOneWidget);
     expect(find.text('Ana Silva'), findsOneWidget);
     expect(find.text('Bia Costa'), findsOneWidget);
   });
@@ -123,6 +160,7 @@ void main() {
         _wrap(
           rankingRepository: rankingRepository,
           eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
           initialTabIndex: 1,
         ),
       );
@@ -161,6 +199,7 @@ void main() {
       _wrap(
         rankingRepository: rankingRepository,
         eventRepository: eventRepository,
+        notificationRepository: notificationRepository,
       ),
     );
     await tester.pumpAndSettle();
@@ -209,6 +248,7 @@ void main() {
         _wrap(
           rankingRepository: rankingRepository,
           eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
         ),
       );
       await tester.pumpAndSettle();
@@ -269,6 +309,7 @@ void main() {
         _wrap(
           rankingRepository: rankingRepository,
           eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
         ),
       );
       await tester.pumpAndSettle();
@@ -294,6 +335,7 @@ void main() {
       _wrap(
         rankingRepository: rankingRepository,
         eventRepository: eventRepository,
+        notificationRepository: notificationRepository,
       ),
     );
     await tester.pumpAndSettle();
@@ -321,6 +363,7 @@ void main() {
         _wrap(
           rankingRepository: rankingRepository,
           eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
         ),
       );
       await tester.pumpAndSettle();
@@ -328,4 +371,101 @@ void main() {
       expect(find.text('Você não é membro deste grupo.'), findsOneWidget);
     },
   );
+
+  group('F25 - aba Atividade', () {
+    testWidgets('mostra a atividade recente do grupo', (tester) async {
+      when(
+        () => rankingRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => [_entry()]);
+      when(
+        () => eventRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            notificationRepository.listGroupActivity('g-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_activityItem()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          rankingRepository: rankingRepository,
+          eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Atividade'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Novo rolê'), findsOneWidget);
+      expect(
+        find.text('Um novo rolê foi criado: Cantina da Vila'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('grupo sem atividade mostra estado vazio', (tester) async {
+      when(
+        () => rankingRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => [_entry()]);
+      when(
+        () => eventRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(
+        _wrap(
+          rankingRepository: rankingRepository,
+          eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Atividade'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Nenhuma atividade recente neste grupo.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('erro ao carregar mostra estado de erro na aba Atividade', (
+      tester,
+    ) async {
+      when(
+        () => rankingRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => [_entry()]);
+      when(
+        () => eventRepository.listByGroup('g-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            notificationRepository.listGroupActivity('g-1', page: 1, limit: 20),
+      ).thenThrow(
+        const NotificationRepositoryException('Você não é membro deste grupo.'),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          rankingRepository: rankingRepository,
+          eventRepository: eventRepository,
+          notificationRepository: notificationRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Atividade'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Você não é membro deste grupo.'), findsOneWidget);
+    });
+  });
 }

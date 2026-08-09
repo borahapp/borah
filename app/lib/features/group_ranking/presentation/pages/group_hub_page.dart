@@ -18,8 +18,10 @@ import '../../../events/application/events_list_controller.dart';
 import '../../../events/domain/event.dart';
 import '../../../events/presentation/states/events_list_status.dart';
 import '../../../events/presentation/widgets/event_memory_cards.dart';
+import '../../application/group_activity_feed_controller.dart';
 import '../../application/group_ranking_controller.dart';
 import '../../domain/group_ranking_entry.dart';
+import '../states/group_activity_feed_status.dart';
 import '../states/group_ranking_status.dart';
 
 /// Tela unificada "Meu Grupo" (F23, `RC03_DESIGN_GAP.md §1.3`) - Ranking
@@ -64,6 +66,9 @@ class _GroupHubPageState extends ConsumerState<GroupHubPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(groupRankingControllerProvider.notifier).load(widget.groupId);
       ref.read(eventsListControllerProvider.notifier).load(widget.groupId);
+      ref
+          .read(groupActivityFeedControllerProvider.notifier)
+          .loadForGroup(widget.groupId);
     });
   }
 
@@ -85,6 +90,10 @@ class _GroupHubPageState extends ConsumerState<GroupHubPage> {
           AppTabItem(
             label: 'Memórias',
             child: _MemoriesTab(groupId: widget.groupId),
+          ),
+          AppTabItem(
+            label: 'Atividade',
+            child: _ActivityTab(groupId: widget.groupId),
           ),
         ],
       ),
@@ -450,4 +459,93 @@ class _MemoriesContent extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Aba "Atividade" (RC-03 F25) - linha do tempo compartilhada do grupo
+/// (novo rolê, resposta de presença, novo membro), construída sobre
+/// `notifications` (ver doc-comment de `NotificationRepository.
+/// listGroupActivity`). Somente leitura - nunca navega nem marca como
+/// lida (os itens não têm dono individual significativo aqui).
+class _ActivityTab extends ConsumerStatefulWidget {
+  const _ActivityTab({required this.groupId});
+
+  final String groupId;
+
+  @override
+  ConsumerState<_ActivityTab> createState() => _ActivityTabState();
+}
+
+class _ActivityTabState extends ConsumerState<_ActivityTab> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
+    _isLoadingMore = true;
+    ref
+        .read(groupActivityFeedControllerProvider.notifier)
+        .loadNextPage()
+        .whenComplete(() {
+          if (mounted) _isLoadingMore = false;
+        });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = ref.watch(groupActivityFeedControllerProvider);
+
+    return AppAnimatedSwitcher(
+      child: switch (status) {
+        GroupActivityFeedInitial() || GroupActivityFeedLoading() =>
+          const LoadingScreen(key: ValueKey('hub-activity-loading')),
+        GroupActivityFeedError(:final message) => ErrorState(
+          key: const ValueKey('hub-activity-error'),
+          message: message,
+          onRetry: () => ref
+              .read(groupActivityFeedControllerProvider.notifier)
+              .loadForGroup(groupId),
+        ),
+        GroupActivityFeedEmpty() => const EmptyState(
+          key: ValueKey('hub-activity-empty'),
+          message: 'Nenhuma atividade recente neste grupo.',
+        ),
+        GroupActivityFeedLoaded(:final result) => ListView.builder(
+          key: const ValueKey('hub-activity-loaded'),
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          itemCount: result.items.length,
+          itemBuilder: (context, index) {
+            final item = result.items[index];
+            return AppStaggeredListItem(
+              index: index,
+              child: ListTile(
+                title: Text(item.title),
+                subtitle: Text(item.message),
+              ),
+            );
+          },
+        ),
+      },
+    );
+  }
+
+  String get groupId => widget.groupId;
 }

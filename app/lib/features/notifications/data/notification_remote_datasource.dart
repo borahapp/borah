@@ -46,4 +46,22 @@ class NotificationRemoteDatasource {
         .eq('user_id', userId)
         .eq('is_read', false);
   }
+
+  /// RC-03 F25 - RPC porque `notifications_select_own` restringe SELECT
+  /// ao próprio destinatário; agregação por grupo exige `security
+  /// definer` do lado do banco (`group_activity_feed`). Busca
+  /// `limit + 1`, mesmo mecanismo de `listForUser`.
+  Future<List<Map<String, dynamic>>> listGroupActivity(
+    String groupId, {
+    required int page,
+    required int limit,
+  }) async {
+    final offset = (page - 1) * limit;
+
+    final rows = await _client.rpc(
+      'group_activity_feed',
+      params: {'p_group_id': groupId, 'p_limit': limit + 1, 'p_offset': offset},
+    );
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
 }
