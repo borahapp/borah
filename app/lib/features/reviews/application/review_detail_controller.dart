@@ -40,6 +40,10 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
     required String restaurantId,
     required String userId,
     required double rating,
+    required double ambienceScore,
+    required double serviceScore,
+    required double foodScore,
+    required double costBenefitScore,
     String? comment,
   }) async {
     state = const ReviewDetailSaving();
@@ -48,6 +52,10 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
         restaurantId: restaurantId,
         userId: userId,
         rating: rating,
+        ambienceScore: ambienceScore,
+        serviceScore: serviceScore,
+        foodScore: foodScore,
+        costBenefitScore: costBenefitScore,
         comment: comment,
       );
       unawaited(AppAnalytics.trackReviewCreated(review.id, rating: rating));
@@ -66,6 +74,10 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
   Future<void> update(
     String id, {
     required double rating,
+    required double ambienceScore,
+    required double serviceScore,
+    required double foodScore,
+    required double costBenefitScore,
     String? comment,
   }) async {
     final previous = _currentDetails();
@@ -74,6 +86,10 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
       final review = await _repository.update(
         id,
         rating: rating,
+        ambienceScore: ambienceScore,
+        serviceScore: serviceScore,
+        foodScore: foodScore,
+        costBenefitScore: costBenefitScore,
         comment: comment,
       );
       state = ReviewDetailSaveSuccess(

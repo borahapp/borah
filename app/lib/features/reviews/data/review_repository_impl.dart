@@ -78,6 +78,10 @@ class ReviewRepositoryImpl implements ReviewRepository {
     required String restaurantId,
     required String userId,
     required double rating,
+    required double ambienceScore,
+    required double serviceScore,
+    required double foodScore,
+    required double costBenefitScore,
     String? comment,
   }) {
     return _guard(() async {
@@ -85,6 +89,10 @@ class ReviewRepositoryImpl implements ReviewRepository {
         'restaurant_id': restaurantId,
         'user_id': userId,
         'rating': rating,
+        'ambience_score': ambienceScore,
+        'service_score': serviceScore,
+        'food_score': foodScore,
+        'cost_benefit_score': costBenefitScore,
         'comment': comment,
       });
       return _mapRow(row);
@@ -92,10 +100,22 @@ class ReviewRepositoryImpl implements ReviewRepository {
   }
 
   @override
-  Future<Review> update(String id, {required double rating, String? comment}) {
+  Future<Review> update(
+    String id, {
+    required double rating,
+    required double ambienceScore,
+    required double serviceScore,
+    required double foodScore,
+    required double costBenefitScore,
+    String? comment,
+  }) {
     return _guard(() async {
       final row = await _datasource.updatePatch(id, {
         'rating': rating,
+        'ambience_score': ambienceScore,
+        'service_score': serviceScore,
+        'food_score': foodScore,
+        'cost_benefit_score': costBenefitScore,
         'comment': comment,
       });
       return _mapRow(row);
@@ -151,12 +171,42 @@ class ReviewRepositoryImpl implements ReviewRepository {
     return _guard(() => _datasource.isLikedByUser(reviewId, userId));
   }
 
+  @override
+  Future<List<String>> listRestaurantPhotos(
+    String restaurantId, {
+    int limit = 12,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listByRestaurant(
+        restaurantId,
+        page: 1,
+        limit: 20,
+      );
+
+      final photos = <String>[];
+      for (final row in rows) {
+        if (photos.length >= limit) break;
+        final photosCount = row['photos_count'] as int;
+        if (photosCount == 0) continue;
+        final reviewPhotos = await _datasource.listPhotoUrls(
+          row['id'] as String,
+        );
+        photos.addAll(reviewPhotos);
+      }
+      return photos.length > limit ? photos.sublist(0, limit) : photos;
+    });
+  }
+
   Review _mapRow(Map<String, dynamic> row) {
     return Review(
       id: row['id'] as String,
       restaurantId: row['restaurant_id'] as String,
       userId: row['user_id'] as String,
       rating: (row['rating'] as num).toDouble(),
+      ambienceScore: (row['ambience_score'] as num?)?.toDouble(),
+      serviceScore: (row['service_score'] as num?)?.toDouble(),
+      foodScore: (row['food_score'] as num?)?.toDouble(),
+      costBenefitScore: (row['cost_benefit_score'] as num?)?.toDouble(),
       comment: row['comment'] as String?,
       likesCount: row['likes_count'] as int,
       photosCount: row['photos_count'] as int,

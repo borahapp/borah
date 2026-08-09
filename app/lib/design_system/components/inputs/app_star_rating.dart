@@ -87,6 +87,7 @@ class _AppStarRatingContent extends StatelessWidget {
           children: [
             for (var i = 1; i <= starCount; i++)
               _Star(
+                position: i,
                 filled: i <= value,
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -110,8 +111,13 @@ class _AppStarRatingContent extends StatelessWidget {
 }
 
 class _Star extends StatelessWidget {
-  const _Star({required this.filled, required this.onTap});
+  const _Star({
+    required this.position,
+    required this.filled,
+    required this.onTap,
+  });
 
+  final int position;
   final bool filled;
   final VoidCallback onTap;
 
@@ -121,6 +127,7 @@ class _Star extends StatelessWidget {
 
     return IconButton(
       onPressed: onTap,
+      tooltip: position == 1 ? '1 estrela' : '$position estrelas',
       icon: AnimatedScale(
         scale: filled ? 1.0 : 0.85,
         duration: AppMotion.scaled(context, AppMotion.fast),

@@ -96,13 +96,25 @@ void main() {
           restaurantId: any(named: 'restaurantId'),
           userId: any(named: 'userId'),
           rating: any(named: 'rating'),
+          ambienceScore: any(named: 'ambienceScore'),
+          serviceScore: any(named: 'serviceScore'),
+          foodScore: any(named: 'foodScore'),
+          costBenefitScore: any(named: 'costBenefitScore'),
           comment: any(named: 'comment'),
         ),
       ).thenAnswer((_) async => _review());
 
       await container
           .read(reviewDetailControllerProvider.notifier)
-          .create(restaurantId: 'r-1', userId: 'user-1', rating: 4.5);
+          .create(
+            restaurantId: 'r-1',
+            userId: 'user-1',
+            rating: 4.5,
+            ambienceScore: 4,
+            serviceScore: 4,
+            foodScore: 5,
+            costBenefitScore: 4,
+          );
 
       expect(
         container.read(reviewDetailControllerProvider),
@@ -116,13 +128,25 @@ void main() {
           restaurantId: any(named: 'restaurantId'),
           userId: any(named: 'userId'),
           rating: any(named: 'rating'),
+          ambienceScore: any(named: 'ambienceScore'),
+          serviceScore: any(named: 'serviceScore'),
+          foodScore: any(named: 'foodScore'),
+          costBenefitScore: any(named: 'costBenefitScore'),
           comment: any(named: 'comment'),
         ),
       ).thenThrow(const ReviewRepositoryException('Já existe uma avaliação.'));
 
       await container
           .read(reviewDetailControllerProvider.notifier)
-          .create(restaurantId: 'r-1', userId: 'user-1', rating: 4.5);
+          .create(
+            restaurantId: 'r-1',
+            userId: 'user-1',
+            rating: 4.5,
+            ambienceScore: 4,
+            serviceScore: 4,
+            foodScore: 5,
+            costBenefitScore: 4,
+          );
 
       expect(
         container.read(reviewDetailControllerProvider),
@@ -145,14 +169,30 @@ void main() {
           () => repository.isLikedByUser('rv-1', 'user-1'),
         ).thenAnswer((_) async => true);
         when(
-          () => repository.update('rv-1', rating: 3.0, comment: 'Editado'),
+          () => repository.update(
+            'rv-1',
+            rating: 3.0,
+            ambienceScore: any(named: 'ambienceScore'),
+            serviceScore: any(named: 'serviceScore'),
+            foodScore: any(named: 'foodScore'),
+            costBenefitScore: any(named: 'costBenefitScore'),
+            comment: 'Editado',
+          ),
         ).thenAnswer((_) async => _review(rating: 3.0));
 
         final notifier = container.read(
           reviewDetailControllerProvider.notifier,
         );
         await notifier.load('rv-1', currentUserId: 'user-1');
-        await notifier.update('rv-1', rating: 3.0, comment: 'Editado');
+        await notifier.update(
+          'rv-1',
+          rating: 3.0,
+          ambienceScore: 3,
+          serviceScore: 3,
+          foodScore: 3,
+          costBenefitScore: 3,
+          comment: 'Editado',
+        );
 
         final status = container.read(reviewDetailControllerProvider);
         expect(status, isA<ReviewDetailSaveSuccess>());
@@ -168,13 +208,25 @@ void main() {
         () => repository.update(
           'rv-1',
           rating: any(named: 'rating'),
+          ambienceScore: any(named: 'ambienceScore'),
+          serviceScore: any(named: 'serviceScore'),
+          foodScore: any(named: 'foodScore'),
+          costBenefitScore: any(named: 'costBenefitScore'),
           comment: any(named: 'comment'),
         ),
       ).thenThrow(const ReviewRepositoryException('Fora da janela de edição.'));
 
       await container
           .read(reviewDetailControllerProvider.notifier)
-          .update('rv-1', rating: 3.0, comment: 'Editado');
+          .update(
+            'rv-1',
+            rating: 3.0,
+            ambienceScore: 3,
+            serviceScore: 3,
+            foodScore: 3,
+            costBenefitScore: 3,
+            comment: 'Editado',
+          );
 
       final status = container.read(reviewDetailControllerProvider);
       expect(status, isA<ReviewDetailError>());
