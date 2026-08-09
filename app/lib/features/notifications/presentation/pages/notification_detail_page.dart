@@ -66,7 +66,12 @@ class _NotificationDetailPageState
       final groupId = payload['group_id'] as String?;
       if (groupId != null) context.push('/groups/$groupId');
     }
-    if (type == 'new_event' || type == 'event_attendance_response') {
+    // FASE C.4: mesmo destino de 'new_event'/'event_attendance_response'
+    // - a tela de Detalhe do rolê já é onde o botão "Avaliar" aparece
+    // (EventDetailPage, condicionado a `canReview`), nenhuma rota nova.
+    if (type == 'new_event' ||
+        type == 'event_attendance_response' ||
+        type == 'event_review_open') {
       final groupId = payload['group_id'] as String?;
       final eventId = payload['event_id'] as String?;
       if (groupId != null && eventId != null) {
