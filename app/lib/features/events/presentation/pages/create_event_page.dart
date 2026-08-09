@@ -15,6 +15,8 @@ import '../../../restaurants/domain/restaurant.dart';
 import '../../application/create_event_controller.dart';
 import '../../application/event_restaurant_search_controller.dart';
 import '../../application/events_list_controller.dart';
+import '../../application/group_restaurant_suggestions_provider.dart';
+import '../../application/rotation_suggestion_provider.dart';
 import '../states/create_event_status.dart';
 import '../states/event_restaurant_search_status.dart';
 
@@ -223,6 +225,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (selected == null) ...[
+            _buildRotationSuggestion(),
+            _buildGroupRestaurantSuggestions(),
             AppSearchField(
               controller: _searchController,
               label: 'Buscar restaurante',
@@ -245,6 +249,81 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
             onPressed: selected == null
                 ? null
                 : () => setState(() => _step = 1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// RC-03 F36 - sugestão de rodízio justo, puramente informativa: nunca
+  /// impede a criação do rolê por outra pessoa (`create_event_page.dart`
+  /// nunca restringiu quem pode criar, e continua não restringindo).
+  /// `SizedBox.shrink()` enquanto carrega/sem dado - a sugestão nunca
+  /// bloqueia nem atrasa visualmente o fluxo principal de criação.
+  Widget _buildRotationSuggestion() {
+    final suggestion = ref.watch(rotationSuggestionProvider(widget.groupId));
+    final member = suggestion.valueOrNull;
+    if (member == null) return const SizedBox.shrink();
+
+    final name = member.fullName?.isNotEmpty == true
+        ? member.fullName!
+        : 'Um membro do grupo';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              const Icon(Icons.shuffle_rounded),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text('Sugestão de rodízio: era a vez de $name.')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// RC-03 F13 - restaurantes favoritados por membros do grupo, ainda
+  /// não visitados pelo grupo. Reaproveita `RestaurantCard` já existente
+  /// - nenhum widget novo. `SizedBox.shrink()` enquanto carrega/sem
+  /// sugestão - nunca atrasa nem bloqueia o fluxo de busca manual.
+  Widget _buildGroupRestaurantSuggestions() {
+    final suggestions = ref.watch(
+      groupRestaurantSuggestionsProvider(widget.groupId),
+    );
+    final restaurants = suggestions.valueOrNull ?? const [];
+    if (restaurants.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Favoritos do grupo ainda não visitados',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 156,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: restaurants.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+              itemBuilder: (context, index) {
+                final restaurant = restaurants[index];
+                return SizedBox(
+                  width: 240,
+                  child: _restaurantCard(
+                    restaurant,
+                    onTap: () => _selectRestaurant(restaurant),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
