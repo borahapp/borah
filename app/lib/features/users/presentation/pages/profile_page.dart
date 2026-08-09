@@ -191,6 +191,15 @@ class _ProfileView extends ConsumerWidget {
           label: 'Notificações',
           onTap: () => context.push('/notifications'),
         ),
+        // FASE SOCIAL 1: Favoritos saiu da barra de navegação principal
+        // (deu lugar a Rankings) - este atalho é o novo lar da
+        // funcionalidade, mesma rota `/favorites` já existente, nenhum
+        // dado ou comportamento alterado.
+        _ShortcutCard(
+          icon: Icons.favorite_border,
+          label: 'Favoritos',
+          onTap: () => context.push('/favorites'),
+        ),
       ],
     );
   }

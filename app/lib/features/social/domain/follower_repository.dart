@@ -30,4 +30,14 @@ abstract interface class FollowerRepository {
     required int page,
     required int limit,
   });
+
+  /// FASE SOCIAL 1 - busca de pessoas (nova tela de Pesquisa). `ilike`
+  /// sobre `profiles.full_name`, mesmo padrão já usado em
+  /// `RestaurantRepository.search` - sem `username` (coluna ainda não
+  /// existe) e sem índice trigram (volume atual do projeto não exige).
+  Future<PagedResult<UserProfile>> searchProfiles(
+    String query, {
+    required int page,
+    required int limit,
+  });
 }

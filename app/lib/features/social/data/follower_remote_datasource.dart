@@ -81,6 +81,24 @@ class FollowerRemoteDatasource {
     ).map((row) => row['following_id'] as String).toList();
   }
 
+  /// FASE SOCIAL 1 - busca `limit + 1` registros, mesmo mecanismo de
+  /// `listFollowerIds`/`RestaurantRemoteDatasource.search`.
+  Future<List<Map<String, dynamic>>> searchProfiles(
+    String query, {
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+    final rows = await _client
+        .from(_profilesTable)
+        .select()
+        .ilike('full_name', '%$query%')
+        .order('full_name')
+        .range(from, to);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<List<Map<String, dynamic>>> fetchProfilesByIds(
     List<String> ids,
   ) async {

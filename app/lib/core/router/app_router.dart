@@ -55,6 +55,7 @@ import '../../features/reviews/presentation/pages/create_review_page.dart';
 import '../../features/reviews/presentation/pages/edit_review_page.dart';
 import '../../features/reviews/presentation/pages/review_detail_page.dart';
 import '../../features/reviews/presentation/pages/reviews_list_page.dart';
+import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/social/presentation/pages/comments_page.dart';
 import '../../features/social/presentation/pages/feed_page.dart';
 import '../../features/social/presentation/pages/follow_list_page.dart';
@@ -90,6 +91,7 @@ const _protectedRoutePrefixes = [
   '/notifications',
   '/gamification',
   '/groups',
+  '/search',
 ];
 
 bool _isProtectedRoute(String location) {
@@ -328,6 +330,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const FavoritesPage(),
       ),
       GoRoute(path: '/feed', builder: (context, state) => const FeedPage()),
+      GoRoute(path: '/search', builder: (context, state) => const SearchPage()),
       GoRoute(
         path: '/reviews/:id/comments',
         builder: (context, state) =>

@@ -53,6 +53,10 @@ Widget _wrap(
         path: '/gamification',
         builder: (_, _) => const Scaffold(body: Text('Gamification Page')),
       ),
+      GoRoute(
+        path: '/favorites',
+        builder: (_, _) => const Scaffold(body: Text('Favorites Page')),
+      ),
     ],
   );
 
@@ -93,7 +97,7 @@ void main() {
     );
   });
 
-  testWidgets('mostra os 4 atalhos', (tester) async {
+  testWidgets('mostra os 5 atalhos', (tester) async {
     await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
     await tester.pumpAndSettle();
 
@@ -101,6 +105,19 @@ void main() {
     expect(find.text('Gamificação'), findsOneWidget);
     expect(find.text('Rankings'), findsOneWidget);
     expect(find.text('Notificações'), findsOneWidget);
+    expect(find.text('Favoritos'), findsOneWidget);
+  });
+
+  testWidgets('tocar no atalho de Favoritos navega até a rota', (tester) async {
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Favoritos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Favoritos'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Favorites Page'), findsOneWidget);
   });
 
   testWidgets('atalho de Gamificação mostra prévia de nível/XP', (

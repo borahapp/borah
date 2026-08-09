@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../design_system/components/navigation/app_bottom_navigation.dart';
-import '../../features/favorites/presentation/pages/favorites_page.dart';
+import '../../design_system/tokens/app_spacing.dart';
+import '../../features/gamification/presentation/pages/ranking_users_page.dart';
 import '../../features/groups/presentation/pages/groups_list_page.dart';
-import '../../features/restaurants/presentation/pages/restaurants_search_page.dart';
+import '../../features/social/presentation/pages/feed_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
 
-/// RC-04E: shell de navegação inicial pós-login em `/home`, conectando o
-/// `AppBottomNavigation` às 4 telas mais centrais do app. `IndexedStack`
-/// preserva o estado de cada aba ao trocar (evita recarregar dados/
-/// perder posição de rolagem a cada troca).
+/// FASE SOCIAL 1: shell de navegação pós-login em `/home`, conectando o
+/// `AppBottomNavigation` às 4 telas centrais - Feed, Grupos, Rankings
+/// (ranking de usuários por XP, `/gamification/ranking` - não o ranking
+/// de restaurantes) e Perfil. `IndexedStack` preserva o estado de cada
+/// aba ao trocar (evita recarregar dados/perder posição de rolagem).
 ///
-/// Decisão de produto (BLOCO 9, pendente desde o relatório de
-/// prontidão): "Feed" saiu da barra principal e "Grupos" entrou em seu
-/// lugar - a home passa a refletir a identidade real do BORAH ("o
-/// ranking dos seus rolês", organizado por grupos de amigos), não a de
-/// um app de review de restaurante individual. `FeedPage` continua a
-/// existir no código (perfis públicos ainda linkam para
-/// seguidores/seguindo, DV-07) - só deixou de ser um destino da barra
-/// inferior.
+/// Decisão de produto (FASE FEED SOCIAL, revertendo a decisão do BLOCO 9
+/// que havia tirado o Feed da barra): o Feed volta a ser a Home - "a
+/// sensação ao abrir o app deve ser 'quero ver o que meus amigos estão
+/// fazendo', não 'quero procurar um restaurante'". Restaurantes e
+/// Favoritos saem da barra principal (ambos continuam existindo, só
+/// mudam de porta de entrada - ver `_openCreateSheet`/`profile_page.dart`).
+///
+/// A barra tem 5 itens, mas só 4 páginas: "Criar" (índice 2) nunca é
+/// uma aba do `IndexedStack` - abre um `BottomSheet` com atalhos para
+/// as ações de criação já existentes, sem mudar a aba selecionada.
 class HomeShellPage extends StatefulWidget {
   const HomeShellPage({super.key});
 
@@ -27,30 +32,37 @@ class HomeShellPage extends StatefulWidget {
 }
 
 class _HomeShellPageState extends State<HomeShellPage> {
-  int _index = 0;
+  /// Índice dentro dos 5 itens da barra (0-4) - o que `AppBottomNavigation`
+  /// mostra selecionado.
+  int _navIndex = 0;
 
   static const _pages = [
+    FeedPage(),
     GroupsListPage(),
-    RestaurantsSearchPage(),
-    FavoritesPage(),
+    RankingUsersPage(),
     ProfilePage(),
   ];
 
   static const _items = [
+    AppBottomNavigationItem(
+      icon: Icons.dynamic_feed_outlined,
+      selectedIcon: Icons.dynamic_feed,
+      label: 'Feed',
+    ),
     AppBottomNavigationItem(
       icon: Icons.groups_outlined,
       selectedIcon: Icons.groups,
       label: 'Grupos',
     ),
     AppBottomNavigationItem(
-      icon: Icons.restaurant_outlined,
-      selectedIcon: Icons.restaurant,
-      label: 'Restaurantes',
+      icon: Icons.add_circle_outline,
+      selectedIcon: Icons.add_circle,
+      label: 'Criar',
     ),
     AppBottomNavigationItem(
-      icon: Icons.favorite_border,
-      selectedIcon: Icons.favorite,
-      label: 'Favoritos',
+      icon: Icons.emoji_events_outlined,
+      selectedIcon: Icons.emoji_events,
+      label: 'Rankings',
     ),
     AppBottomNavigationItem(
       icon: Icons.person_outline,
@@ -59,14 +71,71 @@ class _HomeShellPageState extends State<HomeShellPage> {
     ),
   ];
 
+  /// Converte o índice da barra (0-4, com "Criar" em 2) para o índice
+  /// real do `IndexedStack` (0-3, só as 4 páginas).
+  int get _pageIndex => _navIndex < 2 ? _navIndex : _navIndex - 1;
+
+  void _onNavTap(int navIndex) {
+    if (navIndex == 2) {
+      _openCreateSheet();
+      return;
+    }
+    setState(() => _navIndex = navIndex);
+  }
+
+  /// Bottom sheet de "Criar" - 3 atalhos para fluxos já existentes,
+  /// nenhuma tela nova de criação. Rolê e avaliação sempre pertencem a
+  /// um grupo/restaurante específico, então levam primeiro para a
+  /// escolha (Grupos/Restaurantes), não direto a um formulário.
+  Future<void> _openCreateSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            ListTile(
+              leading: const Icon(Icons.groups_outlined),
+              title: const Text('Criar grupo'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.push('/groups/new');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.event_outlined),
+              title: const Text('Criar rolê'),
+              subtitle: const Text('Escolha o grupo'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.push('/groups');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.rate_review_outlined),
+              title: const Text('Avaliar restaurante'),
+              subtitle: const Text('Escolha o restaurante'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.push('/restaurants');
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _pages),
+      body: IndexedStack(index: _pageIndex, children: _pages),
       bottomNavigationBar: AppBottomNavigation(
-        currentIndex: _index,
+        currentIndex: _navIndex,
         items: _items,
-        onTap: (index) => setState(() => _index = index),
+        onTap: _onNavTap,
       ),
     );
   }

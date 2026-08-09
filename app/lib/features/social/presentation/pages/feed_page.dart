@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
@@ -69,7 +70,16 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     final status = ref.watch(feedControllerProvider);
 
     return Scaffold(
-      appBar: const AppTopBar(title: 'Feed'),
+      appBar: AppTopBar(
+        title: 'Feed',
+        actions: [
+          AppIconButton(
+            icon: Icons.search,
+            tooltip: 'Pesquisar',
+            onPressed: () => context.push('/search'),
+          ),
+        ],
+      ),
       body: AppAnimatedSwitcher(
         child: switch (status) {
           FeedInitial() ||

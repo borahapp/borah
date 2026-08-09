@@ -57,6 +57,29 @@ class FollowerRepositoryImpl implements FollowerRepository {
     );
   }
 
+  @override
+  Future<PagedResult<UserProfile>> searchProfiles(
+    String query, {
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.searchProfiles(
+        query,
+        page: page,
+        limit: limit,
+      );
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+      return PagedResult<UserProfile>(
+        items: pageRows.map(_mapRow).toList(),
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
+    });
+  }
+
   Future<PagedResult<UserProfile>> _listByIds(
     Future<List<String>> Function() fetchIds, {
     required int page,
