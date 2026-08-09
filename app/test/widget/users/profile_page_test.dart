@@ -22,10 +22,13 @@ UserProfile _profile() {
   return UserProfile(
     id: 'user-1',
     fullName: 'Ana Silva',
+    username: 'anasilva',
     bio: null,
     avatarUrl: null,
     city: 'São Paulo',
     state: 'SP',
+    followersCount: 5,
+    followingCount: 2,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );
@@ -56,6 +59,14 @@ Widget _wrap(
       GoRoute(
         path: '/favorites',
         builder: (_, _) => const Scaffold(body: Text('Favorites Page')),
+      ),
+      GoRoute(
+        path: '/users/:id/followers',
+        builder: (_, _) => const Scaffold(body: Text('Followers Page')),
+      ),
+      GoRoute(
+        path: '/users/:id/following',
+        builder: (_, _) => const Scaffold(body: Text('Following Page')),
       ),
     ],
   );
@@ -95,6 +106,41 @@ void main() {
     ).thenAnswer(
       (_) async => const GroupsActivitySummary(eventsCount: 0, reviewsCount: 0),
     );
+  });
+
+  testWidgets('mostra username e contadores de seguidores/seguindo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpAndSettle();
+
+    expect(find.text('@anasilva'), findsOneWidget);
+    expect(find.text('5 seguidores'), findsOneWidget);
+    expect(find.text('2 seguindo'), findsOneWidget);
+  });
+
+  testWidgets('tocar em seguidores navega até a lista de seguidores', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('5 seguidores'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Followers Page'), findsOneWidget);
+  });
+
+  testWidgets('tocar em seguindo navega até a lista de seguindo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('2 seguindo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Following Page'), findsOneWidget);
   });
 
   testWidgets('mostra os 5 atalhos', (tester) async {

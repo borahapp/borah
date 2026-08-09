@@ -19,6 +19,12 @@ class FollowerRemoteDatasource {
   static const _table = 'followers';
   static const _profilesTable = 'profiles';
 
+  /// FASE SOCIAL 2 §11 (AUDITORIA) - campos explícitos em vez de
+  /// `.select()` (equivalente a `select *`).
+  static const _profileColumns =
+      'id,full_name,username,bio,avatar_url,city,state,'
+      'followers_count,following_count,created_at,updated_at';
+
   Future<void> follow(String followerId, String followingId) {
     return _client.from(_table).insert({
       'follower_id': followerId,
@@ -81,8 +87,10 @@ class FollowerRemoteDatasource {
     ).map((row) => row['following_id'] as String).toList();
   }
 
-  /// FASE SOCIAL 1 - busca `limit + 1` registros, mesmo mecanismo de
-  /// `listFollowerIds`/`RestaurantRemoteDatasource.search`.
+  /// Busca `limit + 1` registros, mesmo mecanismo de
+  /// `listFollowerIds`/`RestaurantRemoteDatasource.search`. FASE SOCIAL
+  /// 2: aceita busca por "@username" além de nome (`.or()` do
+  /// PostgREST) - normaliza o termo antes de montar o filtro.
   Future<List<Map<String, dynamic>>> searchProfiles(
     String query, {
     required int page,
@@ -90,13 +98,24 @@ class FollowerRemoteDatasource {
   }) async {
     final from = (page - 1) * limit;
     final to = from + limit;
+    final normalized = _normalizeSearchTerm(query);
     final rows = await _client
         .from(_profilesTable)
-        .select()
-        .ilike('full_name', '%$query%')
+        .select(_profileColumns)
+        .or('full_name.ilike.%$normalized%,username.ilike.%$normalized%')
         .order('full_name')
         .range(from, to);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// Remove um "@" inicial (busca por "@victorfrare" deve funcionar como
+  /// "victorfrare") e `,`/`(`/`)` - caracteres com significado especial
+  /// na sintaxe do filtro `.or()` do PostgREST, que quebrariam a
+  /// consulta (ou mudariam seu significado) se um nome/username os
+  /// contivesse.
+  String _normalizeSearchTerm(String query) {
+    final withoutAt = query.startsWith('@') ? query.substring(1) : query;
+    return withoutAt.replaceAll(RegExp(r'[,()]'), '');
   }
 
   Future<List<Map<String, dynamic>>> fetchProfilesByIds(
@@ -105,8 +124,25 @@ class FollowerRemoteDatasource {
     if (ids.isEmpty) return [];
     final rows = await _client
         .from(_profilesTable)
-        .select()
+        .select(_profileColumns)
         .inFilter('id', ids);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// FASE SOCIAL 2 - quais de [candidateIds] o usuário [followerId] já
+  /// segue, numa única consulta (ver `FollowerRepository.listFollowingAmong`).
+  Future<List<String>> listFollowingAmong(
+    String followerId,
+    List<String> candidateIds,
+  ) async {
+    if (candidateIds.isEmpty) return [];
+    final rows = await _client
+        .from(_table)
+        .select('following_id')
+        .eq('follower_id', followerId)
+        .inFilter('following_id', candidateIds);
+    return List<Map<String, dynamic>>.from(
+      rows,
+    ).map((row) => row['following_id'] as String).toList();
   }
 }

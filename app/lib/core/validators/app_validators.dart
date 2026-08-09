@@ -46,3 +46,23 @@ String? validateRating(String? value) {
   }
   return null;
 }
+
+final _usernamePattern = RegExp(r'^[a-zA-Z0-9_.]+$');
+
+/// FASE SOCIAL 2 - `profiles.username` é opcional (contas antigas
+/// continuam sem username), então um campo vazio é válido; só valida o
+/// formato quando algo foi digitado. Mesma regra da CHECK constraint
+/// `profiles_username_format` (`add_profiles_username.sql`) - mantidas
+/// em sincronia manualmente, mesma decisão já aceita no projeto para
+/// `validateRating`/CHECK de `reviews.overall_rating`.
+String? validateUsername(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final trimmed = value.trim();
+  if (trimmed.length < 3 || trimmed.length > 30) {
+    return 'O nome de usuário deve ter entre 3 e 30 caracteres.';
+  }
+  if (!_usernamePattern.hasMatch(trimmed)) {
+    return 'Use apenas letras, números, ponto e underscore.';
+  }
+  return null;
+}

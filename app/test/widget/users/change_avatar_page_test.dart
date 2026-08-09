@@ -33,10 +33,13 @@ UserProfile _profile({String? avatarUrl}) {
   return UserProfile(
     id: 'user-1',
     fullName: 'Ana Souza',
+    username: null,
     bio: 'Apaixonada por gastronomia.',
     avatarUrl: avatarUrl,
     city: 'São Paulo',
     state: 'SP',
+    followersCount: 0,
+    followingCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );

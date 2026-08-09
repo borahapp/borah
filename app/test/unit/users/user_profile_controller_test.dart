@@ -15,10 +15,13 @@ UserProfile _profile({String? fullName}) {
   return UserProfile(
     id: 'user-1',
     fullName: fullName ?? 'Ana',
+    username: null,
     bio: null,
     avatarUrl: null,
     city: null,
     state: null,
+    followersCount: 0,
+    followingCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );
@@ -84,6 +87,7 @@ void main() {
         () => repository.updateProfile(
           'user-1',
           fullName: any(named: 'fullName'),
+          username: any(named: 'username'),
           bio: any(named: 'bio'),
           city: any(named: 'city'),
           stateProvince: any(named: 'stateProvince'),
@@ -104,6 +108,7 @@ void main() {
         () => repository.updateProfile(
           'user-1',
           fullName: any(named: 'fullName'),
+          username: any(named: 'username'),
           bio: any(named: 'bio'),
           city: any(named: 'city'),
           stateProvince: any(named: 'stateProvince'),

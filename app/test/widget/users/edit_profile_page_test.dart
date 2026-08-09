@@ -30,6 +30,7 @@ class _SeededUserProfileController extends UserProfileController {
 
 UserProfile _profile({
   String fullName = 'Ana Souza',
+  String? username,
   String bio = 'Apaixonada por gastronomia.',
   String city = 'São Paulo',
   String state = 'SP',
@@ -37,10 +38,13 @@ UserProfile _profile({
   return UserProfile(
     id: 'user-1',
     fullName: fullName,
+    username: username,
     bio: bio,
     avatarUrl: null,
     city: city,
     state: state,
+    followersCount: 0,
+    followingCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );
@@ -129,6 +133,86 @@ void main() {
     expect(find.text('SP'), findsOneWidget);
   });
 
+  testWidgets('formulário preenchido com username existente', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        repository,
+        initialStatus: ProfileLoaded(_profile(username: 'anasouza')),
+      ),
+    );
+    await _openEditProfile(tester);
+
+    expect(
+      find.widgetWithText(TextFormField, 'Nome de usuário (opcional)'),
+      findsOneWidget,
+    );
+    expect(find.text('anasouza'), findsOneWidget);
+  });
+
+  testWidgets('username inválido mostra erro de validação', (tester) async {
+    await tester.pumpWidget(
+      _wrap(repository, initialStatus: ProfileLoaded(_profile())),
+    );
+    await _openEditProfile(tester);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome de usuário (opcional)'),
+      'ab',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('O nome de usuário deve ter entre 3 e 30 caracteres.'),
+      findsOneWidget,
+    );
+    verifyNever(
+      () => repository.updateProfile(
+        any(),
+        fullName: any(named: 'fullName'),
+        username: any(named: 'username'),
+        bio: any(named: 'bio'),
+        city: any(named: 'city'),
+        stateProvince: any(named: 'stateProvince'),
+      ),
+    );
+  });
+
+  testWidgets('username vazio é enviado como null (não altera)', (
+    tester,
+  ) async {
+    when(
+      () => repository.updateProfile(
+        'user-1',
+        fullName: any(named: 'fullName'),
+        username: any(named: 'username'),
+        bio: any(named: 'bio'),
+        city: any(named: 'city'),
+        stateProvince: any(named: 'stateProvince'),
+      ),
+    ).thenAnswer((_) async => _profile());
+
+    await tester.pumpWidget(
+      _wrap(repository, initialStatus: ProfileLoaded(_profile())),
+    );
+    await _openEditProfile(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Salvar'));
+    await tester.pumpAndSettle();
+
+    final captured = verify(
+      () => repository.updateProfile(
+        'user-1',
+        fullName: any(named: 'fullName'),
+        username: captureAny(named: 'username'),
+        bio: any(named: 'bio'),
+        city: any(named: 'city'),
+        stateProvince: any(named: 'stateProvince'),
+      ),
+    ).captured;
+    expect(captured.last, isNull);
+  });
+
   testWidgets('validação exige o preenchimento do nome', (tester) async {
     await tester.pumpWidget(
       _wrap(repository, initialStatus: ProfileLoaded(_profile())),
@@ -144,6 +228,7 @@ void main() {
       () => repository.updateProfile(
         any(),
         fullName: any(named: 'fullName'),
+        username: any(named: 'username'),
         bio: any(named: 'bio'),
         city: any(named: 'city'),
         stateProvince: any(named: 'stateProvince'),
@@ -180,6 +265,7 @@ void main() {
         () => repository.updateProfile(
           'user-1',
           fullName: captureAny(named: 'fullName'),
+          username: any(named: 'username'),
           bio: any(named: 'bio'),
           city: any(named: 'city'),
           stateProvince: any(named: 'stateProvince'),
@@ -200,6 +286,7 @@ void main() {
       () => repository.updateProfile(
         'user-1',
         fullName: any(named: 'fullName'),
+        username: any(named: 'username'),
         bio: any(named: 'bio'),
         city: any(named: 'city'),
         stateProvince: any(named: 'stateProvince'),
@@ -227,6 +314,7 @@ void main() {
       () => repository.updateProfile(
         'user-1',
         fullName: any(named: 'fullName'),
+        username: any(named: 'username'),
         bio: any(named: 'bio'),
         city: any(named: 'city'),
         stateProvince: any(named: 'stateProvince'),
@@ -266,6 +354,7 @@ void main() {
       () => repository.updateProfile(
         any(),
         fullName: any(named: 'fullName'),
+        username: any(named: 'username'),
         bio: any(named: 'bio'),
         city: any(named: 'city'),
         stateProvince: any(named: 'stateProvince'),

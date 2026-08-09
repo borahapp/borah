@@ -32,6 +32,7 @@ class UserProfileController extends Notifier<UserProfileStatus> {
   Future<void> updateProfile(
     String userId, {
     String? fullName,
+    String? username,
     String? bio,
     String? city,
     String? stateProvince,
@@ -44,6 +45,7 @@ class UserProfileController extends Notifier<UserProfileStatus> {
       final updated = await _repository.updateProfile(
         userId,
         fullName: fullName,
+        username: username,
         bio: bio,
         city: city,
         stateProvince: stateProvince,

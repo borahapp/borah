@@ -16,10 +16,13 @@ UserProfile _profile({String id = 'user-1'}) {
   return UserProfile(
     id: id,
     fullName: 'Ana',
+    username: null,
     bio: null,
     avatarUrl: null,
     city: null,
     state: null,
+    followersCount: 0,
+    followingCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );

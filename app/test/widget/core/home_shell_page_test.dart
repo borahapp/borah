@@ -32,10 +32,13 @@ UserProfile _profile() {
   return UserProfile(
     id: 'user-1',
     fullName: 'Ana Silva',
+    username: null,
     bio: null,
     avatarUrl: null,
     city: null,
     state: null,
+    followersCount: 0,
+    followingCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
   );

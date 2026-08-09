@@ -22,6 +22,7 @@ class EditProfilePage extends ConsumerStatefulWidget {
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _bioController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
@@ -30,6 +31,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _bioController.dispose();
     _cityController.dispose();
     _stateController.dispose();
@@ -40,6 +42,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (_prefilled) return;
     if (status is ProfileLoaded) {
       _nameController.text = status.profile.fullName ?? '';
+      _usernameController.text = status.profile.username ?? '';
       _bioController.text = status.profile.bio ?? '';
       _cityController.text = status.profile.city ?? '';
       _stateController.text = status.profile.state ?? '';
@@ -52,11 +55,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
 
+    final usernameText = _usernameController.text.trim();
     ref
         .read(userProfileControllerProvider.notifier)
         .updateProfile(
           userId,
           fullName: _nameController.text.trim(),
+          // FASE SOCIAL 2 - `username` continua nullable no banco; um
+          // campo vazio aqui significa "não alterar" (ver doc-comment
+          // de `UserProfileRepositoryImpl.updateProfile`), não "remover
+          // o username já salvo" - remoção não foi pedida nesta fase.
+          username: usernameText.isEmpty ? null : usernameText,
           bio: _bioController.text.trim(),
           city: _cityController.text.trim(),
           stateProvince: _stateController.text.trim(),
@@ -100,6 +109,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   controller: _nameController,
                   label: 'Nome',
                   validator: (value) => validateRequired(value, 'seu nome'),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  controller: _usernameController,
+                  label: 'Nome de usuário (opcional)',
+                  validator: validateUsername,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 AppTextField(controller: _bioController, label: 'Biografia'),

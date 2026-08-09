@@ -27,6 +27,7 @@ abstract interface class UserProfileRepository {
   Future<UserProfile> updateProfile(
     String userId, {
     String? fullName,
+    String? username,
     String? bio,
     String? city,
     String? stateProvince,

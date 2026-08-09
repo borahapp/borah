@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
@@ -78,11 +79,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ProfileUpdating(:final profile) ||
           ProfileUpdateSuccess(:final profile) => _ProfileView(
             key: const ValueKey('loaded'),
+            userId: profile.id,
             avatarPath: profile.avatarUrl,
             fullName: profile.fullName,
+            username: profile.username,
             bio: profile.bio,
             city: profile.city,
             state: profile.state,
+            followersCount: profile.followersCount,
+            followingCount: profile.followingCount,
             createdAt: profile.createdAt,
           ),
         },
@@ -94,19 +99,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 class _ProfileView extends ConsumerWidget {
   const _ProfileView({
     super.key,
+    required this.userId,
     required this.avatarPath,
     required this.fullName,
+    required this.username,
     required this.bio,
     required this.city,
     required this.state,
+    required this.followersCount,
+    required this.followingCount,
     required this.createdAt,
   });
 
+  final String userId;
   final String? avatarPath;
   final String? fullName;
+  final String? username;
   final String? bio;
   final String? city;
   final String? state;
+  final int followersCount;
+  final int followingCount;
   final DateTime createdAt;
 
   @override
@@ -126,6 +139,10 @@ class _ProfileView extends ConsumerWidget {
             fullName?.isNotEmpty == true ? fullName! : 'Sem nome',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
+          if (username != null && username!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text('@$username', style: Theme.of(context).textTheme.bodyMedium),
+          ],
           if (location.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(location, style: Theme.of(context).textTheme.bodyMedium),
@@ -134,7 +151,24 @@ class _ProfileView extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
             Text(bio!, textAlign: TextAlign.center),
           ],
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
+          // FASE SOCIAL 2 - contadores reais (profiles.followers_count/
+          // following_count, mantidos por trigger - ver AUDITORIA §4),
+          // mesmas rotas de FollowListPage já usadas pelo Perfil público.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppTextButton(
+                label: '$followersCount seguidores',
+                onPressed: () => context.push('/users/$userId/followers'),
+              ),
+              AppTextButton(
+                label: '$followingCount seguindo',
+                onPressed: () => context.push('/users/$userId/following'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
           AppOutlinedButton(
             label: 'Editar perfil',
             onPressed: () => context.push('/profile/edit'),

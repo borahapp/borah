@@ -80,6 +80,20 @@ class FollowerRepositoryImpl implements FollowerRepository {
     });
   }
 
+  @override
+  Future<Set<String>> listFollowingAmong(
+    String followerId,
+    List<String> candidateIds,
+  ) {
+    return _guard(() async {
+      final ids = await _datasource.listFollowingAmong(
+        followerId,
+        candidateIds,
+      );
+      return ids.toSet();
+    });
+  }
+
   Future<PagedResult<UserProfile>> _listByIds(
     Future<List<String>> Function() fetchIds, {
     required int page,
@@ -113,10 +127,13 @@ class FollowerRepositoryImpl implements FollowerRepository {
     return UserProfile(
       id: row['id'] as String,
       fullName: row['full_name'] as String?,
+      username: row['username'] as String?,
       bio: row['bio'] as String?,
       avatarUrl: row['avatar_url'] as String?,
       city: row['city'] as String?,
       state: row['state'] as String?,
+      followersCount: row['followers_count'] as int,
+      followingCount: row['following_count'] as int,
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
     );

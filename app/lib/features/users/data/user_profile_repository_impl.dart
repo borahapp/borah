@@ -52,6 +52,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
   Future<UserProfile> updateProfile(
     String userId, {
     String? fullName,
+    String? username,
     String? bio,
     String? city,
     String? stateProvince,
@@ -59,6 +60,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     return _guard(() async {
       final patch = <String, dynamic>{
         'full_name': ?fullName,
+        'username': ?username,
         'bio': ?bio,
         'city': ?city,
         'state': ?stateProvince,
@@ -90,10 +92,13 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     return UserProfile(
       id: row['id'] as String,
       fullName: row['full_name'] as String?,
+      username: row['username'] as String?,
       bio: row['bio'] as String?,
       avatarUrl: row['avatar_url'] as String?,
       city: row['city'] as String?,
       state: row['state'] as String?,
+      followersCount: row['followers_count'] as int,
+      followingCount: row['following_count'] as int,
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
     );
@@ -103,6 +108,14 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     try {
       return await action();
     } on PostgrestException catch (e) {
+      // FASE SOCIAL 2 - `profiles_username_unique_idx` (violação de
+      // unicidade, código Postgres 23505) vira mensagem amigável em vez
+      // do texto cru do Postgres.
+      if (e.code == '23505') {
+        throw const UserProfileRepositoryException(
+          'Nome de usuário já está em uso.',
+        );
+      }
       throw UserProfileRepositoryException(e.message);
     } on StorageException catch (e) {
       throw UserProfileRepositoryException(e.message);
