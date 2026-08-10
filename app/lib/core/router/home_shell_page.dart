@@ -4,15 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../design_system/components/navigation/app_bottom_navigation.dart';
 import '../../design_system/tokens/app_spacing.dart';
 import '../../features/gamification/presentation/pages/ranking_users_page.dart';
-import '../../features/groups/presentation/pages/groups_list_page.dart';
+import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/social/presentation/pages/feed_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
 
 /// FASE SOCIAL 1: shell de navegação pós-login em `/home`, conectando o
-/// `AppBottomNavigation` às 4 telas centrais - Feed, Grupos, Rankings
-/// (ranking de usuários por XP, `/gamification/ranking` - não o ranking
-/// de restaurantes) e Perfil. `IndexedStack` preserva o estado de cada
-/// aba ao trocar (evita recarregar dados/perder posição de rolagem).
+/// `AppBottomNavigation` às 4 telas centrais. `IndexedStack` preserva o
+/// estado de cada aba ao trocar (evita recarregar dados/perder posição
+/// de rolagem).
 ///
 /// Decisão de produto (FASE FEED SOCIAL, revertendo a decisão do BLOCO 9
 /// que havia tirado o Feed da barra): o Feed volta a ser a Home - "a
@@ -20,6 +19,14 @@ import '../../features/users/presentation/pages/profile_page.dart';
 /// fazendo', não 'quero procurar um restaurante'". Restaurantes e
 /// Favoritos saem da barra principal (ambos continuam existindo, só
 /// mudam de porta de entrada - ver `_openCreateSheet`/`profile_page.dart`).
+///
+/// FASE SOCIAL 4: o 2º item deixa de ser "Grupos" (`GroupsListPage`) e
+/// passa a ser "Explorar" (`SearchPage`, Pessoas/Grupos/Restaurantes já
+/// existente desde a FASE SOCIAL 1) - o Feed já cobre a descoberta de
+/// atividade social, então a barra passa a priorizar descoberta de
+/// pessoas/grupos/restaurantes em vez de "meus grupos". "Meus Grupos"
+/// não desaparece - novo atalho em `ProfilePage` leva à mesma
+/// `GroupsListPage`/rota `/groups` de sempre.
 ///
 /// A barra tem 5 itens, mas só 4 páginas: "Criar" (índice 2) nunca é
 /// uma aba do `IndexedStack` - abre um `BottomSheet` com atalhos para
@@ -38,7 +45,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
   static const _pages = [
     FeedPage(),
-    GroupsListPage(),
+    SearchPage(),
     RankingUsersPage(),
     ProfilePage(),
   ];
@@ -50,9 +57,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
       label: 'Feed',
     ),
     AppBottomNavigationItem(
-      icon: Icons.groups_outlined,
-      selectedIcon: Icons.groups,
-      label: 'Grupos',
+      icon: Icons.search_outlined,
+      selectedIcon: Icons.search,
+      label: 'Explorar',
     ),
     AppBottomNavigationItem(
       icon: Icons.add_circle_outline,
