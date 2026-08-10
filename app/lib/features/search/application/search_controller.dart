@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../groups/data/group_repository_impl.dart';
 import '../../restaurants/data/restaurant_repository_impl.dart';
 import '../../restaurants/domain/restaurant_search_filters.dart';
 import '../../social/data/follower_repository_impl.dart';
 import '../presentation/states/search_status.dart';
 
-/// FASE SOCIAL 1 - controller da nova Pesquisa. Sem repositório próprio:
-/// chama `FollowerRepository`/`RestaurantRepository` diretamente, já que
-/// não há lógica de busca nova a encapsular (os 2 métodos já existem ou
-/// foram adicionados nesta mesma fase, ver `follower_repository.dart`).
-/// Busca de grupos fica de fora (ver `search_status.dart`).
+/// Controller da Pesquisa (FASE SOCIAL 1-3). Sem repositório próprio:
+/// chama `FollowerRepository`/`GroupRepository`/`RestaurantRepository`
+/// diretamente, já que não há lógica de busca nova a encapsular (os 3
+/// métodos já existem cada um na sua feature).
 class SearchController extends Notifier<SearchStatus> {
   @override
   SearchStatus build() => const SearchInitial();
@@ -30,6 +30,9 @@ class SearchController extends Notifier<SearchStatus> {
       final peopleFuture = ref
           .read(followerRepositoryProvider)
           .searchProfiles(trimmed, page: 1, limit: _limit);
+      final groupsFuture = ref
+          .read(groupRepositoryProvider)
+          .search(trimmed, page: 1, limit: _limit);
       final restaurantsFuture = ref
           .read(restaurantRepositoryProvider)
           .search(
@@ -37,10 +40,15 @@ class SearchController extends Notifier<SearchStatus> {
           );
 
       final people = await peopleFuture;
+      final groups = await groupsFuture;
       final restaurants = await restaurantsFuture;
       if (requestId != _requestId) return;
 
-      state = SearchLoaded(people: people, restaurants: restaurants);
+      state = SearchLoaded(
+        people: people,
+        groups: groups,
+        restaurants: restaurants,
+      );
     } catch (_) {
       if (requestId != _requestId) return;
       state = const SearchError('Não foi possível buscar. Tente novamente.');

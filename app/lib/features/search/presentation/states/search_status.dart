@@ -1,14 +1,13 @@
 import '../../../../core/models/paged_result.dart';
+import '../../../groups/domain/group.dart';
 import '../../../restaurants/domain/restaurant.dart';
 import '../../../users/domain/user_profile.dart';
 
-/// Estado da tela de Pesquisa (FASE SOCIAL 1), sealed class - mesmo
-/// padrão do resto do app. `SearchLoaded` carrega os 2 resultados que já
-/// existem (Pessoas, Restaurantes) - Grupos não tem estado próprio
-/// porque a busca de grupos públicos ainda não é possível (RLS de
-/// `groups` bloqueia 100% de acesso a não-membros até `groups.visibility`
-/// existir - fase futura, ver PLANO UX/TÉCNICO). A UI mostra uma seção
-/// de Grupos fixa, explicativa, não um estado de carregamento real.
+/// Estado da tela de Pesquisa (FASE SOCIAL 1-3), sealed class - mesmo
+/// padrão do resto do app. `SearchLoaded` carrega os 3 resultados
+/// (Pessoas, Grupos, Restaurantes) - busca de grupos só ficou possível
+/// a partir da FASE SOCIAL 3 (`groups.visibility`); antes disso a UI
+/// mostrava uma mensagem fixa em vez de resultado real.
 sealed class SearchStatus {
   const SearchStatus();
 }
@@ -23,9 +22,14 @@ final class SearchLoading extends SearchStatus {
 }
 
 final class SearchLoaded extends SearchStatus {
-  const SearchLoaded({required this.people, required this.restaurants});
+  const SearchLoaded({
+    required this.people,
+    required this.groups,
+    required this.restaurants,
+  });
 
   final PagedResult<UserProfile> people;
+  final PagedResult<Group> groups;
   final PagedResult<Restaurant> restaurants;
 }
 

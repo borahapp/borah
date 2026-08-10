@@ -1,5 +1,8 @@
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
+import 'package:app/features/groups/data/group_repository_impl.dart';
+import 'package:app/features/groups/domain/group.dart';
+import 'package:app/features/groups/domain/group_repository.dart';
 import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
 import 'package:app/features/restaurants/domain/restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant_repository.dart';
@@ -17,6 +20,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFollowerRepository extends Mock implements FollowerRepository {}
+
+class MockGroupRepository extends Mock implements GroupRepository {}
 
 class MockRestaurantRepository extends Mock implements RestaurantRepository {}
 
@@ -46,6 +51,22 @@ UserProfile _person({
   );
 }
 
+Group _group({
+  String id = 'group-1',
+  String name = 'Os Exploradores',
+  int memberCount = 12,
+}) {
+  return Group(
+    id: id,
+    name: name,
+    description: null,
+    photoUrl: null,
+    inviteCode: 'ABCDEFGH',
+    visibility: 'public',
+    memberCount: memberCount,
+  );
+}
+
 Restaurant _restaurant() {
   return Restaurant(
     id: 'rest-1',
@@ -61,6 +82,7 @@ Restaurant _restaurant() {
 
 Widget _wrap(
   MockFollowerRepository followerRepository,
+  MockGroupRepository groupRepository,
   MockRestaurantRepository restaurantRepository,
   MockDiscoveryRepository discoveryRepository,
 ) {
@@ -76,12 +98,21 @@ Widget _wrap(
         path: '/restaurants/:id',
         builder: (_, _) => const Scaffold(body: Text('Restaurant Page')),
       ),
+      GoRoute(
+        path: '/groups/:id/preview',
+        builder: (_, _) => const Scaffold(body: Text('Group Preview Page')),
+      ),
+      GoRoute(
+        path: '/groups/:id',
+        builder: (_, _) => const Scaffold(body: Text('Group Detail Page')),
+      ),
     ],
   );
 
   return ProviderScope(
     overrides: [
       followerRepositoryProvider.overrideWithValue(followerRepository),
+      groupRepositoryProvider.overrideWithValue(groupRepository),
       restaurantRepositoryProvider.overrideWithValue(restaurantRepository),
       discoveryRepositoryProvider.overrideWithValue(discoveryRepository),
       currentUserIdProvider.overrideWithValue('me'),
@@ -98,6 +129,7 @@ Future<void> _submit(WidgetTester tester, String text) async {
 
 void main() {
   late MockFollowerRepository followerRepository;
+  late MockGroupRepository groupRepository;
   late MockRestaurantRepository restaurantRepository;
   late MockDiscoveryRepository discoveryRepository;
 
@@ -107,12 +139,14 @@ void main() {
 
   setUp(() {
     followerRepository = MockFollowerRepository();
+    groupRepository = MockGroupRepository();
     restaurantRepository = MockRestaurantRepository();
     discoveryRepository = MockDiscoveryRepository();
 
-    // Padrão: sem sugestões e sem status de follow conhecido - os testes
-    // que precisam de outro comportamento sobrescrevem no corpo do teste
-    // (que roda depois do setUp, então a sobrescrita vale).
+    // Padrão: sem sugestões, sem grupos em destaque, sem status de
+    // follow/membro conhecido - os testes que precisam de outro
+    // comportamento sobrescrevem no corpo do teste (que roda depois do
+    // setUp, então a sobrescrita vale).
     when(
       () => discoveryRepository.suggestPeople('me', limit: any(named: 'limit')),
     ).thenAnswer(
@@ -121,21 +155,49 @@ void main() {
     when(
       () => followerRepository.listFollowingAmong('me', any()),
     ).thenAnswer((_) async => {});
+    when(
+      () => groupRepository.listFeatured(
+        page: any(named: 'page'),
+        limit: any(named: 'limit'),
+      ),
+    ).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 10, hasNextPage: false),
+    );
+    when(
+      () => groupRepository.listMyGroupIds('me'),
+    ).thenAnswer((_) async => {});
   });
 
-  testWidgets('estado inicial mostra "Você pode conhecer"', (tester) async {
-    await tester.pumpWidget(
-      _wrap(followerRepository, restaurantRepository, discoveryRepository),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'estado inicial mostra "Você pode conhecer" e "Grupos em destaque"',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Busque por pessoas ou restaurantes.'), findsOneWidget);
-    expect(find.text('Você pode conhecer'), findsOneWidget);
-    expect(
-      find.text('Nenhuma sugestão disponível no momento.'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.text('Busque por pessoas, grupos ou restaurantes.'),
+        findsOneWidget,
+      );
+      expect(find.text('Você pode conhecer'), findsOneWidget);
+      expect(
+        find.text('Nenhuma sugestão disponível no momento.'),
+        findsOneWidget,
+      );
+      expect(find.text('Grupos em destaque'), findsOneWidget);
+      expect(
+        find.text('Nenhum grupo público em destaque no momento.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('"Você pode conhecer" mostra pessoas sugeridas', (tester) async {
     when(
@@ -148,13 +210,120 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _wrap(followerRepository, restaurantRepository, discoveryRepository),
+      _wrap(
+        followerRepository,
+        groupRepository,
+        restaurantRepository,
+        discoveryRepository,
+      ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Carla Souza'), findsOneWidget);
     expect(find.text('Seguir'), findsOneWidget);
   });
+
+  testWidgets('"Grupos em destaque" mostra grupos públicos', (tester) async {
+    when(
+      () => groupRepository.listFeatured(
+        page: any(named: 'page'),
+        limit: any(named: 'limit'),
+      ),
+    ).thenAnswer(
+      (_) async => PagedResult(
+        items: [_group()],
+        page: 1,
+        limit: 10,
+        hasNextPage: false,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        followerRepository,
+        groupRepository,
+        restaurantRepository,
+        discoveryRepository,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Os Exploradores'), findsOneWidget);
+    expect(find.text('12 membros'), findsOneWidget);
+  });
+
+  testWidgets(
+    'grupo em destaque do qual o usuário já participa mostra "Você participa"',
+    (tester) async {
+      when(
+        () => groupRepository.listFeatured(
+          page: any(named: 'page'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_group()],
+          page: 1,
+          limit: 10,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => groupRepository.listMyGroupIds('me'),
+      ).thenAnswer((_) async => {'group-1'});
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Você participa'), findsOneWidget);
+
+      await tester.tap(find.text('Os Exploradores'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Group Detail Page'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'tocar num grupo em destaque do qual não participa abre o perfil público',
+    (tester) async {
+      when(
+        () => groupRepository.listFeatured(
+          page: any(named: 'page'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_group()],
+          page: 1,
+          limit: 10,
+          hasNextPage: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Os Exploradores'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Group Preview Page'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'busca com resultado mostra pessoas (com username/contador/Seguir), grupos e restaurantes',
@@ -164,6 +333,16 @@ void main() {
       ).thenAnswer(
         (_) async => PagedResult(
           items: [_person()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => groupRepository.search('bruno', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_group()],
           page: 1,
           limit: 20,
           hasNextPage: false,
@@ -189,7 +368,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(followerRepository, restaurantRepository, discoveryRepository),
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -199,11 +383,9 @@ void main() {
       expect(find.text('@brunocosta'), findsOneWidget);
       expect(find.text('3 seguidores'), findsOneWidget);
       expect(find.text('Seguir'), findsOneWidget);
+      expect(find.text('Os Exploradores'), findsOneWidget);
+      expect(find.text('12 membros'), findsOneWidget);
       expect(find.text('Cantina Bella'), findsOneWidget);
-      expect(
-        find.text('Busca de grupos públicos chega em breve.'),
-        findsOneWidget,
-      );
     },
   );
 
@@ -219,6 +401,10 @@ void main() {
         limit: 20,
         hasNextPage: false,
       ),
+    );
+    when(() => groupRepository.search('bruno', page: 1, limit: 20)).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
     );
     when(
       () => restaurantRepository.search(
@@ -236,7 +422,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _wrap(followerRepository, restaurantRepository, discoveryRepository),
+      _wrap(
+        followerRepository,
+        groupRepository,
+        restaurantRepository,
+        discoveryRepository,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -253,6 +444,10 @@ void main() {
     when(
       () => followerRepository.searchProfiles('bella', page: 1, limit: 20),
     ).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+    );
+    when(() => groupRepository.search('bella', page: 1, limit: 20)).thenAnswer(
       (_) async =>
           const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
     );
@@ -276,7 +471,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _wrap(followerRepository, restaurantRepository, discoveryRepository),
+      _wrap(
+        followerRepository,
+        groupRepository,
+        restaurantRepository,
+        discoveryRepository,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -291,13 +491,22 @@ void main() {
     when(
       () => followerRepository.searchProfiles(any(), page: 1, limit: 20),
     ).thenThrow(Exception('falhou'));
+    when(() => groupRepository.search(any(), page: 1, limit: 20)).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+    );
     when(() => restaurantRepository.search(any())).thenAnswer(
       (_) async =>
           const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
     );
 
     await tester.pumpWidget(
-      _wrap(followerRepository, restaurantRepository, discoveryRepository),
+      _wrap(
+        followerRepository,
+        groupRepository,
+        restaurantRepository,
+        discoveryRepository,
+      ),
     );
     await tester.pumpAndSettle();
 

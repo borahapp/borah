@@ -1,4 +1,7 @@
 import 'package:app/core/models/paged_result.dart';
+import 'package:app/features/groups/data/group_repository_impl.dart';
+import 'package:app/features/groups/domain/group.dart';
+import 'package:app/features/groups/domain/group_repository.dart';
 import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
 import 'package:app/features/restaurants/domain/restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant_repository.dart';
@@ -13,6 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFollowerRepository extends Mock implements FollowerRepository {}
+
+class MockGroupRepository extends Mock implements GroupRepository {}
 
 class MockRestaurantRepository extends Mock implements RestaurantRepository {}
 
@@ -35,6 +40,18 @@ UserProfile _person() {
   );
 }
 
+Group _group() {
+  return const Group(
+    id: 'group-1',
+    name: 'Os Exploradores',
+    description: null,
+    photoUrl: null,
+    inviteCode: 'ABCDEFGH',
+    visibility: 'public',
+    memberCount: 12,
+  );
+}
+
 Restaurant _restaurant() {
   return Restaurant(
     id: 'rest-1',
@@ -50,6 +67,7 @@ Restaurant _restaurant() {
 
 void main() {
   late MockFollowerRepository followerRepository;
+  late MockGroupRepository groupRepository;
   late MockRestaurantRepository restaurantRepository;
   late ProviderContainer container;
 
@@ -59,10 +77,12 @@ void main() {
 
   setUp(() {
     followerRepository = MockFollowerRepository();
+    groupRepository = MockGroupRepository();
     restaurantRepository = MockRestaurantRepository();
     container = ProviderContainer(
       overrides: [
         followerRepositoryProvider.overrideWithValue(followerRepository),
+        groupRepositoryProvider.overrideWithValue(groupRepository),
         restaurantRepositoryProvider.overrideWithValue(restaurantRepository),
       ],
     );
@@ -73,12 +93,20 @@ void main() {
     expect(container.read(searchControllerProvider), isA<SearchInitial>());
   });
 
-  test('busca com sucesso carrega pessoas e restaurantes', () async {
+  test('busca com sucesso carrega pessoas, grupos e restaurantes', () async {
     when(
       () => followerRepository.searchProfiles('bruno', page: 1, limit: 20),
     ).thenAnswer(
       (_) async => PagedResult(
         items: [_person()],
+        page: 1,
+        limit: 20,
+        hasNextPage: false,
+      ),
+    );
+    when(() => groupRepository.search('bruno', page: 1, limit: 20)).thenAnswer(
+      (_) async => PagedResult(
+        items: [_group()],
         page: 1,
         limit: 20,
         hasNextPage: false,
@@ -109,6 +137,7 @@ void main() {
     expect(status, isA<SearchLoaded>());
     final loaded = status as SearchLoaded;
     expect(loaded.people.items, hasLength(1));
+    expect(loaded.groups.items, hasLength(1));
     expect(loaded.restaurants.items, hasLength(1));
   });
 
@@ -116,6 +145,10 @@ void main() {
     when(
       () => followerRepository.searchProfiles(any(), page: 1, limit: 20),
     ).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+    );
+    when(() => groupRepository.search(any(), page: 1, limit: 20)).thenAnswer(
       (_) async =>
           const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
     );
@@ -135,6 +168,10 @@ void main() {
     when(
       () => followerRepository.searchProfiles(any(), page: 1, limit: 20),
     ).thenThrow(Exception('falhou'));
+    when(() => groupRepository.search(any(), page: 1, limit: 20)).thenAnswer(
+      (_) async =>
+          const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+    );
     when(() => restaurantRepository.search(any())).thenAnswer(
       (_) async =>
           const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
@@ -154,6 +191,17 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
         return PagedResult(
           items: [_person()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        );
+      });
+      when(
+        () => groupRepository.search('lento', page: 1, limit: 20),
+      ).thenAnswer((_) async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        return const PagedResult<Group>(
+          items: [],
           page: 1,
           limit: 20,
           hasNextPage: false,
@@ -180,6 +228,16 @@ void main() {
       });
       when(
         () => followerRepository.searchProfiles('rapido', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => groupRepository.search('rapido', page: 1, limit: 20),
       ).thenAnswer(
         (_) async => const PagedResult(
           items: [],

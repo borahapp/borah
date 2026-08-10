@@ -13,26 +13,27 @@ import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
+import '../../../groups/data/group_repository_impl.dart';
+import '../../../groups/domain/group.dart';
+import '../../../groups/presentation/widgets/group_result_tile.dart';
 import '../../../restaurants/domain/restaurant.dart';
 import '../../../social/data/follower_repository_impl.dart';
 import '../../../social/presentation/widgets/person_list_tile.dart';
 import '../../../users/domain/user_profile.dart';
 import '../../application/discovery_controller.dart';
+import '../../application/featured_groups_controller.dart';
 import '../../application/search_controller.dart';
 import '../states/discovery_status.dart';
+import '../states/featured_groups_status.dart';
 import '../states/search_status.dart';
 
-/// Tela de Pesquisa/Explorar social (FASE SOCIAL 1 + 2) - Pessoas,
-/// Grupos e Restaurantes numa única tela com seções, mesmo padrão de
+/// Tela de Pesquisa/Explorar social (FASE SOCIAL 1-3) - Pessoas, Grupos
+/// e Restaurantes numa única tela com seções, mesmo padrão de
 /// busca-no-submit já usado em `restaurants_search_page.dart`. Antes de
-/// qualquer busca, mostra "Você pode conhecer" (FASE SOCIAL 2) em vez
-/// de uma tela vazia - a decisão de UX aprovada foi manter Explorar
-/// como o estado inicial desta tela, não como abas novas.
-///
-/// A seção Grupos é fixa/explicativa, não uma busca real: grupos são
-/// 100% privados hoje (RLS bloqueia SELECT para não-membros) - buscar
-/// grupos públicos exige `groups.visibility` + policy nova, escopo da
-/// FASE SOCIAL 3.
+/// qualquer busca, mostra "Você pode conhecer" + "Grupos em destaque"
+/// (FASE SOCIAL 2/3) em vez de uma tela vazia - a decisão de UX
+/// aprovada foi manter Explorar como o estado inicial desta tela, não
+/// como abas novas.
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -50,6 +51,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Set<String> _followingIds = {};
   final Set<String> _followingStatusKnownIds = {};
 
+  // FASE SOCIAL 3 - grupos dos quais o usuário já é membro, para marcar
+  // "Você participa" em vez de "Entrar" (decisão de produto: nunca
+  // esconder um grupo relevante da busca/destaque só porque o usuário
+  // já participa dele). Buscado 1 vez - diferente de seguidores, a
+  // lista de grupos de uma pessoa é naturalmente pequena, sem motivo
+  // para o mesmo mecanismo incremental de `_followingIds`.
+  Set<String> _myGroupIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +66,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       final userId = ref.read(currentUserIdProvider);
       if (userId != null) {
         ref.read(discoveryControllerProvider.notifier).load(userId);
+        _loadMyGroupIds(userId);
       }
+      ref.read(featuredGroupsControllerProvider.notifier).load();
     });
   }
 
@@ -69,6 +80,27 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   void _search(String? value) {
     ref.read(searchControllerProvider.notifier).search(value ?? '');
+  }
+
+  Future<void> _loadMyGroupIds(String userId) async {
+    try {
+      final ids = await ref
+          .read(groupRepositoryProvider)
+          .listMyGroupIds(userId);
+      if (!mounted) return;
+      setState(() => _myGroupIds = ids);
+    } catch (_) {
+      // Falha silenciosa: sem essa marcação, um grupo do qual o usuário
+      // já participa só mostraria "Entrar" em vez de "Você participa" -
+      // degradação aceitável, não impede o uso da busca.
+    }
+  }
+
+  void _openGroup(Group group) {
+    final destination = _myGroupIds.contains(group.id)
+        ? '/groups/${group.id}'
+        : '/groups/${group.id}/preview';
+    context.push(destination);
   }
 
   Future<void> _syncFollowingStatus(List<UserProfile> people) async {
@@ -115,6 +147,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final status = ref.watch(searchControllerProvider);
     final discoveryStatus = ref.watch(discoveryControllerProvider);
+    final featuredGroupsStatus = ref.watch(featuredGroupsControllerProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
 
     ref.listen<SearchStatus>(searchControllerProvider, (previous, next) {
@@ -142,9 +175,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 SearchInitial() => _ExploreView(
                   key: const ValueKey('explore'),
                   discoveryStatus: discoveryStatus,
+                  featuredGroupsStatus: featuredGroupsStatus,
                   currentUserId: currentUserId,
                   followingIds: _followingIds,
-                  onLoadMore: _loadMoreSuggestions,
+                  myGroupIds: _myGroupIds,
+                  onLoadMoreSuggestions: _loadMoreSuggestions,
+                  onLoadMoreGroups: () => ref
+                      .read(featuredGroupsControllerProvider.notifier)
+                      .loadMore(),
+                  onOpenGroup: _openGroup,
                 ),
                 SearchLoading() => const LoadingScreen(
                   key: ValueKey('loading'),
@@ -154,13 +193,20 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   message: message,
                   onRetry: () => _search(_queryController.text),
                 ),
-                SearchLoaded(:final people, :final restaurants) =>
+                SearchLoaded(
+                  :final people,
+                  :final groups,
+                  :final restaurants,
+                ) =>
                   _SearchResults(
                     key: const ValueKey('loaded'),
                     people: people.items,
+                    groups: groups.items,
                     restaurants: restaurants.items,
                     currentUserId: currentUserId,
                     followingIds: _followingIds,
+                    myGroupIds: _myGroupIds,
+                    onOpenGroup: _openGroup,
                   ),
               },
             ),
@@ -172,21 +218,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 }
 
 /// Estado inicial da tela (antes de qualquer busca) - "Você pode
-/// conhecer" (FASE SOCIAL 2 §12). `Grupos em destaque` fica para a FASE
-/// SOCIAL 3 (grupos públicos ainda não existem).
+/// conhecer" (FASE SOCIAL 2) + "Grupos em destaque" (FASE SOCIAL 3).
 class _ExploreView extends StatelessWidget {
   const _ExploreView({
     super.key,
     required this.discoveryStatus,
+    required this.featuredGroupsStatus,
     required this.currentUserId,
     required this.followingIds,
-    required this.onLoadMore,
+    required this.myGroupIds,
+    required this.onLoadMoreSuggestions,
+    required this.onLoadMoreGroups,
+    required this.onOpenGroup,
   });
 
   final DiscoveryStatus discoveryStatus;
+  final FeaturedGroupsStatus featuredGroupsStatus;
   final String? currentUserId;
   final Set<String> followingIds;
-  final Future<void> Function() onLoadMore;
+  final Set<String> myGroupIds;
+  final Future<void> Function() onLoadMoreSuggestions;
+  final Future<void> Function() onLoadMoreGroups;
+  final void Function(Group) onOpenGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +248,7 @@ class _ExploreView extends StatelessWidget {
       children: [
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Text('Busque por pessoas ou restaurantes.'),
+          child: Text('Busque por pessoas, grupos ou restaurantes.'),
         ),
         const SizedBox(height: AppSpacing.lg),
         const Padding(
@@ -244,7 +297,59 @@ class _ExploreView extends StatelessWidget {
                   ),
                   child: AppTextButton(
                     label: 'Ver mais',
-                    onPressed: onLoadMore,
+                    onPressed: onLoadMoreSuggestions,
+                  ),
+                ),
+            ],
+          ),
+        },
+        const SizedBox(height: AppSpacing.lg),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: SectionHeader(title: 'Grupos em destaque'),
+        ),
+        switch (featuredGroupsStatus) {
+          FeaturedGroupsInitial() || FeaturedGroupsLoading() => const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Center(
+              key: ValueKey('featured-groups-loading'),
+              child: LoadingIndicator(size: 28),
+            ),
+          ),
+          FeaturedGroupsError(:final message) => Padding(
+            key: const ValueKey('featured-groups-error'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            child: Text(message),
+          ),
+          FeaturedGroupsEmpty() => const Padding(
+            key: ValueKey('featured-groups-empty'),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            child: Text('Nenhum grupo público em destaque no momento.'),
+          ),
+          FeaturedGroupsLoaded(:final groups, :final hasMore) => Column(
+            key: const ValueKey('featured-groups-loaded'),
+            children: [
+              for (final group in groups)
+                GroupResultTile(
+                  group: group,
+                  isMember: myGroupIds.contains(group.id),
+                  onTap: () => onOpenGroup(group),
+                ),
+              if (hasMore)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: AppTextButton(
+                    label: 'Ver mais',
+                    onPressed: onLoadMoreGroups,
                   ),
                 ),
             ],
@@ -259,19 +364,25 @@ class _SearchResults extends StatelessWidget {
   const _SearchResults({
     super.key,
     required this.people,
+    required this.groups,
     required this.restaurants,
     required this.currentUserId,
     required this.followingIds,
+    required this.myGroupIds,
+    required this.onOpenGroup,
   });
 
   final List<UserProfile> people;
+  final List<Group> groups;
   final List<Restaurant> restaurants;
   final String? currentUserId;
   final Set<String> followingIds;
+  final Set<String> myGroupIds;
+  final void Function(Group) onOpenGroup;
 
   @override
   Widget build(BuildContext context) {
-    if (people.isEmpty && restaurants.isEmpty) {
+    if (people.isEmpty && groups.isEmpty && restaurants.isEmpty) {
       return const EmptyState(message: 'Nenhum resultado encontrado.');
     }
 
@@ -307,16 +418,21 @@ class _SearchResults extends StatelessWidget {
           ),
           child: SectionHeader(title: 'Grupos'),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          // FASE SOCIAL 1/2: busca de grupos públicos ainda não é
-          // possível (ver doc-comment de SearchPage) - mensagem
-          // explicativa, não um estado de carregamento/erro.
-          child: Text('Busca de grupos públicos chega em breve.'),
-        ),
+        if (groups.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            child: Text('Nenhum grupo encontrado.'),
+          )
+        else
+          for (final group in groups)
+            GroupResultTile(
+              group: group,
+              isMember: myGroupIds.contains(group.id),
+              onTap: () => onOpenGroup(group),
+            ),
         const Padding(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
