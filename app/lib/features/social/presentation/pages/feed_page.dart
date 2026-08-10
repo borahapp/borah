@@ -3,30 +3,100 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_icon_button.dart';
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/navigation/app_tabs.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../authentication/application/auth_controller.dart';
-import '../../../reviews/presentation/widgets/review_summary_tile.dart';
 import '../../application/feed_controller.dart';
 import '../states/feed_status.dart';
+import '../widgets/social_feed_card.dart';
 
-/// Tela de Feed (DV-07 §5, escopo restrito): avaliações recentes de
-/// usuários seguidos - sem favoritos ou conquistas de gamificação
-/// (decisão do DV-07).
-class FeedPage extends ConsumerStatefulWidget {
+/// Tela de Feed (FASE SOCIAL 4) - o coração social do BORAH. Duas abas:
+/// "Para Você" (descoberta determinística - seguidos, pessoas de grupos em
+/// comum, entradas em grupos públicos) e "Seguindo" (só quem o usuário
+/// segue). Cada aba tem seu próprio controller/paginação, preservados ao
+/// trocar de aba (`AppTabs`/`TabBarView` mantém as duas construídas).
+class FeedPage extends StatelessWidget {
   const FeedPage({super.key});
 
   @override
-  ConsumerState<FeedPage> createState() => _FeedPageState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppTopBar(
+        title: 'Feed',
+        actions: [
+          AppIconButton(
+            icon: Icons.search,
+            tooltip: 'Pesquisar',
+            onPressed: () => context.push('/search'),
+          ),
+        ],
+      ),
+      body: AppTabs(
+        tabs: [
+          AppTabItem(
+            label: 'Para Você',
+            child: _FeedTabView(
+              emptyMessage:
+                  'Comece a seguir pessoas e grupos para personalizar seu Feed.',
+              emptyAction: AppOutlinedButton(
+                label: 'Explorar pessoas e grupos',
+                onPressed: () => context.push('/search'),
+              ),
+              watchStatus: (ref) => ref.watch(feedForYouControllerProvider),
+              notifierOf: (ref) =>
+                  ref.read(feedForYouControllerProvider.notifier),
+            ),
+          ),
+          AppTabItem(
+            label: 'Seguindo',
+            child: _FeedTabView(
+              emptyMessage: 'Nenhuma atividade de quem você segue ainda.',
+              watchStatus: (ref) => ref.watch(feedFollowingControllerProvider),
+              notifierOf: (ref) =>
+                  ref.read(feedFollowingControllerProvider.notifier),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _FeedPageState extends ConsumerState<FeedPage> {
+/// Conteúdo de uma aba do Feed - idêntico entre "Para Você"/"Seguindo",
+/// só a fonte ([watchStatus]/[notifierOf]) muda. Recebe funções (não o
+/// provider em si) para evitar problemas de variância genérica entre
+/// `NotifierProvider<FeedForYouController, FeedStatus>` e
+/// `NotifierProvider<FeedFollowingController, FeedStatus>`.
+class _FeedTabView extends ConsumerStatefulWidget {
+  const _FeedTabView({
+    required this.emptyMessage,
+    required this.watchStatus,
+    required this.notifierOf,
+    this.emptyAction,
+  });
+
+  final String emptyMessage;
+  final Widget? emptyAction;
+  final FeedStatus Function(WidgetRef ref) watchStatus;
+  final FeedControllerBase Function(WidgetRef ref) notifierOf;
+
+  @override
+  ConsumerState<_FeedTabView> createState() => _FeedTabViewState();
+}
+
+class _FeedTabViewState extends ConsumerState<_FeedTabView>
+    with AutomaticKeepAliveClientMixin {
   final _scrollController = ScrollController();
   bool _isLoadingMore = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -46,11 +116,11 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   void _load() {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
-    ref.read(feedControllerProvider.notifier).loadForUser(userId);
+    widget.notifierOf(ref).loadForUser(userId);
   }
 
   Future<void> _refresh() {
-    return ref.read(feedControllerProvider.notifier).refresh();
+    return widget.notifierOf(ref).refresh();
   }
 
   void _onScroll() {
@@ -60,66 +130,58 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       return;
     }
     _isLoadingMore = true;
-    ref.read(feedControllerProvider.notifier).loadNextPage().whenComplete(() {
+    widget.notifierOf(ref).loadNextPage().whenComplete(() {
       if (mounted) _isLoadingMore = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final status = ref.watch(feedControllerProvider);
+    super.build(context);
+    final status = widget.watchStatus(ref);
+    final currentUserId = ref.watch(currentUserIdProvider) ?? '';
 
-    return Scaffold(
-      appBar: AppTopBar(
-        title: 'Feed',
-        actions: [
-          AppIconButton(
-            icon: Icons.search,
-            tooltip: 'Pesquisar',
-            onPressed: () => context.push('/search'),
+    return AppAnimatedSwitcher(
+      child: switch (status) {
+        FeedInitial() ||
+        FeedLoading() => const LoadingScreen(key: ValueKey('loading')),
+        FeedError(:final message) => ErrorState(
+          key: const ValueKey('error'),
+          message: message,
+          onRetry: _load,
+        ),
+        FeedEmpty() => EmptyState(
+          key: const ValueKey('empty'),
+          message: widget.emptyMessage,
+          action: widget.emptyAction,
+        ),
+        FeedRefreshing(:final result) ||
+        FeedLoaded(:final result) => RefreshIndicator(
+          key: const ValueKey('loaded'),
+          onRefresh: _refresh,
+          child: ListView.builder(
+            controller: _scrollController,
+            // Sem isto, um `ScrollController` explícito desativa o scroll
+            // "sempre disponível" que `RefreshIndicator` precisa para
+            // funcionar em listas pequenas (que não preenchem a
+            // viewport) - mesma regressão real já documentada no Feed
+            // anterior.
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: result.items.length,
+            itemBuilder: (context, index) {
+              final item = result.items[index];
+              return AppStaggeredListItem(
+                index: index,
+                child: SocialFeedCard(
+                  key: ValueKey(item.feedKey),
+                  item: item,
+                  currentUserId: currentUserId,
+                ),
+              );
+            },
           ),
-        ],
-      ),
-      body: AppAnimatedSwitcher(
-        child: switch (status) {
-          FeedInitial() ||
-          FeedLoading() => const LoadingScreen(key: ValueKey('loading')),
-          FeedError(:final message) => ErrorState(
-            key: const ValueKey('error'),
-            message: message,
-            onRetry: _load,
-          ),
-          FeedEmpty() => const EmptyState(
-            key: ValueKey('empty'),
-            message: 'Nenhuma avaliação de quem você segue ainda.',
-          ),
-          FeedRefreshing(:final result) ||
-          FeedLoaded(:final result) => RefreshIndicator(
-            key: const ValueKey('loaded'),
-            onRefresh: _refresh,
-            child: ListView.builder(
-              controller: _scrollController,
-              // Sem isto, um `ScrollController` explícito desativa o
-              // scroll "sempre disponível" que `RefreshIndicator`
-              // precisa para funcionar em listas pequenas (que não
-              // preenchem a viewport) - regressão real encontrada por
-              // `feed_page_test.dart` ao conectar o scroll desta fase.
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: result.items.length,
-              itemBuilder: (context, index) {
-                final review = result.items[index];
-                return AppStaggeredListItem(
-                  index: index,
-                  child: ReviewSummaryTile(
-                    review: review,
-                    onTap: () => context.push('/reviews/${review.id}'),
-                  ),
-                );
-              },
-            ),
-          ),
-        },
-      ),
+        ),
+      },
     );
   }
 }

@@ -138,7 +138,8 @@ class _GoRouterRefreshNotifier extends ChangeNotifier {
         ref.invalidate(notificationsControllerProvider);
         ref.invalidate(notificationPreferencesControllerProvider);
         ref.invalidate(gamificationProfileControllerProvider);
-        ref.invalidate(feedControllerProvider);
+        ref.invalidate(feedForYouControllerProvider);
+        ref.invalidate(feedFollowingControllerProvider);
       }
     });
   }
