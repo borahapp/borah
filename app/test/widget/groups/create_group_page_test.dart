@@ -80,6 +80,64 @@ void main() {
     },
   );
 
+  testWidgets('privado é o padrão de visibilidade', (tester) async {
+    when(
+      () => repository.create(
+        name: any(named: 'name'),
+        description: any(named: 'description'),
+        photoUrl: any(named: 'photoUrl'),
+        visibility: any(named: 'visibility'),
+      ),
+    ).thenAnswer((_) async => _group());
+
+    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Novo Grupo');
+    await tester.tap(find.widgetWithText(AppPrimaryButton, 'Criar grupo'));
+    await tester.pumpAndSettle();
+
+    final captured = verify(
+      () => repository.create(
+        name: any(named: 'name'),
+        description: any(named: 'description'),
+        photoUrl: any(named: 'photoUrl'),
+        visibility: captureAny(named: 'visibility'),
+      ),
+    ).captured;
+    expect(captured.single, 'private');
+  });
+
+  testWidgets('alternar para Público envia visibility public', (tester) async {
+    when(
+      () => repository.create(
+        name: any(named: 'name'),
+        description: any(named: 'description'),
+        photoUrl: any(named: 'photoUrl'),
+        visibility: any(named: 'visibility'),
+      ),
+    ).thenAnswer((_) async => _group());
+
+    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'Novo Grupo');
+    await tester.tap(find.text('Público'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(AppPrimaryButton, 'Criar grupo'));
+    await tester.pumpAndSettle();
+
+    final captured = verify(
+      () => repository.create(
+        name: any(named: 'name'),
+        description: any(named: 'description'),
+        photoUrl: any(named: 'photoUrl'),
+        visibility: captureAny(named: 'visibility'),
+      ),
+    ).captured;
+    expect(captured.single, 'public');
+  });
+
   testWidgets('falha na criação mostra snackbar e permanece na tela', (
     tester,
   ) async {
@@ -88,6 +146,7 @@ void main() {
         name: any(named: 'name'),
         description: any(named: 'description'),
         photoUrl: any(named: 'photoUrl'),
+        visibility: any(named: 'visibility'),
       ),
     ).thenThrow(const GroupRepositoryException('Nome inválido.'));
 

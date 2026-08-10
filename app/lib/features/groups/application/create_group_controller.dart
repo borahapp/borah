@@ -14,6 +14,7 @@ class CreateGroupController extends Notifier<CreateGroupStatus> {
     required String name,
     String? description,
     String? photoUrl,
+    String visibility = 'private',
   }) async {
     state = const CreateGroupSaving();
     try {
@@ -21,6 +22,7 @@ class CreateGroupController extends Notifier<CreateGroupStatus> {
         name: name,
         description: description,
         photoUrl: photoUrl,
+        visibility: visibility,
       );
       state = CreateGroupSaveSuccess(group);
     } on GroupRepositoryException catch (e) {

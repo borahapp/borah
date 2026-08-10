@@ -33,6 +33,11 @@ class _CreateGroupPageState extends ConsumerState<CreateGroupPage> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
+  // FASE SOCIAL 3 - privado é o padrão: nenhum grupo se torna público
+  // sem escolha explícita do criador (mesmo requisito que garante que
+  // todo grupo já existente continua privado).
+  String _visibility = 'private';
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -50,6 +55,7 @@ class _CreateGroupPageState extends ConsumerState<CreateGroupPage> {
           description: _descriptionController.text.trim().isEmpty
               ? null
               : _descriptionController.text.trim(),
+          visibility: _visibility,
         );
   }
 
@@ -99,6 +105,25 @@ class _CreateGroupPageState extends ConsumerState<CreateGroupPage> {
                 AppTextField(
                   controller: _descriptionController,
                   label: 'Descrição (opcional)',
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                const SectionHeader(title: 'Visibilidade'),
+                const SizedBox(height: AppSpacing.sm),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'private', label: Text('Privado')),
+                    ButtonSegment(value: 'public', label: Text('Público')),
+                  ],
+                  selected: {_visibility},
+                  onSelectionChanged: (selection) =>
+                      setState(() => _visibility = selection.first),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _visibility == 'public'
+                      ? 'Aparece na busca para qualquer pessoa.'
+                      : 'Só quem tiver o convite encontra o grupo.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 AppPrimaryButton(

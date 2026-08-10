@@ -21,10 +21,18 @@ class GroupRemoteDatasource {
   static const _profilesTable = 'profiles';
   static const _eventsTable = 'events';
 
+  /// FASE SOCIAL 3 - colunas de `groups` que toda consulta desta classe
+  /// passa a selecionar (além das que cada método já buscava), para que
+  /// `GroupRepositoryImpl._mapRow` sempre tenha `visibility`/
+  /// `member_count` disponíveis, nunca dependendo de valor default de
+  /// fallback por coluna ausente.
+  static const _visibilityColumns = 'visibility,member_count';
+
   Future<Map<String, dynamic>> createGroup({
     required String name,
     String? description,
     String? photoUrl,
+    required String visibility,
   }) async {
     final result = await _client.rpc(
       'create_group',
@@ -32,6 +40,7 @@ class GroupRemoteDatasource {
         'p_name': name,
         'p_description': description,
         'p_photo_url': photoUrl,
+        'p_visibility': visibility,
       },
     );
     return result as Map<String, dynamic>;
@@ -56,7 +65,9 @@ class GroupRemoteDatasource {
   Future<List<Map<String, dynamic>>> listMine() async {
     final rows = await _client
         .from(_groupsTable)
-        .select('id,name,photo_url,invite_code,group_members(count)')
+        .select(
+          'id,name,photo_url,invite_code,group_members(count),$_visibilityColumns',
+        )
         .order('last_activity_at', ascending: false);
     return List<Map<String, dynamic>>.from(rows);
   }
@@ -90,7 +101,7 @@ class GroupRemoteDatasource {
   Future<Map<String, dynamic>> fetchGroupById(String id) {
     return _client
         .from(_groupsTable)
-        .select('id,name,description,photo_url,invite_code')
+        .select('id,name,description,photo_url,invite_code,$_visibilityColumns')
         .eq('id', id)
         .single();
   }
@@ -151,9 +162,89 @@ class GroupRemoteDatasource {
     if (groupIds.isEmpty) return [];
     final rows = await _client
         .from(_groupsTable)
-        .select('id,name,photo_url,invite_code')
+        .select('id,name,photo_url,invite_code,$_visibilityColumns')
         .inFilter('id', groupIds);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// FASE SOCIAL 3 - ids de grupo dos quais [userId] já é membro, usado
+  /// para MARCAR (não excluir) os resultados de `search`/`listFeatured` -
+  /// um grupo público do qual o usuário já participa continua aparecendo
+  /// normalmente, só troca "Entrar" por "Você participa" na UI (decisão
+  /// de produto explícita: não esconder grupos relevantes da busca).
+  Future<List<String>> fetchMyGroupIds(String userId) async {
+    final rows = await _client
+        .from(_membersTable)
+        .select('group_id')
+        .eq('user_id', userId);
+    return List<Map<String, dynamic>>.from(
+      rows,
+    ).map((row) => row['group_id'] as String).toList();
+  }
+
+  /// FASE SOCIAL 3 - busca de grupos `public` por nome (Pesquisa/
+  /// Explorar). `visibility = 'public'` explícito além da RLS (defesa
+  /// em profundidade, mesmo padrão já usado em
+  /// `FollowerRemoteDatasource.searchProfiles`).
+  Future<List<Map<String, dynamic>>> searchGroups(
+    String query, {
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+    final rows = await _client
+        .from(_groupsTable)
+        .select('id,name,description,photo_url,invite_code,$_visibilityColumns')
+        .eq('visibility', 'public')
+        .ilike('name', '%$query%')
+        .order('name')
+        .range(from, to);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// FASE SOCIAL 3 - "Grupos em destaque": só `public`, ordenado por
+  /// `member_count` e depois `last_activity_at` (que `create_event()`
+  /// já mantém a cada novo rolê criado no grupo, confirmado em
+  /// `20260731092000_create_events_and_attendances.sql`) - nenhum
+  /// algoritmo, só os 2 sinais que já existem.
+  Future<List<Map<String, dynamic>>> listFeaturedGroups({
+    required int page,
+    required int limit,
+  }) async {
+    final from = (page - 1) * limit;
+    final to = from + limit;
+    final rows = await _client
+        .from(_groupsTable)
+        .select('id,name,description,photo_url,invite_code,$_visibilityColumns')
+        .eq('visibility', 'public')
+        .order('member_count', ascending: false)
+        .order('last_activity_at', ascending: false)
+        .range(from, to);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// FASE SOCIAL 3 - dados básicos de um grupo `public` para quem ainda
+  /// não é membro (`PublicGroupProfilePage`) - sem `fetchMembers`
+  /// (`group_members` continua fechado a não-membros).
+  Future<Map<String, dynamic>> fetchGroupPublicSummary(String groupId) {
+    return _client
+        .from(_groupsTable)
+        .select('id,name,description,photo_url,invite_code,$_visibilityColumns')
+        .eq('id', groupId)
+        .single();
+  }
+
+  /// FASE SOCIAL 3 - `join_public_group()` é `SECURITY DEFINER`, valida
+  /// `visibility = 'public'` no servidor (nunca confia só na UI já ter
+  /// checado isso) e insere o chamador como `member`, idempotente
+  /// (`on conflict do nothing`), mesmo padrão de `joinByInviteCode`.
+  Future<Map<String, dynamic>> joinPublicGroup(String groupId) async {
+    final result = await _client.rpc(
+      'join_public_group',
+      params: {'p_group_id': groupId},
+    );
+    return result as Map<String, dynamic>;
   }
 
   /// ONBOARDING-01: `join_group_by_invite_code()` é `SECURITY DEFINER`

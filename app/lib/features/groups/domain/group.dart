@@ -11,6 +11,7 @@ class Group {
     required this.description,
     required this.photoUrl,
     required this.inviteCode,
+    this.visibility = 'private',
     this.memberCount,
     this.nextEvent,
   });
@@ -21,11 +22,23 @@ class Group {
   final String? photoUrl;
   final String inviteCode;
 
-  /// Contagem de integrantes (Sprint 3, F46 - `GroupCard`). Populado
-  /// apenas por `GroupRepository.listMine()`, via embed do PostgREST
-  /// (`group_members(count)`, sem migration) - `null` em `create`/
-  /// `update`/`getById`/`joinByInviteCode`, que não renderizam
-  /// `GroupCard` e não precisam desse dado.
+  /// FASE SOCIAL 3 - `groups.visibility` (`'private'`/`'public'`,
+  /// `text + check` - mesma convenção de `GroupMember.role`, sem enum
+  /// Dart). Default `'private'` aqui só evita quebrar os ~15 call sites
+  /// de teste (fora do escopo desta fase) que já constroem `Group` sem
+  /// esse campo - toda leitura real do banco sempre popula o valor
+  /// verdadeiro da coluna, nunca depende deste default.
+  final String visibility;
+
+  bool get isPublic => visibility == 'public';
+
+  /// Contagem de integrantes. Antes da FASE SOCIAL 3, só vinha
+  /// (`memberCount`) via embed de `listMine()` - agora também vem da
+  /// coluna denormalizada `groups.member_count` em `search`/
+  /// `listFeatured`/`getPublicSummary` (necessário porque um não-membro
+  /// de um grupo `public` não pode consultar `group_members`
+  /// diretamente - RLS continua fechada). Continua `null` nos métodos
+  /// que não precisam desse dado (`update`/`joinByInviteCode`).
   final int? memberCount;
 
   /// Próximo rolê agendado do grupo (Sprint 3, `RC03_DESIGN_GAP.md

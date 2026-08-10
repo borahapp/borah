@@ -1,3 +1,4 @@
+import '../../../core/models/paged_result.dart';
 import 'group.dart';
 import 'group_details.dart';
 
@@ -15,10 +16,15 @@ class GroupRepositoryException implements Exception {
 /// (GROUP-02B.1), `joinByInviteCode` (ONBOARDING-01) e `update`/
 /// `updateMemberRole`/`removeMember` (BLOCO 2 - administração).
 abstract interface class GroupRepository {
+  /// FASE SOCIAL 3 - [visibility] default `'private'` (mesmo default da
+  /// RPC `create_group()`) - chamar sem o parâmetro preserva o
+  /// comportamento de sempre, nenhum grupo passa a ser `public` sem
+  /// escolha explícita do criador.
   Future<Group> create({
     required String name,
     String? description,
     String? photoUrl,
+    String visibility = 'private',
   });
 
   /// Grupos dos quais o usuário autenticado é membro, ordenados por
@@ -97,4 +103,47 @@ abstract interface class GroupRepository {
     String currentUserId,
     String otherUserId,
   );
+
+  /// FASE SOCIAL 3 - busca de grupos `public` por nome (Pesquisa/
+  /// Explorar), mesmo padrão `ilike` de `FollowerRepository.searchProfiles`/
+  /// `RestaurantRepository.search`. Grupos `private` nunca aparecem -
+  /// tanto por filtro explícito quanto pela RLS (`groups_select_members`),
+  /// defesa em profundidade. Grupos dos quais o usuário já é membro são
+  /// excluídos (ver `PersonListTile`-equivalente desta fase,
+  /// `GroupResultTile` - "Você participa" no lugar de "Entrar").
+  Future<PagedResult<Group>> search(
+    String query, {
+    required int page,
+    required int limit,
+  });
+
+  /// FASE SOCIAL 3 - "Grupos em destaque" (Explorar) - só grupos
+  /// `public`, ordenados por `member_count` e depois `last_activity_at`
+  /// (nenhum algoritmo, mesmos 2 sinais já existentes/criados nesta
+  /// fase). Grupos dos quais o usuário já é membro são excluídos, mesma
+  /// regra de `search`.
+  Future<PagedResult<Group>> listFeatured({
+    required int page,
+    required int limit,
+  });
+
+  /// FASE SOCIAL 3 - dados básicos de um grupo `public` para quem ainda
+  /// não é membro (`PublicGroupProfilePage`) - só a linha de `groups`
+  /// (nome/foto/descrição/`memberCount`), nunca a lista de membros
+  /// (`group_members` continua fechada a não-membros, decisão de
+  /// produto desta fase).
+  Future<Group> getPublicSummary(String groupId);
+
+  /// FASE SOCIAL 3 - entra instantaneamente num grupo `public`, sem
+  /// código de convite (`join_public_group()`, `SECURITY DEFINER` -
+  /// valida `visibility = 'public'` no servidor, nunca confia só na UI
+  /// já ter checado isso).
+  Future<Group> joinPublicGroup(String groupId);
+
+  /// FASE SOCIAL 3 - ids de todos os grupos dos quais [userId] já é
+  /// membro - usado por `search`/`listFeatured` na UI para marcar "Você
+  /// participa" em vez de "Entrar" (decisão de produto: grupos dos
+  /// quais o usuário já participa continuam aparecendo normalmente na
+  /// busca/destaque, nunca são escondidos).
+  Future<Set<String>> listMyGroupIds(String userId);
 }

@@ -39,12 +39,63 @@ void main() {
   });
 
   group('create', () {
+    test('sem visibility explícito, propaga o default private', () async {
+      when(
+        () => repository.create(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          photoUrl: any(named: 'photoUrl'),
+          visibility: any(named: 'visibility'),
+        ),
+      ).thenAnswer((_) async => _group());
+
+      await container
+          .read(createGroupControllerProvider.notifier)
+          .create(name: 'Turma do João');
+
+      final captured = verify(
+        () => repository.create(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          photoUrl: any(named: 'photoUrl'),
+          visibility: captureAny(named: 'visibility'),
+        ),
+      ).captured;
+      expect(captured.single, 'private');
+    });
+
+    test('propaga visibility public quando informado', () async {
+      when(
+        () => repository.create(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          photoUrl: any(named: 'photoUrl'),
+          visibility: any(named: 'visibility'),
+        ),
+      ).thenAnswer((_) async => _group());
+
+      await container
+          .read(createGroupControllerProvider.notifier)
+          .create(name: 'Turma do João', visibility: 'public');
+
+      final captured = verify(
+        () => repository.create(
+          name: any(named: 'name'),
+          description: any(named: 'description'),
+          photoUrl: any(named: 'photoUrl'),
+          visibility: captureAny(named: 'visibility'),
+        ),
+      ).captured;
+      expect(captured.single, 'public');
+    });
+
     test('sucesso -> CreateGroupSaveSuccess', () async {
       when(
         () => repository.create(
           name: any(named: 'name'),
           description: any(named: 'description'),
           photoUrl: any(named: 'photoUrl'),
+          visibility: any(named: 'visibility'),
         ),
       ).thenAnswer((_) async => _group());
 
