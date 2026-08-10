@@ -21,6 +21,23 @@ class JoinGroupController extends Notifier<JoinGroupStatus> {
       state = const JoinGroupError('Não foi possível entrar no grupo.');
     }
   }
+
+  /// FASE SOCIAL 3 - entrada instantânea num grupo `public`
+  /// (`PublicGroupProfilePage`), sem código de convite. Mesmo
+  /// `JoinGroupStatus` de [join] - reutiliza o mesmo controller em vez
+  /// de criar um novo, já que o formato do estado (Saving/Success/Error)
+  /// é idêntico para as duas formas de entrar num grupo.
+  Future<void> joinPublic(String groupId) async {
+    state = const JoinGroupSaving();
+    try {
+      final group = await _repository.joinPublicGroup(groupId);
+      state = JoinGroupSaveSuccess(group);
+    } on GroupRepositoryException catch (e) {
+      state = JoinGroupError(e.message);
+    } catch (_) {
+      state = const JoinGroupError('Não foi possível entrar no grupo.');
+    }
+  }
 }
 
 final joinGroupControllerProvider =

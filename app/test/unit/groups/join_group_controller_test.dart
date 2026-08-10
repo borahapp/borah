@@ -90,4 +90,54 @@ void main() {
       );
     });
   });
+
+  group('joinPublic', () {
+    test('sucesso -> JoinGroupSaveSuccess', () async {
+      when(
+        () => repository.joinPublicGroup('g-1'),
+      ).thenAnswer((_) async => _group());
+
+      await container
+          .read(joinGroupControllerProvider.notifier)
+          .joinPublic('g-1');
+
+      final status = container.read(joinGroupControllerProvider);
+      expect(status, isA<JoinGroupSaveSuccess>());
+      expect((status as JoinGroupSaveSuccess).group.name, 'Turma do João');
+    });
+
+    test(
+      'grupo não é público -> JoinGroupError com a mensagem original',
+      () async {
+        when(() => repository.joinPublicGroup('g-2')).thenThrow(
+          const GroupRepositoryException('Este grupo não é público.'),
+        );
+
+        await container
+            .read(joinGroupControllerProvider.notifier)
+            .joinPublic('g-2');
+
+        final status = container.read(joinGroupControllerProvider);
+        expect(status, isA<JoinGroupError>());
+        expect((status as JoinGroupError).message, 'Este grupo não é público.');
+      },
+    );
+
+    test('falha inesperada -> JoinGroupError com mensagem genérica', () async {
+      when(
+        () => repository.joinPublicGroup('g-1'),
+      ).thenThrow(Exception('erro de rede'));
+
+      await container
+          .read(joinGroupControllerProvider.notifier)
+          .joinPublic('g-1');
+
+      final status = container.read(joinGroupControllerProvider);
+      expect(status, isA<JoinGroupError>());
+      expect(
+        (status as JoinGroupError).message,
+        'Não foi possível entrar no grupo.',
+      );
+    });
+  });
 }
