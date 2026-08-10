@@ -1,7 +1,8 @@
 import '../../../../core/models/paged_result.dart';
-import '../../../reviews/domain/review.dart';
+import '../../domain/feed_item.dart';
 
-/// Estado do Feed (DV-07 §10), sealed class.
+/// Estado do Feed (FASE SOCIAL 4), sealed class - compartilhado pelos 2
+/// controllers (Para Você/Seguindo), cada um com sua própria instância.
 sealed class FeedStatus {
   const FeedStatus();
 }
@@ -17,7 +18,7 @@ final class FeedLoading extends FeedStatus {
 final class FeedLoaded extends FeedStatus {
   const FeedLoaded(this.result);
 
-  final PagedResult<Review> result;
+  final PagedResult<FeedItem> result;
 }
 
 /// Atualização em segundo plano de um feed já carregado (DV-07 §10
@@ -26,7 +27,7 @@ final class FeedLoaded extends FeedStatus {
 final class FeedRefreshing extends FeedStatus {
   const FeedRefreshing(this.result);
 
-  final PagedResult<Review> result;
+  final PagedResult<FeedItem> result;
 }
 
 final class FeedEmpty extends FeedStatus {
