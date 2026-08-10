@@ -220,6 +220,15 @@ class _ProfileView extends ConsumerWidget {
           label: 'Rankings',
           onTap: () => context.push('/rankings'),
         ),
+        // FASE SOCIAL 4: "Grupos" saiu da barra de navegação principal
+        // (deu lugar a "Explorar") - este atalho é o novo lar de "Meus
+        // Grupos", mesma rota `/groups`/`GroupsListPage` de sempre,
+        // nenhum dado ou comportamento alterado.
+        _ShortcutCard(
+          icon: Icons.groups_outlined,
+          label: 'Meus Grupos',
+          onTap: () => context.push('/groups'),
+        ),
         _ShortcutCard(
           icon: Icons.notifications_outlined,
           label: 'Notificações',

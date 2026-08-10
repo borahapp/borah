@@ -61,6 +61,10 @@ Widget _wrap(
         builder: (_, _) => const Scaffold(body: Text('Favorites Page')),
       ),
       GoRoute(
+        path: '/groups',
+        builder: (_, _) => const Scaffold(body: Text('Groups Page')),
+      ),
+      GoRoute(
         path: '/users/:id/followers',
         builder: (_, _) => const Scaffold(body: Text('Followers Page')),
       ),
@@ -143,16 +147,33 @@ void main() {
     expect(find.text('Following Page'), findsOneWidget);
   });
 
-  testWidgets('mostra os 5 atalhos', (tester) async {
+  testWidgets('mostra os 6 atalhos', (tester) async {
     await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
     await tester.pumpAndSettle();
 
     expect(find.text('Feed'), findsOneWidget);
     expect(find.text('Gamificação'), findsOneWidget);
     expect(find.text('Rankings'), findsOneWidget);
+    expect(find.text('Meus Grupos'), findsOneWidget);
     expect(find.text('Notificações'), findsOneWidget);
     expect(find.text('Favoritos'), findsOneWidget);
   });
+
+  testWidgets(
+    'tocar no atalho de Meus Grupos navega até a rota (FASE SOCIAL 4 - '
+    '"Grupos" saiu da barra principal)',
+    (tester) async {
+      await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Meus Grupos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Meus Grupos'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Groups Page'), findsOneWidget);
+    },
+  );
 
   testWidgets('tocar no atalho de Favoritos navega até a rota', (tester) async {
     await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
