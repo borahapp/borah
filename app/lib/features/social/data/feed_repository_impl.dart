@@ -107,9 +107,26 @@ class FeedRepositoryImpl implements FeedRepository {
         ? const <String>{}
         : await _datasource.fetchMyGroupIds(viewerId);
 
+    // `reviews`/`user_badges` não têm FK direta para `profiles` (ambas
+    // referenciam `auth.users`), então o autor não vem embutido na linha -
+    // 1 única consulta em lote resolve os perfis de ambas as fontes juntas
+    // (nunca 1 consulta por review/badge).
+    final authorIds = {
+      ...reviewRows.map((row) => row['user_id'] as String),
+      ...badgeRows.map((row) => row['user_id'] as String),
+    }.toList();
+    final profileRows = authorIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await _datasource.fetchProfilesByIds(authorIds);
+    final profilesById = {
+      for (final row in profileRows) row['id'] as String: row,
+    };
+
     final items = <FeedItem>[
-      ...reviewRows.map((row) => _mapReviewRow(row, likedIds, commentCounts)),
-      ...badgeRows.map(_mapBadgeRow),
+      ...reviewRows.map(
+        (row) => _mapReviewRow(row, likedIds, commentCounts, profilesById),
+      ),
+      ...badgeRows.map((row) => _mapBadgeRow(row, profilesById)),
       ...groupJoinRows.map((row) => _mapGroupJoinRow(row, myGroupIds)),
     ];
 
@@ -138,12 +155,19 @@ class FeedRepositoryImpl implements FeedRepository {
     );
   }
 
-  FeedActor _mapActor(Map<String, dynamic> profileRow) {
+  /// Monta o autor a partir de [userId] + o mapa resolvido em lote em
+  /// `_compose` - se [userId] não tiver perfil correspondente (sem crash),
+  /// o autor ainda aparece (com o id), só sem nome/username/avatar.
+  FeedActor _mapActor(
+    String userId,
+    Map<String, Map<String, dynamic>> profilesById,
+  ) {
+    final profile = profilesById[userId];
     return FeedActor(
-      id: profileRow['id'] as String,
-      fullName: profileRow['full_name'] as String?,
-      username: profileRow['username'] as String?,
-      avatarUrl: profileRow['avatar_url'] as String?,
+      id: userId,
+      fullName: profile?['full_name'] as String?,
+      username: profile?['username'] as String?,
+      avatarUrl: profile?['avatar_url'] as String?,
     );
   }
 
@@ -151,14 +175,16 @@ class FeedRepositoryImpl implements FeedRepository {
     Map<String, dynamic> row,
     Set<String> likedIds,
     Map<String, int> commentCounts,
+    Map<String, Map<String, dynamic>> profilesById,
   ) {
     final id = row['id'] as String;
+    final userId = row['user_id'] as String;
     final restaurant = row['restaurants'] as Map<String, dynamic>;
     return FeedReviewItem(
       review: Review(
         id: id,
         restaurantId: row['restaurant_id'] as String,
-        userId: row['user_id'] as String,
+        userId: userId,
         rating: (row['rating'] as num).toDouble(),
         ambienceScore: (row['ambience_score'] as num?)?.toDouble(),
         serviceScore: (row['service_score'] as num?)?.toDouble(),
@@ -170,7 +196,7 @@ class FeedRepositoryImpl implements FeedRepository {
         createdAt: DateTime.parse(row['created_at'] as String),
         updatedAt: DateTime.parse(row['updated_at'] as String),
       ),
-      actor: _mapActor(row['profiles'] as Map<String, dynamic>),
+      actor: _mapActor(userId, profilesById),
       restaurantId: restaurant['id'] as String,
       restaurantName: restaurant['name'] as String,
       restaurantCoverImage: restaurant['cover_image'] as String?,
@@ -180,11 +206,14 @@ class FeedRepositoryImpl implements FeedRepository {
     );
   }
 
-  FeedBadgeItem _mapBadgeRow(Map<String, dynamic> row) {
+  FeedBadgeItem _mapBadgeRow(
+    Map<String, dynamic> row,
+    Map<String, Map<String, dynamic>> profilesById,
+  ) {
     final badge = row['badges'] as Map<String, dynamic>;
     return FeedBadgeItem(
       id: row['id'] as String,
-      actor: _mapActor(row['profiles'] as Map<String, dynamic>),
+      actor: _mapActor(row['user_id'] as String, profilesById),
       badgeCode: badge['code'] as String,
       badgeName: badge['name'] as String,
       badgeDescription: badge['description'] as String?,

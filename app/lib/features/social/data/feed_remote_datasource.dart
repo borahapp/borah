@@ -12,14 +12,11 @@ class FeedRemoteDatasource {
   final SupabaseClient _client;
 
   static const _reviewsSelect =
-      '*, '
-      'profiles!inner(id, full_name, username, avatar_url), '
-      'restaurants!inner(id, name, cover_image, status, deleted_at)';
+      '*, restaurants!inner(id, name, cover_image, status, deleted_at)';
 
-  static const _badgesSelect =
-      '*, '
-      'badges!inner(code, name, description), '
-      'profiles!inner(id, full_name, username, avatar_url)';
+  static const _badgesSelect = '*, badges!inner(code, name, description)';
+
+  static const _profilesSelect = 'id, full_name, username, avatar_url';
 
   Future<List<String>> fetchFollowingIds(String userId) async {
     final rows = await _client
@@ -109,6 +106,21 @@ class FeedRemoteDatasource {
   /// Entradas recentes em grupos `public` (RPC `security definer` -
   /// `group_members` de grupo `private` nunca é alcançada, mesmo se o
   /// usuário atual for membro dele).
+  /// Perfis dos autores de [ids] (reviews/badges), buscados à parte -
+  /// `reviews.user_id`/`user_badges.user_id` referenciam `auth.users`, não
+  /// `profiles`, então não há FK direta que o PostgREST possa usar num
+  /// embed (mesma limitação documentada em `FollowerRemoteDatasource`).
+  Future<List<Map<String, dynamic>>> fetchProfilesByIds(
+    List<String> ids,
+  ) async {
+    if (ids.isEmpty) return [];
+    final rows = await _client
+        .from('profiles')
+        .select(_profilesSelect)
+        .inFilter('id', ids);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<List<Map<String, dynamic>>> fetchRecentPublicGroupJoins({
     required int limit,
   }) async {

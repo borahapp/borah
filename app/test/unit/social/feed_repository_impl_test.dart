@@ -10,47 +10,50 @@ class MockFeedRemoteDatasource extends Mock implements FeedRemoteDatasource {}
 
 Map<String, dynamic> _reviewRow({
   String id = 'rv-1',
+  String userId = 'user-2',
   String createdAt = '2026-01-03T00:00:00.000Z',
 }) {
   return {
     'id': id,
     'restaurant_id': 'r-1',
-    'user_id': 'user-2',
+    'user_id': userId,
     'rating': 4.5,
     'comment': 'Ótimo!',
     'likes_count': 3,
     'photos_count': 0,
     'created_at': createdAt,
     'updated_at': createdAt,
-    'profiles': {
-      'id': 'user-2',
-      'full_name': 'Bruno Costa',
-      'username': 'bruno',
-      'avatar_url': null,
-    },
     'restaurants': {'id': 'r-1', 'name': 'Outback', 'cover_image': null},
   };
 }
 
 Map<String, dynamic> _badgeRow({
   String id = 'ub-1',
+  String userId = 'user-2',
   String earnedAt = '2026-01-02T00:00:00.000Z',
 }) {
   return {
     'id': id,
-    'user_id': 'user-2',
+    'user_id': userId,
     'earned_at': earnedAt,
     'badges': {
       'code': 'first_review',
       'name': 'Primeira Avaliação',
       'description': 'Publicou sua primeira avaliação.',
     },
-    'profiles': {
-      'id': 'user-2',
-      'full_name': 'Bruno Costa',
-      'username': 'bruno',
-      'avatar_url': null,
-    },
+  };
+}
+
+Map<String, dynamic> _profileRow({
+  required String id,
+  String? fullName = 'Bruno Costa',
+  String? username = 'bruno',
+}) {
+  return {
+    'id': id,
+    'full_name': fullName,
+    'username': username,
+    'avatar_url': null,
   };
 }
 
@@ -88,6 +91,15 @@ void main() {
       () => datasource.fetchCommentCounts(any()),
     ).thenAnswer((_) async => {});
     when(() => datasource.fetchMyGroupIds(any())).thenAnswer((_) async => {});
+    // Default: resolve um perfil sintético para qualquer id pedido -
+    // testes que não verificam o autor não precisam de um stub próprio;
+    // os que verificam sobrescrevem este stub.
+    when(() => datasource.fetchProfilesByIds(any())).thenAnswer((
+      invocation,
+    ) async {
+      final ids = invocation.positionalArguments.first as List<String>;
+      return ids.map((id) => _profileRow(id: id)).toList();
+    });
   });
 
   group('listForYou', () {
@@ -114,6 +126,7 @@ void main() {
       verifyNever(
         () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
       );
+      verifyNever(() => datasource.fetchProfilesByIds(any()));
     });
 
     test('combina reviews + badges + entradas em grupo público, ordenados por '
@@ -280,6 +293,177 @@ void main() {
       final page2 = await repository.listForYou('user-1', page: 2, limit: 2);
       expect(page2.items.map((i) => i.feedKey), ['review:rv-3']);
       expect(page2.hasNextPage, isFalse);
+    });
+  });
+
+  group('resolução de perfis (reviews/badges sem embed)', () {
+    test('autor de review é resolvido via fetchProfilesByIds, não vem embutido '
+        'na linha', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(userId: 'user-2')]);
+      when(
+        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(() => datasource.fetchProfilesByIds(['user-2'])).thenAnswer(
+        (_) async => [
+          _profileRow(id: 'user-2', fullName: 'Bruno Costa', username: 'bruno'),
+        ],
+      );
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      final item = result.items.single as FeedReviewItem;
+      expect(item.actor.id, 'user-2');
+      expect(item.actor.fullName, 'Bruno Costa');
+      expect(item.actor.username, 'bruno');
+      verify(() => datasource.fetchProfilesByIds(['user-2'])).called(1);
+    });
+
+    test(
+      'autor de badge é resolvido pela mesma consulta em lote de perfis',
+      () async {
+        when(
+          () => datasource.fetchFollowingIds('user-1'),
+        ).thenAnswer((_) async => ['user-2']);
+        when(
+          () => datasource.fetchGroupPeerIds('user-1'),
+        ).thenAnswer((_) async => []);
+        when(
+          () =>
+              datasource.fetchReviewsByUsers(any(), limit: any(named: 'limit')),
+        ).thenAnswer((_) async => []);
+        when(
+          () =>
+              datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+        ).thenAnswer((_) async => [_badgeRow(userId: 'user-2')]);
+        when(
+          () => datasource.fetchRecentPublicGroupJoins(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(() => datasource.fetchProfilesByIds(['user-2'])).thenAnswer(
+          (_) async => [
+            _profileRow(
+              id: 'user-2',
+              fullName: 'Bruno Costa',
+              username: 'bruno',
+            ),
+          ],
+        );
+
+        final result = await repository.listForYou(
+          'user-1',
+          page: 1,
+          limit: 20,
+        );
+
+        final item = result.items.single as FeedBadgeItem;
+        expect(item.actor.id, 'user-2');
+        expect(item.actor.fullName, 'Bruno Costa');
+      },
+    );
+
+    test('autor sem perfil correspondente não quebra o Feed - item aparece só '
+        'com o id', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(userId: 'user-2')]);
+      when(
+        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchProfilesByIds(['user-2']),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      final item = result.items.single as FeedReviewItem;
+      expect(item.actor.id, 'user-2');
+      expect(item.actor.fullName, isNull);
+      expect(item.actor.username, isNull);
+    });
+
+    test('múltiplas reviews do mesmo autor disparam uma única consulta de '
+        'perfis', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [
+          _reviewRow(id: 'rv-1', userId: 'user-2'),
+          _reviewRow(
+            id: 'rv-2',
+            userId: 'user-2',
+            createdAt: '2026-01-02T00:00:00.000Z',
+          ),
+        ],
+      );
+      when(
+        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items, hasLength(2));
+      verify(() => datasource.fetchProfilesByIds(['user-2'])).called(1);
+    });
+
+    test('reviews e badges de autores diferentes contribuem para uma única '
+        'consulta batched com todos os ids envolvidos', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2', 'user-3']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(userId: 'user-2')]);
+      when(
+        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_badgeRow(userId: 'user-3')]);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      await repository.listForYou('user-1', page: 1, limit: 20);
+
+      verify(
+        () => datasource.fetchProfilesByIds(
+          any(that: unorderedEquals(['user-2', 'user-3'])),
+        ),
+      ).called(1);
     });
   });
 
