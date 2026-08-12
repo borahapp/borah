@@ -15,6 +15,12 @@ import '../../domain/review.dart';
 /// `rating.toStringAsFixed(1)` (a mesma string de antes) — os testes de
 /// widget que dependem de `find.text('4.5')` (`feed_page_test.dart`)
 /// continuam válidos sem alteração, verificado antes desta mudança.
+///
+/// 2B.3: autor/restaurante/data (achado P2/P3 - ausentes até então)
+/// lidos direto de [review], já resolvidos pelo repositório
+/// (`ReviewRepositoryImpl._mapRow`) - este widget nunca acessa o
+/// datasource, só o que já chega pronto no objeto `Review`. Campos são
+/// `null` quando o repositório não os resolveu (nunca quebra o layout).
 class ReviewSummaryTile extends StatelessWidget {
   const ReviewSummaryTile({
     super.key,
@@ -29,14 +35,47 @@ class ReviewSummaryTile extends StatelessWidget {
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? contentPadding;
 
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasAuthorOrRestaurant =
+        (review.authorFullName?.isNotEmpty ?? false) ||
+        (review.restaurantName?.isNotEmpty ?? false);
+
     return ListTile(
       contentPadding: contentPadding,
-      title: ScoreBubble(rating: review.rating),
-      subtitle: review.comment != null && review.comment!.isNotEmpty
-          ? Text(review.comment!)
-          : null,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ScoreBubble(rating: review.rating),
+          const SizedBox(width: 8),
+          Text(_formatDate(review.createdAt), style: theme.textTheme.bodySmall),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasAuthorOrRestaurant)
+            Text(
+              [
+                if (review.authorFullName?.isNotEmpty ?? false)
+                  review.authorFullName!,
+                if (review.restaurantName?.isNotEmpty ?? false)
+                  review.restaurantName!,
+              ].join(' · '),
+              style: theme.textTheme.labelMedium,
+            ),
+          if (review.comment != null && review.comment!.isNotEmpty)
+            Text(review.comment!),
+        ],
+      ),
       trailing: trailing,
       onTap: onTap,
     );

@@ -4,10 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/analytics/app_analytics.dart';
+import '../../social/application/user_reviews_controller.dart';
 import '../data/review_repository_impl.dart';
 import '../domain/review.dart';
 import '../domain/review_repository.dart';
 import '../presentation/states/review_detail_status.dart';
+import 'reviews_controller.dart';
 
 /// Regra do DV-04 §11: no máximo 5 fotos por avaliação.
 const maxReviewPhotos = 5;
@@ -110,6 +112,12 @@ class ReviewDetailController extends Notifier<ReviewDetailStatus> {
     state = const ReviewDetailSaving();
     try {
       await _repository.delete(id);
+      // 2B.3 (P1): remoção otimista local nas duas listas que podem
+      // exibir esta review - sem refetch de rede, sem invalidar o
+      // provider inteiro. Seguro mesmo que nenhuma das duas tenha sido
+      // carregada ainda (`removeReview` não faz nada nesse caso).
+      ref.read(reviewsControllerProvider.notifier).removeReview(id);
+      ref.read(userReviewsControllerProvider.notifier).removeReview(id);
       state = const ReviewDetailDeleted();
     } on ReviewRepositoryException catch (e) {
       state = ReviewDetailError(e.message);

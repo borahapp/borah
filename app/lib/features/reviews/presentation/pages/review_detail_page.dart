@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,11 +15,13 @@ import '../../../../design_system/components/feedback/app_staggered_list_item.da
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
+import '../../../../design_system/components/media/borah_photo_viewer.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_radius.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../application/review_detail_controller.dart';
+import '../../domain/review.dart';
 import '../states/review_detail_status.dart';
 import '../widgets/review_detail_error_listener.dart';
 
@@ -73,10 +76,21 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
+    } on PlatformException catch (_) {
+      // 2B.3 (P6): falha real de plataforma (ex.: permissão de galeria
+      // negada pelo SO) - distinta do cancelamento do usuário, que já
+      // retorna `null` acima sem cair em nenhum catch. Mensagem orienta a
+      // verificar a permissão em vez do genérico "não foi possível".
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível acessar a galeria. Verifique se o BORAH tem '
+            'permissão para acessar suas fotos.',
+          ),
+        ),
+      );
     } catch (_) {
-      // RC-04E: falha de plataforma (ex.: permissão de galeria negada
-      // pelo SO) antes não tinha nenhum tratamento - o botão parecia
-      // travado, sem feedback nenhum.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
@@ -167,9 +181,7 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
             :final likedByCurrentUser,
           ) => _DetailView(
             key: const ValueKey('loaded'),
-            rating: review.rating,
-            comment: review.comment,
-            likesCount: review.likesCount,
+            review: review,
             photoUrls: photoUrls,
             likedByCurrentUser: likedByCurrentUser,
             canManage: review.userId == currentUserId,
@@ -192,9 +204,7 @@ class _ReviewDetailPageState extends ConsumerState<ReviewDetailPage> {
 class _DetailView extends StatelessWidget {
   const _DetailView({
     super.key,
-    required this.rating,
-    required this.comment,
-    required this.likesCount,
+    required this.review,
     required this.photoUrls,
     required this.likedByCurrentUser,
     required this.canManage,
@@ -208,9 +218,7 @@ class _DetailView extends StatelessWidget {
     required this.onViewComments,
   });
 
-  final double rating;
-  final String? comment;
-  final int likesCount;
+  final Review review;
   final List<String> photoUrls;
   final bool likedByCurrentUser;
   final bool canManage;
@@ -223,17 +231,42 @@ class _DetailView extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onViewComments;
 
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasAuthorOrRestaurant =
+        (review.authorFullName?.isNotEmpty ?? false) ||
+        (review.restaurantName?.isNotEmpty ?? false);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ScoreBubble(rating: rating),
-          if (comment != null && comment!.isNotEmpty) ...[
+          if (hasAuthorOrRestaurant) ...[
+            Text(
+              [
+                if (review.authorFullName?.isNotEmpty ?? false)
+                  review.authorFullName!,
+                if (review.restaurantName?.isNotEmpty ?? false)
+                  review.restaurantName!,
+              ].join(' · '),
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
+          Text(_formatDate(review.createdAt), style: theme.textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.sm),
+          ScoreBubble(rating: review.rating),
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            Text(comment!),
+            Text(review.comment!),
           ],
           const SizedBox(height: AppSpacing.lg),
           Row(
@@ -250,7 +283,7 @@ class _DetailView extends StatelessWidget {
                   onPressed: onToggleLike,
                 ),
               ),
-              Text('$likesCount'),
+              Text('${review.likesCount}'),
               const Spacer(),
               AppIconButton(
                 icon: Icons.share,
@@ -275,13 +308,20 @@ class _DetailView extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) => AppStaggeredListItem(
                   index: index,
-                  child: ClipRRect(
-                    borderRadius: AppRadius.radiusSm,
-                    child: Image.network(
-                      photoUrls[index],
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
+                  child: GestureDetector(
+                    onTap: () => BorahPhotoViewer.open(
+                      context,
+                      imageUrls: photoUrls,
+                      initialIndex: index,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: AppRadius.radiusSm,
+                      child: Image.network(
+                        photoUrls[index],
+                        width: 96,
+                        height: 96,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),

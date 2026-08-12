@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/paged_result.dart';
 import '../../reviews/data/review_repository_impl.dart';
 import '../../reviews/domain/review_repository.dart';
 import '../../reviews/presentation/states/reviews_status.dart';
@@ -23,6 +24,29 @@ class UserReviewsController extends Notifier<ReviewsStatus> {
     _userId = userId;
     _page = 1;
     return _run(const ReviewsLoading());
+  }
+
+  /// Remove [reviewId] da lista já carregada, sem nova consulta ao
+  /// backend (2B.3 - P1) - mesmo mecanismo de
+  /// `ReviewsController.removeReview`, duplicado aqui por decisão
+  /// consciente (os dois controllers não compartilham uma base comum
+  /// hoje, mesma convenção já usada em outros pares do projeto).
+  void removeReview(String reviewId) {
+    final current = state;
+    if (current is! ReviewsLoaded) return;
+    final items = current.result.items
+        .where((review) => review.id != reviewId)
+        .toList();
+    state = items.isEmpty
+        ? const ReviewsEmpty()
+        : ReviewsLoaded(
+            PagedResult(
+              items: items,
+              page: current.result.page,
+              limit: current.result.limit,
+              hasNextPage: current.result.hasNextPage,
+            ),
+          );
   }
 
   Future<void> loadNextPage() {

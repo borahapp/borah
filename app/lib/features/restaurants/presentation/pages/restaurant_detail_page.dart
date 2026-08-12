@@ -10,6 +10,7 @@ import '../../../../design_system/components/feedback/app_animated_switcher.dart
 import '../../../../design_system/components/feedback/app_pulse_icon.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/media/borah_photo_viewer.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../../design_system/tokens/app_radius.dart';
@@ -264,13 +265,20 @@ class _DetailView extends ConsumerWidget {
                 itemCount: photos.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) => ClipRRect(
-                  borderRadius: AppRadius.radiusMd,
-                  child: Image.network(
-                    photos[index],
-                    width: 96,
-                    height: 96,
-                    fit: BoxFit.cover,
+                itemBuilder: (context, index) => GestureDetector(
+                  onTap: () => BorahPhotoViewer.open(
+                    context,
+                    imageUrls: photos,
+                    initialIndex: index,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: AppRadius.radiusMd,
+                    child: Image.network(
+                      photos[index],
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),

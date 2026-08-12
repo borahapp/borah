@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:app/design_system/components/media/borah_photo_viewer.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/reviews/application/review_detail_controller.dart';
 import 'package:app/features/reviews/data/review_repository_impl.dart';
@@ -21,6 +22,8 @@ Review _review({
   double rating = 4.5,
   String? comment = 'Muito bom, recomendo!',
   int likesCount = 3,
+  String? authorFullName,
+  String? restaurantName,
 }) {
   return Review(
     id: id,
@@ -32,6 +35,8 @@ Review _review({
     photosCount: 0,
     createdAt: DateTime(2026, 1, 1),
     updatedAt: DateTime(2026, 1, 1),
+    authorFullName: authorFullName,
+    restaurantName: restaurantName,
   );
 }
 
@@ -110,6 +115,48 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('mostra autor, restaurante e data quando resolvidos (2B.3)', (
+    tester,
+  ) async {
+    when(() => repository.getById('rv-1')).thenAnswer(
+      (_) async =>
+          _review(authorFullName: 'Bruno Costa', restaurantName: 'Outback'),
+    );
+    when(
+      () => repository.listPhotoUrls('rv-1'),
+    ).thenAnswer((_) async => <String>[]);
+    when(
+      () => repository.isLikedByUser('rv-1', 'user-1'),
+    ).thenAnswer((_) async => false);
+
+    await tester.pumpWidget(_wrap(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Bruno Costa'), findsOneWidget);
+    expect(find.textContaining('Outback'), findsOneWidget);
+    expect(find.text('01/01/2026'), findsOneWidget);
+  });
+
+  testWidgets(
+    'autor/restaurante ausentes (não resolvidos) não quebram a tela - só '
+    'a data aparece',
+    (tester) async {
+      when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>[]);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('01/01/2026'), findsOneWidget);
+    },
+  );
 
   testWidgets('conteúdo da avaliação sem comentário não quebra a tela', (
     tester,
@@ -330,6 +377,29 @@ void main() {
         find.widgetWithText(OutlinedButton, 'Adicionar foto'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('tocar em uma miniatura abre o BorahPhotoViewer (P4)', (
+      tester,
+    ) async {
+      when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>['https://x/0.jpg', 'https://x/1.jpg']);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+      while (tester.takeException() != null) {}
+
+      await tester.tap(find.byType(Image).first);
+      await tester.pumpAndSettle();
+      while (tester.takeException() != null) {}
+
+      expect(find.byType(BorahPhotoViewer), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
     });
 
     testWidgets('sem fotos não exibe a lista de imagens', (tester) async {

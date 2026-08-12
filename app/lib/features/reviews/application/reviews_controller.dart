@@ -27,6 +27,29 @@ class ReviewsController extends Notifier<ReviewsStatus> {
     return _run(const ReviewsLoading(), requestId: ++_requestId);
   }
 
+  /// Remove [reviewId] da lista já carregada, sem nova consulta ao
+  /// backend (2B.3 - P1) - chamado por `ReviewDetailController.delete()`
+  /// para refletir a exclusão aqui sem exigir refresh manual. Sem efeito
+  /// se a lista ainda não estiver carregada ou não contiver [reviewId]
+  /// (ex.: usuário nunca visitou esta tela).
+  void removeReview(String reviewId) {
+    final current = state;
+    if (current is! ReviewsLoaded) return;
+    final items = current.result.items
+        .where((review) => review.id != reviewId)
+        .toList();
+    state = items.isEmpty
+        ? const ReviewsEmpty()
+        : ReviewsLoaded(
+            PagedResult(
+              items: items,
+              page: current.result.page,
+              limit: current.result.limit,
+              hasNextPage: current.result.hasNextPage,
+            ),
+          );
+  }
+
   Future<void> loadNextPage() {
     final current = state;
     if (_restaurantId == null ||

@@ -31,6 +31,7 @@ export 'inputs/app_password_field.dart';
 export 'inputs/app_search_field.dart';
 export 'inputs/app_star_rating.dart';
 export 'inputs/app_text_field.dart';
+export 'media/borah_photo_viewer.dart';
 export 'navigation/app_bottom_navigation.dart';
 export 'navigation/app_tabs.dart';
 export 'navigation/app_top_bar.dart';

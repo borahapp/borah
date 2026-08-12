@@ -2,6 +2,9 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/storage/app_storage.dart';
+import '../../../core/storage/storage_upload_config.dart';
+
 /// Encapsula toda a construção de consultas PostgREST (listagem paginada,
 /// curtidas) e o Storage do bucket `review-photos` (público) - DV-04.
 /// Nenhuma camada acima desta conhece esses detalhes (mesma decisão do DV-03).
@@ -12,7 +15,15 @@ class ReviewRemoteDatasource {
 
   static const _table = 'reviews';
   static const _likesTable = 'review_likes';
+  static const _profilesTable = 'profiles';
   static const _bucket = 'review-photos';
+
+  /// `restaurants!inner` é um embed válido (`reviews.restaurant_id` tem FK
+  /// direta para `restaurants.id`) - diferente de `profiles`
+  /// (`reviews.user_id` referencia `auth.users`, sem FK direta), que por
+  /// isso é sempre resolvido à parte via [fetchProfilesByIds] (mesma
+  /// limitação/padrão já documentado no Feed e em `event_reviews`).
+  static const _reviewsSelect = '*, restaurants!inner(id, name, cover_image)';
 
   /// Busca `limit + 1` registros para permitir detectar se há próxima
   /// página sem depender de uma contagem exata (core/models/paged_result.dart).
@@ -26,7 +37,7 @@ class ReviewRemoteDatasource {
 
     final rows = await _client
         .from(_table)
-        .select()
+        .select(_reviewsSelect)
         .eq('restaurant_id', restaurantId)
         .isFilter('deleted_at', null)
         .order('created_at', ascending: false)
@@ -45,7 +56,7 @@ class ReviewRemoteDatasource {
 
     final rows = await _client
         .from(_table)
-        .select()
+        .select(_reviewsSelect)
         .eq('user_id', userId)
         .isFilter('deleted_at', null)
         .order('created_at', ascending: false)
@@ -57,21 +68,41 @@ class ReviewRemoteDatasource {
   Future<Map<String, dynamic>> fetchById(String id) {
     return _client
         .from(_table)
-        .select()
+        .select(_reviewsSelect)
         .eq('id', id)
         .isFilter('deleted_at', null)
         .single();
   }
 
   Future<Map<String, dynamic>> insert(Map<String, dynamic> data) {
-    return _client.from(_table).insert(data).select().single();
+    return _client.from(_table).insert(data).select(_reviewsSelect).single();
   }
 
   Future<Map<String, dynamic>> updatePatch(
     String id,
     Map<String, dynamic> patch,
   ) {
-    return _client.from(_table).update(patch).eq('id', id).select().single();
+    return _client
+        .from(_table)
+        .update(patch)
+        .eq('id', id)
+        .select(_reviewsSelect)
+        .single();
+  }
+
+  /// Perfis dos autores, buscados à parte - ver comentário de
+  /// [_reviewsSelect]. Duplicado por feature (mesma decisão já tomada em
+  /// `FeedRemoteDatasource`/`FollowerRemoteDatasource`/
+  /// `EventReviewRemoteDatasource`).
+  Future<List<Map<String, dynamic>>> fetchProfilesByIds(
+    List<String> ids,
+  ) async {
+    if (ids.isEmpty) return [];
+    final rows = await _client
+        .from(_profilesTable)
+        .select('id, full_name, avatar_url')
+        .inFilter('id', ids);
+    return List<Map<String, dynamic>>.from(rows);
   }
 
   Future<void> softDelete(String id) {
@@ -81,19 +112,38 @@ class ReviewRemoteDatasource {
         .eq('id', id);
   }
 
-  /// Nome do arquivo inclui um timestamp para permitir múltiplas fotos por
-  /// avaliação (diferente do `cover.$ext` fixo do DV-03, que substitui uma
-  /// única imagem).
+  /// Pasta `<reviewId>/` no bucket público `review-photos`, via
+  /// `AppStorage` (RC-04B) - 2B.3: antes chamava `_client.storage` direto,
+  /// sem validar tamanho/MIME/extensão nem a assinatura real dos bytes
+  /// (`matchesImageSignature`); agora usa o mesmo caminho seguro já
+  /// conectado por `EventReviewRemoteDatasource.uploadPhoto`. Nome do
+  /// arquivo é sempre gerado (nunca o do usuário), permitindo múltiplas
+  /// fotos por avaliação.
   Future<String> uploadPhoto(
     String reviewId,
     Uint8List bytes,
     String fileExtension,
-  ) async {
-    final path =
-        '$reviewId/${DateTime.now().microsecondsSinceEpoch}.$fileExtension';
-    await _client.storage.from(_bucket).uploadBinary(path, bytes);
-    return path;
+  ) {
+    return AppStorage.upload(
+      bucket: _bucket,
+      folder: reviewId,
+      bytes: bytes,
+      originalFileName: 'photo.$fileExtension',
+      contentType: _mimeTypeFor(fileExtension),
+      config: StorageUploadConfig.reviewPhoto,
+    );
   }
+
+  /// `ImagePickerService` só devolve bytes+extensão, nunca o MIME -
+  /// `AppStorage.upload` exige `contentType` explícito (mesmo mapeamento
+  /// já usado em `EventReviewRemoteDatasource._mimeTypeFor`, duplicado
+  /// aqui por decisão consciente - cada datasource mantém sua própria
+  /// cópia, mesmo padrão de `fetchProfilesByIds` no projeto).
+  String _mimeTypeFor(String extension) => switch (extension.toLowerCase()) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    _ => 'image/jpeg',
+  };
 
   /// Não há tabela de fotos no modelo aprovado do DV-04 (apenas
   /// `photos_count`) - a lista de fotos é resolvida listando os objetos da

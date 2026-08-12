@@ -282,4 +282,77 @@ void main() {
     final items = (status as ReviewsLoaded).result.items;
     expect(items.map((r) => r.id), ['rv-9']);
   });
+
+  group('removeReview', () {
+    test('remove a review indicada da lista já carregada', () async {
+      when(
+        () => repository.listByRestaurant('r-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [
+            _review(id: 'rv-1'),
+            _review(id: 'rv-2'),
+          ],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      final notifier = container.read(reviewsControllerProvider.notifier);
+      await notifier.loadForRestaurant('r-1');
+      notifier.removeReview('rv-1');
+
+      final status = container.read(reviewsControllerProvider) as ReviewsLoaded;
+      expect(status.result.items.map((r) => r.id), ['rv-2']);
+    });
+
+    test(
+      'lista fica vazia -> ReviewsEmpty quando remove o último item',
+      () async {
+        when(
+          () => repository.listByRestaurant('r-1', page: 1, limit: 20),
+        ).thenAnswer(
+          (_) async => PagedResult(
+            items: [_review(id: 'rv-1')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        final notifier = container.read(reviewsControllerProvider.notifier);
+        await notifier.loadForRestaurant('r-1');
+        notifier.removeReview('rv-1');
+
+        expect(container.read(reviewsControllerProvider), isA<ReviewsEmpty>());
+      },
+    );
+
+    test('não faz nada quando a lista ainda não foi carregada', () {
+      container.read(reviewsControllerProvider.notifier).removeReview('rv-1');
+
+      expect(container.read(reviewsControllerProvider), isA<ReviewsInitial>());
+    });
+
+    test('não faz nada quando o id não existe na lista carregada', () async {
+      when(
+        () => repository.listByRestaurant('r-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_review(id: 'rv-1')],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      final notifier = container.read(reviewsControllerProvider.notifier);
+      await notifier.loadForRestaurant('r-1');
+      notifier.removeReview('rv-999');
+
+      final status = container.read(reviewsControllerProvider) as ReviewsLoaded;
+      expect(status.result.items.map((r) => r.id), ['rv-1']);
+    });
+  });
 }

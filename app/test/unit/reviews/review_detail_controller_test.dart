@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/reviews/application/review_detail_controller.dart';
+import 'package:app/features/reviews/application/reviews_controller.dart';
 import 'package:app/features/reviews/data/review_repository_impl.dart';
 import 'package:app/features/reviews/domain/review.dart';
 import 'package:app/features/reviews/domain/review_repository.dart';
 import 'package:app/features/reviews/presentation/states/review_detail_status.dart';
+import 'package:app/features/reviews/presentation/states/reviews_status.dart';
+import 'package:app/features/social/application/user_reviews_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -491,5 +495,85 @@ void main() {
       expect(status, isA<ReviewDetailError>());
       expect((status as ReviewDetailError).message, 'Não é o autor.');
     });
+
+    // 2B.3 (P1): sucesso deve remover a review das duas listas que podem
+    // exibi-la, sem exigir refresh manual do usuário.
+    test('sucesso remove a review de ReviewsController e '
+        'UserReviewsController já carregados (sem refetch)', () async {
+      when(
+        () => repository.listByRestaurant('r-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [
+            _review(id: 'rv-1'),
+            _review(id: 'rv-2'),
+          ],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => repository.listByUser('user-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [
+            _review(id: 'rv-1'),
+            _review(id: 'rv-3'),
+          ],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => repository.delete('rv-1')).thenAnswer((_) async {});
+
+      await container
+          .read(reviewsControllerProvider.notifier)
+          .loadForRestaurant('r-1');
+      await container
+          .read(userReviewsControllerProvider.notifier)
+          .loadForUser('user-1');
+
+      await container
+          .read(reviewDetailControllerProvider.notifier)
+          .delete('rv-1');
+
+      final reviewsStatus =
+          container.read(reviewsControllerProvider) as ReviewsLoaded;
+      expect(reviewsStatus.result.items.map((r) => r.id), ['rv-2']);
+
+      final userReviewsStatus =
+          container.read(userReviewsControllerProvider) as ReviewsLoaded;
+      expect(userReviewsStatus.result.items.map((r) => r.id), ['rv-3']);
+
+      // Nenhum novo fetch - a remoção é local, não um refresh.
+      verify(
+        () => repository.listByRestaurant('r-1', page: 1, limit: 20),
+      ).called(1);
+      verify(
+        () => repository.listByUser('user-1', page: 1, limit: 20),
+      ).called(1);
+    });
+
+    test(
+      'sucesso não quebra quando as listas ainda não foram carregadas',
+      () async {
+        when(() => repository.delete('rv-1')).thenAnswer((_) async {});
+
+        await container
+            .read(reviewDetailControllerProvider.notifier)
+            .delete('rv-1');
+
+        expect(
+          container.read(reviewDetailControllerProvider),
+          isA<ReviewDetailDeleted>(),
+        );
+        expect(
+          container.read(reviewsControllerProvider),
+          isA<ReviewsInitial>(),
+        );
+      },
+    );
   });
 }

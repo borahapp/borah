@@ -11,6 +11,7 @@ import '../../../../design_system/components/feedback/app_animated_switcher.dart
 import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
+import '../../../../design_system/components/media/borah_photo_viewer.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_radius.dart';
@@ -421,13 +422,20 @@ class _ReviewsSection extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               itemCount: albumPhotos.length,
               separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-              itemBuilder: (context, index) => ClipRRect(
-                borderRadius: AppRadius.radiusMd,
-                child: Image.network(
-                  albumPhotos[index],
-                  width: 96,
-                  height: 96,
-                  fit: BoxFit.cover,
+              itemBuilder: (context, index) => GestureDetector(
+                onTap: () => BorahPhotoViewer.open(
+                  context,
+                  imageUrls: albumPhotos,
+                  initialIndex: index,
+                ),
+                child: ClipRRect(
+                  borderRadius: AppRadius.radiusMd,
+                  child: Image.network(
+                    albumPhotos[index],
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
@@ -504,13 +512,19 @@ class _ReviewsSection extends ConsumerWidget {
                                     Text(entry.$2.comment!),
                                   if (entry.$2.photoUrl != null) ...[
                                     const SizedBox(height: AppSpacing.xs),
-                                    ClipRRect(
-                                      borderRadius: AppRadius.radiusSm,
-                                      child: Image.network(
-                                        entry.$2.photoUrl!,
-                                        width: 56,
-                                        height: 56,
-                                        fit: BoxFit.cover,
+                                    GestureDetector(
+                                      onTap: () => BorahPhotoViewer.open(
+                                        context,
+                                        imageUrls: [entry.$2.photoUrl!],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: AppRadius.radiusSm,
+                                        child: Image.network(
+                                          entry.$2.photoUrl!,
+                                          width: 56,
+                                          height: 56,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     ),
                                   ],

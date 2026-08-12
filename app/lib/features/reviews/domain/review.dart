@@ -21,6 +21,10 @@ class Review {
     required this.photosCount,
     required this.createdAt,
     required this.updatedAt,
+    this.authorFullName,
+    this.authorAvatarUrl,
+    this.restaurantName,
+    this.restaurantCoverImage,
   });
 
   final String id;
@@ -36,6 +40,21 @@ class Review {
   final int photosCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Resolvidos separadamente pelo repositório (2B.3) - `reviews.user_id`
+  /// referencia `auth.users`, sem FK direta para `profiles` (mesma
+  /// limitação já documentada/corrigida no Feed), então nunca vêm
+  /// embutidos na linha de `reviews` - só populados quando o repositório
+  /// os resolveu (ex.: chamadas de listagem/detalhe), `null` quando não
+  /// aplicável.
+  final String? authorFullName;
+  final String? authorAvatarUrl;
+
+  /// `reviews.restaurant_id` tem FK direta para `restaurants.id` - estes
+  /// vêm de um embed PostgREST válido, sempre presentes junto com a
+  /// própria linha quando resolvidos pelo repositório.
+  final String? restaurantName;
+  final String? restaurantCoverImage;
 
   /// `true` quando a avaliação tem os 4 critérios (criada/editada pela UI
   /// pós-F16) — usado pela UI para decidir entre mostrar o detalhamento

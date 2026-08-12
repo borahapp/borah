@@ -30,9 +30,12 @@ class ReviewRepositoryImpl implements ReviewRepository {
 
       final hasNextPage = rows.length > limit;
       final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+      final profilesById = await _fetchProfilesById(
+        pageRows.map((row) => row['user_id'] as String),
+      );
 
       return PagedResult<Review>(
-        items: pageRows.map(_mapRow).toList(),
+        items: pageRows.map((row) => _mapRow(row, profilesById)).toList(),
         page: page,
         limit: limit,
         hasNextPage: hasNextPage,
@@ -55,9 +58,12 @@ class ReviewRepositoryImpl implements ReviewRepository {
 
       final hasNextPage = rows.length > limit;
       final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+      final profilesById = await _fetchProfilesById(
+        pageRows.map((row) => row['user_id'] as String),
+      );
 
       return PagedResult<Review>(
-        items: pageRows.map(_mapRow).toList(),
+        items: pageRows.map((row) => _mapRow(row, profilesById)).toList(),
         page: page,
         limit: limit,
         hasNextPage: hasNextPage,
@@ -69,7 +75,8 @@ class ReviewRepositoryImpl implements ReviewRepository {
   Future<Review> getById(String id) {
     return _guard(() async {
       final row = await _datasource.fetchById(id);
-      return _mapRow(row);
+      final profilesById = await _fetchProfilesById([row['user_id'] as String]);
+      return _mapRow(row, profilesById);
     });
   }
 
@@ -95,7 +102,8 @@ class ReviewRepositoryImpl implements ReviewRepository {
         'cost_benefit_score': costBenefitScore,
         'comment': comment,
       });
-      return _mapRow(row);
+      final profilesById = await _fetchProfilesById([userId]);
+      return _mapRow(row, profilesById);
     });
   }
 
@@ -118,7 +126,8 @@ class ReviewRepositoryImpl implements ReviewRepository {
         'cost_benefit_score': costBenefitScore,
         'comment': comment,
       });
-      return _mapRow(row);
+      final profilesById = await _fetchProfilesById([row['user_id'] as String]);
+      return _mapRow(row, profilesById);
     });
   }
 
@@ -147,7 +156,8 @@ class ReviewRepositoryImpl implements ReviewRepository {
       final current = await _datasource.fetchById(id);
       final newCount = (current['photos_count'] as int) + 1;
       final row = await _datasource.updatePatch(id, {'photos_count': newCount});
-      return _mapRow(row);
+      final profilesById = await _fetchProfilesById([row['user_id'] as String]);
+      return _mapRow(row, profilesById);
     });
   }
 
@@ -197,7 +207,24 @@ class ReviewRepositoryImpl implements ReviewRepository {
     });
   }
 
-  Review _mapRow(Map<String, dynamic> row) {
+  /// Busca perfis em lote (dedup via `Set`) - nunca 1 consulta por review,
+  /// mesmo padrão de `EventReviewRepositoryImpl.listByEvent`/
+  /// `FeedRepositoryImpl._compose` (2B.3).
+  Future<Map<String, Map<String, dynamic>>> _fetchProfilesById(
+    Iterable<String> userIds,
+  ) async {
+    final ids = userIds.toSet().toList();
+    if (ids.isEmpty) return const {};
+    final rows = await _datasource.fetchProfilesByIds(ids);
+    return {for (final row in rows) row['id'] as String: row};
+  }
+
+  Review _mapRow(
+    Map<String, dynamic> row,
+    Map<String, Map<String, dynamic>> profilesById,
+  ) {
+    final restaurant = row['restaurants'] as Map<String, dynamic>;
+    final profile = profilesById[row['user_id']];
     return Review(
       id: row['id'] as String,
       restaurantId: row['restaurant_id'] as String,
@@ -212,6 +239,10 @@ class ReviewRepositoryImpl implements ReviewRepository {
       photosCount: row['photos_count'] as int,
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
+      authorFullName: profile?['full_name'] as String?,
+      authorAvatarUrl: profile?['avatar_url'] as String?,
+      restaurantName: restaurant['name'] as String?,
+      restaurantCoverImage: restaurant['cover_image'] as String?,
     );
   }
 
