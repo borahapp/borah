@@ -134,9 +134,38 @@ jobs:
   # nem entre si, nem contra outra execução concorrente deste workflow.
   # Trade-off aceito (correção sobre velocidade, ver
   # docs/operations/CI_CD_SECRETS.md §4).
+  prepare_avd:
+    name: Prepare Android AVD
+    needs: [analyze, unit_test, build_android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-google_apis-x86_64
+
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -noaudio -gpu swiftshader_indirect -no-boot-anim
+          emulator-boot-timeout: 900
+          disable-animations: false
+          script: echo "AVD criado e snapshot gerado para cache."
+
   integration_test:
     name: Integration Test (${{ matrix.test_file }})
-    needs: [analyze, unit_test, build_android]
+    needs: [analyze, unit_test, build_android, prepare_avd]
     runs-on: ubuntu-latest
     environment: qa
     concurrency:
@@ -199,6 +228,15 @@ jobs:
 
       - run: flutter pub get
 
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-google_apis-x86_64
+
       - name: Run Integration Test on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -206,6 +244,9 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -noaudio -gpu swiftshader_indirect -no-boot-anim
+          emulator-boot-timeout: 900
           disable-animations: true
           script: >
             flutter test ${{ matrix.test_file }}
