@@ -150,10 +150,30 @@ class _FeedTabViewState extends ConsumerState<_FeedTabView>
           message: message,
           onRetry: _load,
         ),
-        FeedEmpty() => EmptyState(
+        // 2B.3-G (fix do F2 da auditoria 2B.3-F): antes, só os ramos
+        // Refreshing/Loaded tinham `RefreshIndicator` - puxar para
+        // atualizar não fazia nada com a aba vazia (exatamente o estado
+        // de "Seguindo" logo após seguir alguém pela 1ª vez).
+        // `LayoutBuilder`+`SizedBox` preserva o `Center` de `EmptyState`
+        // dentro de uma `ListView` (altura senão ilimitada no eixo de
+        // rolagem).
+        FeedEmpty() => RefreshIndicator(
           key: const ValueKey('empty'),
-          message: widget.emptyMessage,
-          action: widget.emptyAction,
+          onRefresh: _refresh,
+          child: LayoutBuilder(
+            builder: (context, constraints) => ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: constraints.maxHeight,
+                  child: EmptyState(
+                    message: widget.emptyMessage,
+                    action: widget.emptyAction,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         FeedRefreshing(:final result) ||
         FeedLoaded(:final result) => RefreshIndicator(

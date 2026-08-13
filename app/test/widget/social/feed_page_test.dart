@@ -393,6 +393,51 @@ void main() {
     );
   });
 
+  testWidgets(
+    // 2B.3-G (fix do F2 da auditoria 2B.3-F): antes, só os ramos
+    // Refreshing/Loaded tinham `RefreshIndicator` - puxar para atualizar
+    // com a lista vazia (exatamente o estado da aba "Seguindo" logo após
+    // seguir alguém pela 1ª vez) não fazia nada.
+    'aba vazia (FeedEmpty) permite puxar para atualizar e reflete o novo '
+    'resultado',
+    (tester) async {
+      _stubEmptyBoth(repository);
+
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Comece a seguir pessoas e grupos para personalizar seu Feed.',
+        ),
+        findsOneWidget,
+      );
+
+      when(
+        () => repository.listForYou('user-1', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => PagedResult(
+          items: [_reviewItem()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await tester.fling(
+        find.byType(ListView).first,
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      verify(
+        () => repository.listForYou('user-1', page: 1, limit: 20),
+      ).called(2);
+      expect(find.text('4.5'), findsOneWidget);
+    },
+  );
+
   testWidgets('atende às diretrizes básicas de acessibilidade', (tester) async {
     when(() => repository.listForYou('user-1', page: 1, limit: 20)).thenAnswer(
       (_) async => PagedResult(

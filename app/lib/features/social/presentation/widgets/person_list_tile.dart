@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
+import '../../../users/application/user_profile_controller.dart';
 import '../../../users/domain/user_profile.dart';
 import '../../../users/presentation/widgets/profile_avatar.dart';
+import '../../application/feed_controller.dart';
+import '../../application/public_profile_provider.dart';
 import '../../data/follower_repository_impl.dart';
 
 /// Linha de pessoa reutilizada por Busca, "Você pode conhecer" e
@@ -60,6 +63,15 @@ class _PersonListTileState extends ConsumerState<PersonListTile> {
         await repository.follow(currentUserId, widget.person.id);
       }
       if (!mounted) return;
+      // 2B.3-G (fix do F2 da auditoria 2B.3-F): mesma atualização de
+      // dependentes que `FollowController.toggle` - esta linha usa o
+      // repositório direto (ver comentário da classe), não o controller,
+      // mas o efeito colateral em Feed/Perfil precisa ser o mesmo.
+      ref
+          .read(userProfileControllerProvider.notifier)
+          .loadProfile(currentUserId);
+      ref.invalidate(publicProfileProvider(widget.person.id));
+      ref.read(feedFollowingControllerProvider.notifier).refresh();
       setState(() {
         _isFollowing = !_isFollowing;
         _isSubmitting = false;
