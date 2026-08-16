@@ -41,21 +41,32 @@ class FeedRepositoryImpl implements FeedRepository {
         viewerId: userId,
         page: page,
         limit: limit,
-        fetchRelevantIds: () => _datasource.fetchFollowingIds(userId),
+        fetchRelevantIds: () => _relevantIdsFollowing(userId),
         includeGroupJoins: false,
       ),
     );
   }
 
-  /// "Pessoas que sigo" + "pessoas relacionadas através de grupos em
-  /// comum"/"pessoas dos meus grupos" (FASE SOCIAL 4, ajuste 1) - as duas
-  /// últimas descrevem a mesma relação (membros de um grupo do qual
-  /// também participo), por isso uma única fonte (`fetchGroupPeerIds`)
-  /// atende as duas.
+  /// "Eu mesmo" + "Pessoas que sigo" (FEED-03 acrescenta o próprio
+  /// usuário - mesmo raciocínio de [_relevantIdsForYou]).
+  Future<List<String>> _relevantIdsFollowing(String userId) async {
+    final following = await _datasource.fetchFollowingIds(userId);
+    return {userId, ...following}.toList();
+  }
+
+  /// "Eu mesmo" + "Pessoas que sigo" + "pessoas relacionadas através de
+  /// grupos em comum"/"pessoas dos meus grupos" (FASE SOCIAL 4, ajuste 1;
+  /// FEED-03 acrescenta o próprio usuário) - as duas últimas descrevem a
+  /// mesma relação (membros de um grupo do qual também participo), por
+  /// isso uma única fonte (`fetchGroupPeerIds`) atende as duas.
+  ///
+  /// FEED-03: sem incluir [userId] aqui, as próprias reviews/badges do
+  /// usuário nunca eram buscadas (a causa raiz não era um filtro de
+  /// exclusão - era esta lista de candidatos nunca conter o próprio id).
   Future<List<String>> _relevantIdsForYou(String userId) async {
     final following = await _datasource.fetchFollowingIds(userId);
     final peers = await _datasource.fetchGroupPeerIds(userId);
-    return {...following, ...peers}.toList();
+    return {userId, ...following, ...peers}.toList();
   }
 
   /// Model A (FASE SOCIAL 4, decisão de arquitetura): sem tabela

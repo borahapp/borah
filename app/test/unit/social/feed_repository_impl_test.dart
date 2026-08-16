@@ -103,13 +103,23 @@ void main() {
   });
 
   group('listForYou', () {
-    test('sem seguidos, sem pares de grupo e sem grupos públicos -> vazio, '
-        'nenhuma fonte de "qualquer usuário" é consultada', () async {
+    test('sem seguidos, sem pares de grupo e sem grupos públicos e sem '
+        'atividade própria -> vazio', () async {
       when(
         () => datasource.fetchFollowingIds('user-1'),
       ).thenAnswer((_) async => []);
       when(
         () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
       ).thenAnswer((_) async => []);
       when(
         () =>
@@ -120,13 +130,87 @@ void main() {
 
       expect(result.items, isEmpty);
       expect(result.hasNextPage, isFalse);
-      verifyNever(
-        () => datasource.fetchReviewsByUsers(any(), limit: any(named: 'limit')),
-      );
-      verifyNever(
-        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
-      );
       verifyNever(() => datasource.fetchProfilesByIds(any()));
+    });
+
+    // FEED-03 TESTE 1: sem seguir ninguém, mas com review própria -> a
+    // review própria aparece mesmo assim - a causa raiz de FEED-02 era
+    // exatamente `relevantIds` nunca conter o próprio usuário quando não
+    // havia mais ninguém relevante.
+    test('FEED-03 TESTE 1: Para Você sem seguir ninguém mostra a própria '
+        'review', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(id: 'rv-own', userId: 'user-1')]);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items, hasLength(1));
+      final item = result.items.single as FeedReviewItem;
+      expect(item.review.id, 'rv-own');
+      expect(item.actor.id, 'user-1');
+    });
+
+    // FEED-03 TESTE 2: review própria + review de seguido aparecem juntas,
+    // ordenadas por created_at desc.
+    test('FEED-03 TESTE 2: Para Você combina review própria e de seguido, '
+        'ordenadas por created_at', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer(
+        (_) async => [
+          _reviewRow(
+            id: 'rv-own',
+            userId: 'user-1',
+            createdAt: '2026-01-05T00:00:00.000Z',
+          ),
+          _reviewRow(
+            id: 'rv-followed',
+            userId: 'user-2',
+            createdAt: '2026-01-03T00:00:00.000Z',
+          ),
+        ],
+      );
+      when(
+        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items.map((i) => i.feedKey), [
+        'review:rv-own',
+        'review:rv-followed',
+      ]);
     });
 
     test('combina reviews + badges + entradas em grupo público, ordenados por '
@@ -138,16 +222,18 @@ void main() {
         () => datasource.fetchGroupPeerIds('user-1'),
       ).thenAnswer((_) async => []);
       when(
-        () => datasource.fetchReviewsByUsers([
-          'user-2',
-        ], limit: any(named: 'limit')),
+        () => datasource.fetchReviewsByUsers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
       ).thenAnswer(
         (_) async => [_reviewRow(createdAt: '2026-01-03T00:00:00.000Z')],
       );
       when(
-        () => datasource.fetchBadgesByUsers([
-          'user-2',
-        ], limit: any(named: 'limit')),
+        () => datasource.fetchBadgesByUsers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
       ).thenAnswer(
         (_) async => [_badgeRow(earnedAt: '2026-01-02T00:00:00.000Z')],
       );
@@ -177,7 +263,7 @@ void main() {
       ).thenAnswer((_) async => ['user-2', 'user-3']);
       when(
         () => datasource.fetchReviewsByUsers(
-          any(that: unorderedEquals(['user-2', 'user-3'])),
+          any(that: unorderedEquals(['user-1', 'user-2', 'user-3'])),
           limit: any(named: 'limit'),
         ),
       ).thenAnswer((_) async => [_reviewRow()]);
@@ -194,7 +280,7 @@ void main() {
       expect(result.items, hasLength(1));
       verify(
         () => datasource.fetchReviewsByUsers(
-          any(that: unorderedEquals(['user-2', 'user-3'])),
+          any(that: unorderedEquals(['user-1', 'user-2', 'user-3'])),
           limit: any(named: 'limit'),
         ),
       ).called(1);
@@ -247,6 +333,16 @@ void main() {
       ).thenAnswer((_) async => []);
       when(
         () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
       ).thenAnswer((_) async => []);
       when(
         () =>
@@ -487,6 +583,232 @@ void main() {
             datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
       );
       verifyNever(() => datasource.fetchGroupPeerIds(any()));
+    });
+
+    // FEED-03 TESTE 3: review própria + review de seguido aparecem juntas
+    // em "Seguindo".
+    test(
+      'FEED-03 TESTE 3: Seguindo combina review própria e de seguido',
+      () async {
+        when(
+          () => datasource.fetchFollowingIds('user-1'),
+        ).thenAnswer((_) async => ['user-2']);
+        when(
+          () => datasource.fetchReviewsByUsers(
+            any(that: unorderedEquals(['user-1', 'user-2'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            _reviewRow(
+              id: 'rv-own',
+              userId: 'user-1',
+              createdAt: '2026-01-05T00:00:00.000Z',
+            ),
+            _reviewRow(
+              id: 'rv-followed',
+              userId: 'user-2',
+              createdAt: '2026-01-03T00:00:00.000Z',
+            ),
+          ],
+        );
+        when(
+          () =>
+              datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+        ).thenAnswer((_) async => []);
+
+        final result = await repository.listFollowing(
+          'user-1',
+          page: 1,
+          limit: 20,
+        );
+
+        expect(result.items.map((i) => i.feedKey), [
+          'review:rv-own',
+          'review:rv-followed',
+        ]);
+      },
+    );
+
+    // FEED-03 TESTE 4: sem seguir ninguém, a review própria ainda aparece
+    // em "Seguindo" - o Feed não deve ficar vazio só porque o usuário não
+    // segue mais ninguém.
+    test('FEED-03 TESTE 4: Seguindo sem seguir ninguém mostra a própria '
+        'review, Feed não fica vazio', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(id: 'rv-own', userId: 'user-1')]);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listFollowing(
+        'user-1',
+        page: 1,
+        limit: 20,
+      );
+
+      expect(result.items, isNotEmpty);
+      final item = result.items.single as FeedReviewItem;
+      expect(item.review.id, 'rv-own');
+    });
+
+    // FEED-03 TESTE 5: review de um usuário não seguido e sem relação de
+    // grupo (B) não aparece para A - a correção não deve transformar o
+    // Feed num mural global.
+    test(
+      'FEED-03 TESTE 5: review de usuário não relevante não aparece',
+      () async {
+        when(
+          () => datasource.fetchFollowingIds('user-1'),
+        ).thenAnswer((_) async => []);
+        // `fetchReviewsByUsers` só é stubado para o conjunto relevante
+        // real (`['user-1']`) - se o repository chamasse com 'user-b'
+        // (não seguido, não peer) incluído, o mock lançaria
+        // MissingStubError e o teste falharia, provando que 'user-b'
+        // nunca entra na consulta.
+        when(
+          () => datasource.fetchReviewsByUsers([
+            'user-1',
+          ], limit: any(named: 'limit')),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchBadgesByUsers([
+            'user-1',
+          ], limit: any(named: 'limit')),
+        ).thenAnswer((_) async => []);
+
+        final result = await repository.listFollowing(
+          'user-1',
+          page: 1,
+          limit: 20,
+        );
+
+        expect(result.items, isEmpty);
+      },
+    );
+
+    // FEED-03 TESTE 6: badge própria aparece no Feed próprio.
+    test('FEED-03 TESTE 6: badge própria aparece em Seguindo', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_badgeRow(id: 'ub-own', userId: 'user-1')]);
+
+      final result = await repository.listFollowing(
+        'user-1',
+        page: 1,
+        limit: 20,
+      );
+
+      final item = result.items.single as FeedBadgeItem;
+      expect(item.id, 'ub-own');
+      expect(item.actor.id, 'user-1');
+    });
+
+    // FEED-03 TESTE 7: se o próprio usuário aparecer simultaneamente em
+    // `following` (ex.: dado incoerente/legado) e como o próprio viewer, o
+    // `Set` elimina a duplicação - cada atividade aparece uma única vez,
+    // nunca dobrada.
+    test('FEED-03 TESTE 7: usuário duplicado entre "eu mesmo" e following não '
+        'duplica a atividade', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-1']);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(id: 'rv-own', userId: 'user-1')]);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listFollowing(
+        'user-1',
+        page: 1,
+        limit: 20,
+      );
+
+      expect(result.items, hasLength(1));
+      verify(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).called(1);
+    });
+
+    // FEED-03 TESTE 8: própria review + 3 de seguido, paginação (limit 2)
+    // não duplica nem perde itens entre páginas.
+    test('FEED-03 TESTE 8: paginação com review própria + reviews de seguido '
+        'não duplica nem perde itens', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2']);
+      when(
+        () => datasource.fetchReviewsByUsers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer(
+        (_) async => [
+          _reviewRow(
+            id: 'rv-own',
+            userId: 'user-1',
+            createdAt: '2026-01-06T00:00:00.000Z',
+          ),
+          _reviewRow(
+            id: 'rv-f1',
+            userId: 'user-2',
+            createdAt: '2026-01-05T00:00:00.000Z',
+          ),
+          _reviewRow(
+            id: 'rv-f2',
+            userId: 'user-2',
+            createdAt: '2026-01-04T00:00:00.000Z',
+          ),
+          _reviewRow(
+            id: 'rv-f3',
+            userId: 'user-2',
+            createdAt: '2026-01-03T00:00:00.000Z',
+          ),
+        ],
+      );
+      when(
+        () => datasource.fetchBadgesByUsers(any(), limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+
+      final page1 = await repository.listFollowing('user-1', page: 1, limit: 2);
+      expect(page1.items.map((i) => i.feedKey), [
+        'review:rv-own',
+        'review:rv-f1',
+      ]);
+      expect(page1.hasNextPage, isTrue);
+
+      final page2 = await repository.listFollowing('user-1', page: 2, limit: 2);
+      expect(page2.items.map((i) => i.feedKey), [
+        'review:rv-f2',
+        'review:rv-f3',
+      ]);
+      expect(page2.hasNextPage, isFalse);
     });
   });
 
