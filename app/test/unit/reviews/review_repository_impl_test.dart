@@ -13,6 +13,12 @@ Map<String, dynamic> _row({
   String userId = 'user-2',
   String restaurantId = 'r-1',
   String restaurantName = 'Outback',
+  String? restaurantCoverImage,
+  // BETA-RELEASE-03: `restaurants` é um embed opcional (não `!inner`) -
+  // `null` simula o PostgREST não resolvendo o embed (o cenário que antes
+  // derrubava a linha inteira da lista com `!inner`; ver
+  // `review_remote_datasource.dart`). `true` (padrão) simula o caso normal.
+  bool includeRestaurant = true,
 }) {
   return {
     'id': id,
@@ -24,11 +30,13 @@ Map<String, dynamic> _row({
     'photos_count': 0,
     'created_at': '2026-01-03T00:00:00.000Z',
     'updated_at': '2026-01-03T00:00:00.000Z',
-    'restaurants': {
-      'id': restaurantId,
-      'name': restaurantName,
-      'cover_image': null,
-    },
+    'restaurants': includeRestaurant
+        ? {
+            'id': restaurantId,
+            'name': restaurantName,
+            'cover_image': restaurantCoverImage,
+          }
+        : null,
   };
 }
 
@@ -190,6 +198,111 @@ void main() {
         expect(review.restaurantName, 'Outback');
       },
     );
+  });
+
+  // BETA-RELEASE-03: regressão da causa raiz de BETA-RELEASE-02 - a lista
+  // "Avaliações" ficava vazia porque `restaurants!inner` derrubava a linha
+  // inteira sempre que o embed não resolvia. `restaurants(...)` (embed
+  // opcional) preserva a review nesse caso - ver `_mapRow` em
+  // `review_repository_impl.dart` e `_reviewsSelect` no datasource.
+  group('BETA-RELEASE-03 - embed opcional de restaurants', () {
+    test(
+      'TESTE 1: embed de restaurant presente preenche nome e capa',
+      () async {
+        when(
+          () => datasource.listByRestaurant('r-1', page: 1, limit: 20),
+        ).thenAnswer(
+          (_) async => [
+            _row(
+              restaurantName: 'Outback',
+              restaurantCoverImage: 'https://cdn.example/outback.jpg',
+            ),
+          ],
+        );
+
+        final result = await repository.listByRestaurant(
+          'r-1',
+          page: 1,
+          limit: 20,
+        );
+
+        final review = result.items.single;
+        expect(review.restaurantName, 'Outback');
+        expect(review.restaurantCoverImage, 'https://cdn.example/outback.jpg');
+      },
+    );
+
+    test(
+      'TESTE 2: embed de restaurant nulo não descarta a review nem lança',
+      () async {
+        when(
+          () => datasource.listByRestaurant('r-1', page: 1, limit: 20),
+        ).thenAnswer((_) async => [_row(includeRestaurant: false)]);
+
+        final result = await repository.listByRestaurant(
+          'r-1',
+          page: 1,
+          limit: 20,
+        );
+
+        expect(result.items, hasLength(1));
+        final review = result.items.single;
+        expect(review.restaurantName, isNull);
+        expect(review.restaurantCoverImage, isNull);
+      },
+    );
+
+    test(
+      'TESTE 3: lista mista (embed presente + embed nulo) mantém as duas reviews',
+      () async {
+        when(
+          () => datasource.listByRestaurant('r-1', page: 1, limit: 20),
+        ).thenAnswer(
+          (_) async => [
+            _row(id: 'rv-1', userId: 'user-2', restaurantName: 'Outback'),
+            _row(id: 'rv-2', userId: 'user-2', includeRestaurant: false),
+          ],
+        );
+
+        final result = await repository.listByRestaurant(
+          'r-1',
+          page: 1,
+          limit: 20,
+        );
+
+        expect(result.items, hasLength(2));
+        expect(result.items[0].id, 'rv-1');
+        expect(result.items[0].restaurantName, 'Outback');
+        expect(result.items[1].id, 'rv-2');
+        expect(result.items[1].restaurantName, isNull);
+      },
+    );
+
+    test('TESTE 5 (paginação): page/limit continuam repassados sem alteração '
+        'ao datasource mesmo com embed nulo', () async {
+      when(
+        () => datasource.listByRestaurant('r-1', page: 2, limit: 5),
+      ).thenAnswer(
+        (_) async => List.generate(
+          6,
+          (i) => _row(id: 'rv-$i', includeRestaurant: i.isEven),
+        ),
+      );
+
+      final result = await repository.listByRestaurant(
+        'r-1',
+        page: 2,
+        limit: 5,
+      );
+
+      verify(
+        () => datasource.listByRestaurant('r-1', page: 2, limit: 5),
+      ).called(1);
+      expect(result.page, 2);
+      expect(result.limit, 5);
+      expect(result.hasNextPage, isTrue);
+      expect(result.items, hasLength(5));
+    });
   });
 
   group('update', () {

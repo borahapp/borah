@@ -223,7 +223,12 @@ class ReviewRepositoryImpl implements ReviewRepository {
     Map<String, dynamic> row,
     Map<String, Map<String, dynamic>> profilesById,
   ) {
-    final restaurant = row['restaurants'] as Map<String, dynamic>;
+    // BETA-RELEASE-03: `restaurants` é um embed opcional (não
+    // `!inner` - ver comentário de `_reviewsSelect` no datasource), então
+    // pode vir `null` (linha do PostgREST sem o objeto embutido). Nesse
+    // caso a Review É MANTIDA - apenas `restaurantName`/
+    // `restaurantCoverImage` ficam nulos, nunca descarta a avaliação.
+    final restaurant = row['restaurants'] as Map<String, dynamic>?;
     final profile = profilesById[row['user_id']];
     return Review(
       id: row['id'] as String,
@@ -241,8 +246,8 @@ class ReviewRepositoryImpl implements ReviewRepository {
       updatedAt: DateTime.parse(row['updated_at'] as String),
       authorFullName: profile?['full_name'] as String?,
       authorAvatarUrl: profile?['avatar_url'] as String?,
-      restaurantName: restaurant['name'] as String?,
-      restaurantCoverImage: restaurant['cover_image'] as String?,
+      restaurantName: restaurant?['name'] as String?,
+      restaurantCoverImage: restaurant?['cover_image'] as String?,
     );
   }
 

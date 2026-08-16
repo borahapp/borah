@@ -18,12 +18,23 @@ class ReviewRemoteDatasource {
   static const _profilesTable = 'profiles';
   static const _bucket = 'review-photos';
 
-  /// `restaurants!inner` é um embed válido (`reviews.restaurant_id` tem FK
+  /// `restaurants(...)` é um embed válido (`reviews.restaurant_id` tem FK
   /// direta para `restaurants.id`) - diferente de `profiles`
   /// (`reviews.user_id` referencia `auth.users`, sem FK direta), que por
   /// isso é sempre resolvido à parte via [fetchProfilesByIds] (mesma
   /// limitação/padrão já documentado no Feed e em `event_reviews`).
-  static const _reviewsSelect = '*, restaurants!inner(id, name, cover_image)';
+  ///
+  /// BETA-RELEASE-03: embed NÃO usa `!inner` (join opcional, não
+  /// obrigatório) - `!inner` fazia a linha de `reviews` inteira
+  /// desaparecer do resultado sempre que o embed de `restaurants` não
+  /// resolvia (raiz da regressão "Nenhuma avaliação ainda." reportada em
+  /// BETA-RELEASE-02, mecanismo exato não confirmado, mas correlação de
+  /// código com o commit que introduziu `!inner` era a única mudança
+  /// entre "lista funcionava" e "lista vazia"). Com embed opcional, a
+  /// review nunca é descartada por causa do restaurante; `_mapRow` em
+  /// `review_repository_impl.dart` trata `row['restaurants']` como
+  /// nulável.
+  static const _reviewsSelect = '*, restaurants(id, name, cover_image)';
 
   /// Busca `limit + 1` registros para permitir detectar se há próxima
   /// página sem depender de uma contagem exata (core/models/paged_result.dart).
