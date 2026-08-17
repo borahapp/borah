@@ -125,3 +125,58 @@ class FeedGroupJoinItem extends FeedItem {
   @override
   DateTime get createdAt => joinedAt;
 }
+
+/// "[Pessoa] criou um rolê em [Restaurante]" (FEED-04) - fonte: `events`,
+/// filtrada por `organizer_id IN relevantIds` (mesmos `relevantIds` já
+/// calculados para reviews/badges). Sem filtro de `group_id` no client -
+/// a RLS `events_select_members` (`is_group_member(auth.uid(),
+/// group_id)`) já garante que só rolês de grupos dos quais o viewer é
+/// membro voltam da consulta; "seguir" o organizador nunca é suficiente
+/// sozinho (auditoria FEED-04, confirmado via simulação de RLS).
+///
+/// Sem `title`/`description`/`visibility` - nenhum desses campos existe
+/// em `events` (auditoria FEED-04, seção 2) - não inventados aqui.
+class FeedEventItem extends FeedItem {
+  const FeedEventItem({
+    required this.eventId,
+    required this.actor,
+    required this.groupId,
+    required this.groupName,
+    required this.restaurantId,
+    required this.restaurantName,
+    required this.restaurantCoverImage,
+    required this.scheduledAt,
+    required this.status,
+    required this.confirmedCount,
+    required this.createdAt,
+  });
+
+  final String eventId;
+  @override
+  final FeedActor actor;
+  final String groupId;
+  final String groupName;
+  final String restaurantId;
+  final String restaurantName;
+  final String? restaurantCoverImage;
+  final DateTime scheduledAt;
+
+  /// Valor real do banco (`scheduled`/`completed`/`cancelled` -
+  /// ROLÊ-01), mesmo campo de `Event.status`.
+  final String status;
+
+  /// `event_attendances` com `status = 'confirmed'` - mesma técnica de
+  /// embed filtrado já usada por `Event.confirmedCount`
+  /// (`EventRemoteDatasource._eventColumns`).
+  final int confirmedCount;
+
+  /// Quando o rolê foi criado (`events.created_at`) - usado para
+  /// ordenação, não `scheduled_at` (quando vai acontecer). O Feed é uma
+  /// timeline do que foi publicado agora, mesmo critério de
+  /// Review/Badge/GroupJoin (auditoria FEED-04, seção 12).
+  @override
+  final DateTime createdAt;
+
+  @override
+  String get feedKey => 'event:$eventId';
+}

@@ -109,6 +109,9 @@ class FeedRepositoryImpl implements FeedRepository {
     final groupJoinRows = includeGroupJoins
         ? await _datasource.fetchRecentPublicGroupJoins(limit: candidateLimit)
         : <Map<String, dynamic>>[];
+    final eventRows = relevantIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await _fetchEventsSafely(relevantIds, candidateLimit);
 
     final reviewIds = reviewRows.map((row) => row['id'] as String).toList();
     final likedIds = await _datasource.fetchLikedReviewIds(viewerId, reviewIds);
@@ -125,6 +128,7 @@ class FeedRepositoryImpl implements FeedRepository {
     final authorIds = {
       ...reviewRows.map((row) => row['user_id'] as String),
       ...badgeRows.map((row) => row['user_id'] as String),
+      ...eventRows.map((row) => row['organizer_id'] as String),
     }.toList();
     final profileRows = authorIds.isEmpty
         ? <Map<String, dynamic>>[]
@@ -139,6 +143,7 @@ class FeedRepositoryImpl implements FeedRepository {
       ),
       ...badgeRows.map((row) => _mapBadgeRow(row, profilesById)),
       ...groupJoinRows.map((row) => _mapGroupJoinRow(row, myGroupIds)),
+      ...eventRows.map((row) => _mapEventRow(row, profilesById)),
     ];
 
     items.sort((a, b) {
@@ -164,6 +169,26 @@ class FeedRepositoryImpl implements FeedRepository {
       limit: limit,
       hasNextPage: items.length > to,
     );
+  }
+
+  /// Isola falhas da fonte de Rolês (FEED-04) - diferente das outras
+  /// fontes de `_compose` (que propagam a exceção para o `_guard` externo
+  /// e derrubam o Feed inteiro), uma falha aqui faz `events` virar lista
+  /// vazia silenciosamente: Reviews/Badges/GroupJoin continuam aparecendo
+  /// normalmente. Decisão explícita desta etapa (FEED-04), não aplicada
+  /// retroativamente às demais fontes.
+  Future<List<Map<String, dynamic>>> _fetchEventsSafely(
+    List<String> relevantIds,
+    int candidateLimit,
+  ) async {
+    try {
+      return await _datasource.fetchEventsByOrganizers(
+        relevantIds,
+        limit: candidateLimit,
+      );
+    } on PostgrestException {
+      return const <Map<String, dynamic>>[];
+    }
   }
 
   /// Monta o autor a partir de [userId] + o mapa resolvido em lote em
@@ -251,6 +276,33 @@ class FeedRepositoryImpl implements FeedRepository {
       memberCount: row['member_count'] as int,
       joinedAt: DateTime.parse(row['joined_at'] as String),
       viewerIsMember: myGroupIds.contains(groupId),
+    );
+  }
+
+  FeedEventItem _mapEventRow(
+    Map<String, dynamic> row,
+    Map<String, Map<String, dynamic>> profilesById,
+  ) {
+    final organizerId = row['organizer_id'] as String;
+    final group = row['groups'] as Map<String, dynamic>;
+    final restaurant = row['restaurants'] as Map<String, dynamic>;
+    final attendanceRows = row['event_attendances'] as List?;
+    final confirmedCount = attendanceRows != null && attendanceRows.isNotEmpty
+        ? attendanceRows.first['count'] as int
+        : 0;
+
+    return FeedEventItem(
+      eventId: row['id'] as String,
+      actor: _mapActor(organizerId, profilesById),
+      groupId: row['group_id'] as String,
+      groupName: group['name'] as String,
+      restaurantId: row['restaurant_id'] as String,
+      restaurantName: restaurant['name'] as String,
+      restaurantCoverImage: restaurant['cover_image'] as String?,
+      scheduledAt: DateTime.parse(row['scheduled_at'] as String),
+      status: row['status'] as String,
+      confirmedCount: confirmedCount,
+      createdAt: DateTime.parse(row['created_at'] as String),
     );
   }
 

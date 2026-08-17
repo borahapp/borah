@@ -34,6 +34,7 @@ class SocialFeedCard extends StatelessWidget {
       FeedReviewItem it => _ReviewCard(item: it, currentUserId: currentUserId),
       FeedBadgeItem it => _BadgeCard(item: it),
       FeedGroupJoinItem it => _GroupJoinCard(item: it),
+      FeedEventItem it => _EventCard(item: it),
     };
   }
 }
@@ -443,6 +444,140 @@ class _GroupJoinCard extends StatelessWidget {
                 TextButton(
                   onPressed: () => context.push(groupRoute),
                   child: const Text('Ver grupo'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatScheduledAt(DateTime dateTime) {
+  final day = dateTime.day.toString().padLeft(2, '0');
+  final month = dateTime.month.toString().padLeft(2, '0');
+  final hour = dateTime.hour.toString().padLeft(2, '0');
+  final minute = dateTime.minute.toString().padLeft(2, '0');
+  return '$day/$month/${dateTime.year} às $hour:$minute';
+}
+
+/// "[Pessoa] criou um rolê em [Restaurante]" (FEED-04) - avatar,
+/// contexto, restaurante + capa, data/hora agendada, grupo, contagem de
+/// confirmados. Sem título/descrição (não existem em `events`, auditoria
+/// FEED-04). Navega para a mesma rota de detalhe já usada pelo módulo de
+/// Rolês (`/groups/:groupId/events/:eventId`, `EventDetailPage`) - nenhuma
+/// página nova criada.
+class _EventCard extends StatelessWidget {
+  const _EventCard({required this.item});
+
+  final FeedEventItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final confirmedLabel = item.confirmedCount == 1
+        ? '1 confirmado'
+        : '${item.confirmedCount} confirmados';
+    final eventRoute = '/groups/${item.groupId}/events/${item.eventId}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      child: AppCard(
+        onTap: () => context.push(eventRoute),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _FeedCardHeader(
+              actor: item.actor,
+              createdAt: item.createdAt,
+              onTap: () => context.push('/users/${item.actor.id}'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            RichText(
+              text: TextSpan(
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+                children: [
+                  const TextSpan(text: 'criou um rolê em '),
+                  TextSpan(
+                    text: item.restaurantName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: AppRadius.radiusSm,
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: item.restaurantCoverImage != null
+                        ? Image.network(
+                            item.restaurantCoverImage!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.restaurant),
+                            ),
+                          )
+                        : Container(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: const Icon(Icons.restaurant),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatScheduledAt(item.scheduledAt),
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        item.groupName,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          if (item.status != 'scheduled')
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                right: AppSpacing.sm,
+                              ),
+                              child: AppBadge(
+                                label: item.status == 'cancelled'
+                                    ? 'Cancelado'
+                                    : 'Realizado',
+                                earned: false,
+                              ),
+                            ),
+                          Text(
+                            confirmedLabel,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

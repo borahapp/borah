@@ -18,6 +18,20 @@ class FeedRemoteDatasource {
 
   static const _profilesSelect = 'id, full_name, username, avatar_url';
 
+  /// Mesma lista explícita de colunas de `EventRemoteDatasource._eventColumns`
+  /// (FEED-04) - sem `average_rating`/`total_reviews` (não usados no card do
+  /// Feed) e com `created_at` a mais (usado para ordenação, ver
+  /// `FeedEventItem.createdAt`).
+  static const _eventsSelect =
+      'id,group_id,restaurant_id,organizer_id,scheduled_at,status,created_at,'
+      'groups(name),restaurants(name,cover_image),event_attendances(count)';
+
+  /// Mesma técnica de filtro do embed `event_attendances(count)` já usada
+  /// por `EventRemoteDatasource` - sem isto, o embed contaria TODAS as
+  /// presenças (pending/confirmed/declined), não só as confirmadas.
+  static const _confirmedAttendanceColumn = 'event_attendances.status';
+  static const _confirmedAttendanceValue = 'confirmed';
+
   Future<List<String>> fetchFollowingIds(String userId) async {
     final rows = await _client
         .from('followers')
@@ -118,6 +132,32 @@ class FeedRemoteDatasource {
         .from('profiles')
         .select(_profilesSelect)
         .inFilter('id', ids);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// Rolês organizados por [userIds], mais recentes primeiro, até
+  /// [limit] (FEED-04) - mesmo padrão de `fetchReviewsByUsers`/
+  /// `fetchBadgesByUsers`: 1 consulta em lote, filtrada só por
+  /// `organizer_id`, SEM nenhum filtro de `group_id` no client. A RLS
+  /// `events_select_members` (`is_group_member(auth.uid(), group_id)`,
+  /// ROLE-01) é quem de fato decide quais linhas voltam - um
+  /// `organizer_id` em [userIds] cujo rolê é de um grupo do qual o
+  /// viewer não é membro simplesmente não aparece no resultado
+  /// (filtrado silenciosamente pela RLS, não um erro), mesmo se esse
+  /// organizador for alguém que o viewer segue (auditoria FEED-04:
+  /// "seguir" nunca é suficiente sozinho para ver um rolê).
+  Future<List<Map<String, dynamic>>> fetchEventsByOrganizers(
+    List<String> userIds, {
+    required int limit,
+  }) async {
+    if (userIds.isEmpty) return [];
+    final rows = await _client
+        .from('events')
+        .select(_eventsSelect)
+        .inFilter('organizer_id', userIds)
+        .eq(_confirmedAttendanceColumn, _confirmedAttendanceValue)
+        .order('created_at', ascending: false)
+        .limit(limit);
     return List<Map<String, dynamic>>.from(rows);
   }
 

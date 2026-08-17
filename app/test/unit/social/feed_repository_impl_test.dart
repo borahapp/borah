@@ -57,6 +57,32 @@ Map<String, dynamic> _profileRow({
   };
 }
 
+Map<String, dynamic> _eventRow({
+  String id = 'ev-1',
+  String groupId = 'g-1',
+  String organizerId = 'user-2',
+  String groupName = 'Amigos da Faculdade',
+  String createdAt = '2026-01-03T00:00:00.000Z',
+  String scheduledAt = '2026-02-01T20:00:00.000Z',
+  String status = 'scheduled',
+  int confirmedCount = 3,
+}) {
+  return {
+    'id': id,
+    'group_id': groupId,
+    'restaurant_id': 'r-1',
+    'organizer_id': organizerId,
+    'scheduled_at': scheduledAt,
+    'status': status,
+    'created_at': createdAt,
+    'groups': {'name': groupName},
+    'restaurants': {'name': 'Outback', 'cover_image': null},
+    'event_attendances': [
+      {'count': confirmedCount},
+    ],
+  };
+}
+
 Map<String, dynamic> _groupJoinRow({
   String memberId = 'gm-1',
   String groupId = 'g-1',
@@ -91,6 +117,14 @@ void main() {
       () => datasource.fetchCommentCounts(any()),
     ).thenAnswer((_) async => {});
     when(() => datasource.fetchMyGroupIds(any())).thenAnswer((_) async => {});
+    // Default: sem Rolês, salvo quando um teste FEED-04 sobrescreve - mesmo
+    // papel dos defaults acima (a maioria dos testes não se importa com
+    // `events`, só os da seção "FEED-04" abaixo precisam de um stub
+    // próprio).
+    when(
+      () =>
+          datasource.fetchEventsByOrganizers(any(), limit: any(named: 'limit')),
+    ).thenAnswer((_) async => []);
     // Default: resolve um perfil sintético para qualquer id pedido -
     // testes que não verificam o autor não precisam de um stub próprio;
     // os que verificam sobrescrevem este stub.
@@ -809,6 +843,489 @@ void main() {
         'review:rv-f3',
       ]);
       expect(page2.hasNextPage, isFalse);
+    });
+  });
+
+  group('FEED-04 - Rolês no Feed', () {
+    // TESTE 1: meu Rolê aparece em Para Você.
+    test('meu Rolê aparece em Para Você', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [_eventRow(id: 'ev-own', organizerId: 'user-1')],
+      );
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      final item = result.items.single as FeedEventItem;
+      expect(item.eventId, 'ev-own');
+      expect(item.actor.id, 'user-1');
+    });
+
+    // TESTE 2: Rolê de peer de grupo aparece em Para Você mesmo sem
+    // follow - mesma relação já usada para reviews/badges
+    // (`fetchGroupPeerIds`), sem exigir `fetchFollowingIds` incluir o
+    // organizador.
+    test(
+      'Rolê de peer de grupo aparece em Para Você mesmo sem follow',
+      () async {
+        when(
+          () => datasource.fetchFollowingIds('user-1'),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchGroupPeerIds('user-1'),
+        ).thenAnswer((_) async => ['user-peer']);
+        when(
+          () => datasource.fetchReviewsByUsers(
+            any(that: unorderedEquals(['user-1', 'user-peer'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchBadgesByUsers(
+            any(that: unorderedEquals(['user-1', 'user-peer'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchRecentPublicGroupJoins(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchEventsByOrganizers(
+            any(that: unorderedEquals(['user-1', 'user-peer'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [_eventRow(id: 'ev-peer', organizerId: 'user-peer')],
+        );
+
+        final result = await repository.listForYou(
+          'user-1',
+          page: 1,
+          limit: 20,
+        );
+
+        final item = result.items.single as FeedEventItem;
+        expect(item.eventId, 'ev-peer');
+        expect(item.actor.id, 'user-peer');
+      },
+    );
+
+    // TESTE 3 + 4: Rolê de pessoa seguida sem grupo em comum, ou de grupo
+    // do qual o viewer não é membro, NÃO aparece. Nos dois casos a causa
+    // é a mesma: a RLS `events_select_members` filtra a linha no banco -
+    // o teste simula esse comportamento fazendo o datasource devolver
+    // lista vazia mesmo com o organizador presente em `relevantIds`
+    // (exatamente o que a RLS faria de verdade, "seguir" sozinho nunca
+    // basta - auditoria FEED-04).
+    test('Rolê de pessoa seguida sem grupo em comum (ou de grupo do qual não '
+        'sou membro) NÃO aparece - RLS filtra mesmo com organizador em '
+        'relevantIds', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-distante']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(
+          any(that: unorderedEquals(['user-1', 'user-distante'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers(
+          any(that: unorderedEquals(['user-1', 'user-distante'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      // Mesmo com 'user-distante' presente em relevantIds, o datasource
+      // (RLS de verdade) não devolve o Rolê dele - grupo diferente do
+      // viewer.
+      when(
+        () => datasource.fetchEventsByOrganizers(
+          any(that: unorderedEquals(['user-1', 'user-distante'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => []);
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items, isEmpty);
+    });
+
+    // TESTE 5: meu Rolê aparece em Seguindo mesmo sem seguir ninguém.
+    test('meu Rolê aparece em Seguindo mesmo sem seguir ninguém', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [_eventRow(id: 'ev-own', organizerId: 'user-1')],
+      );
+
+      final result = await repository.listFollowing(
+        'user-1',
+        page: 1,
+        limit: 20,
+      );
+
+      expect(result.items, isNotEmpty);
+      final item = result.items.single as FeedEventItem;
+      expect(item.eventId, 'ev-own');
+    });
+
+    // TESTE 6: Rolê de pessoa seguida + grupo em comum aparece em
+    // Seguindo (único caso em que "seguir" e "ver o Rolê" coincidem).
+    test(
+      'Rolê de pessoa seguida + grupo em comum aparece em Seguindo',
+      () async {
+        when(
+          () => datasource.fetchFollowingIds('user-1'),
+        ).thenAnswer((_) async => ['user-2']);
+        when(
+          () => datasource.fetchReviewsByUsers(
+            any(that: unorderedEquals(['user-1', 'user-2'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchBadgesByUsers(
+            any(that: unorderedEquals(['user-1', 'user-2'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => datasource.fetchEventsByOrganizers(
+            any(that: unorderedEquals(['user-1', 'user-2'])),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [_eventRow(id: 'ev-seguido', organizerId: 'user-2')],
+        );
+
+        final result = await repository.listFollowing(
+          'user-1',
+          page: 1,
+          limit: 20,
+        );
+
+        final item = result.items.single as FeedEventItem;
+        expect(item.eventId, 'ev-seguido');
+        expect(item.actor.id, 'user-2');
+      },
+    );
+
+    // TESTE 7: o mesmo Rolê não aparece duplicado, mesmo se o organizador
+    // estiver presente simultaneamente como "eu mesmo" e em `following`
+    // (dado incoerente/legado, mesmo cenário do FEED-03 TESTE 7) - o
+    // `Set` de `relevantIds` já resolve isso antes da consulta.
+    test('o mesmo Rolê não aparece duplicado', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-1']);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [_eventRow(id: 'ev-own', organizerId: 'user-1')],
+      );
+
+      final result = await repository.listFollowing(
+        'user-1',
+        page: 1,
+        limit: 20,
+      );
+
+      expect(result.items, hasLength(1));
+      verify(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).called(1);
+    });
+
+    // TESTE 8: paginação continua funcionando com Rolês misturados a
+    // outras fontes.
+    test('paginação continua funcionando com Rolês', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [
+          _eventRow(id: 'ev-1', createdAt: '2026-01-06T00:00:00.000Z'),
+          _eventRow(id: 'ev-2', createdAt: '2026-01-05T00:00:00.000Z'),
+          _eventRow(id: 'ev-3', createdAt: '2026-01-04T00:00:00.000Z'),
+        ],
+      );
+
+      final page1 = await repository.listForYou('user-1', page: 1, limit: 2);
+      expect(page1.items.map((i) => i.feedKey), ['event:ev-1', 'event:ev-2']);
+      expect(page1.hasNextPage, isTrue);
+
+      final page2 = await repository.listForYou('user-1', page: 2, limit: 2);
+      expect(page2.items.map((i) => i.feedKey), ['event:ev-3']);
+      expect(page2.hasNextPage, isFalse);
+    });
+
+    // TESTE 9: ordenação por created_at desc funciona junto com
+    // Reviews/Badges/GroupJoin - Rolê entra na mesma timeline, ordenado
+    // pelo mesmo critério (não por `scheduled_at`).
+    test('ordenação por created_at desc funciona junto com Reviews/Badges/'
+        'GroupJoin', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [_reviewRow(createdAt: '2026-01-03T00:00:00.000Z')],
+      );
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [_badgeRow(earnedAt: '2026-01-02T00:00:00.000Z')],
+      );
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [_groupJoinRow(joinedAt: '2026-01-04T00:00:00.000Z')],
+      );
+      when(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) async => [
+          _eventRow(
+            id: 'ev-1',
+            // `scheduled_at` deliberadamente MAIS CEDO que os outros
+            // itens - só `created_at` (2026-01-05, o mais recente de
+            // todos) decide a posição, provando que a ordenação usa
+            // "quando foi criado", não "quando vai acontecer".
+            scheduledAt: '2020-01-01T00:00:00.000Z',
+            createdAt: '2026-01-05T00:00:00.000Z',
+          ),
+        ],
+      );
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items.map((i) => i.feedKey), [
+        'event:ev-1', // 2026-01-05
+        'group_join:gm-1', // 2026-01-04
+        'review:rv-1', // 2026-01-03
+        'badge:ub-1', // 2026-01-02
+      ]);
+    });
+
+    // TESTE 10: Feed sem Rolês continua funcionando (regressão) - as
+    // outras fontes seguem normalmente quando `events` está vazio (setUp
+    // já garante isso por padrão; teste explícito para deixar a garantia
+    // visível).
+    test('Feed sem Rolês continua funcionando', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(userId: 'user-1')]);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      // Sem stub próprio de fetchEventsByOrganizers - usa o default do
+      // setUp() (lista vazia).
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items, hasLength(1));
+      expect(result.items.single, isA<FeedReviewItem>());
+    });
+
+    // TESTE 11: falha na fonte events não derruba Reviews/Badges - o
+    // Feed continua respondendo normalmente com as outras fontes, em vez
+    // de propagar a exceção e derrubar a página inteira.
+    test('falha na fonte events não derruba Reviews/Badges', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_reviewRow(userId: 'user-1')]);
+      when(
+        () => datasource.fetchBadgesByUsers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async => [_badgeRow(id: 'ub-own', userId: 'user-1')]);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchEventsByOrganizers([
+          'user-1',
+        ], limit: any(named: 'limit')),
+      ).thenThrow(const PostgrestException(message: 'RLS/rede falhou'));
+
+      final result = await repository.listForYou('user-1', page: 1, limit: 20);
+
+      expect(result.items, hasLength(2));
+      expect(result.items.whereType<FeedReviewItem>(), hasLength(1));
+      expect(result.items.whereType<FeedBadgeItem>(), hasLength(1));
+      expect(result.items.whereType<FeedEventItem>(), isEmpty);
+    });
+
+    // TESTE 12: nenhum N+1 - uma única chamada em lote para events (nunca
+    // uma por Rolê), e os organizadores entram na MESMA consulta batched
+    // de perfis já usada por reviews/badges (nunca uma consulta de
+    // perfil extra só para events).
+    test('nenhum N+1: uma chamada em lote para events, perfis dos '
+        'organizadores resolvidos junto com reviews/badges', () async {
+      when(
+        () => datasource.fetchFollowingIds('user-1'),
+      ).thenAnswer((_) async => ['user-2']);
+      when(
+        () => datasource.fetchGroupPeerIds('user-1'),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchReviewsByUsers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => [_reviewRow(userId: 'user-2')]);
+      when(
+        () => datasource.fetchBadgesByUsers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => []);
+      when(
+        () =>
+            datasource.fetchRecentPublicGroupJoins(limit: any(named: 'limit')),
+      ).thenAnswer((_) async => []);
+      when(
+        () => datasource.fetchEventsByOrganizers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer(
+        (_) async => [
+          _eventRow(id: 'ev-1', organizerId: 'user-1'),
+          _eventRow(id: 'ev-2', organizerId: 'user-2'),
+          _eventRow(id: 'ev-3', organizerId: 'user-2'),
+        ],
+      );
+
+      await repository.listForYou('user-1', page: 1, limit: 20);
+
+      verify(
+        () => datasource.fetchEventsByOrganizers(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+          limit: any(named: 'limit'),
+        ),
+      ).called(1);
+      verify(
+        () => datasource.fetchProfilesByIds(
+          any(that: unorderedEquals(['user-1', 'user-2'])),
+        ),
+      ).called(1);
     });
   });
 
