@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,7 +42,10 @@ class CreateEventPage extends ConsumerStatefulWidget {
 }
 
 class _CreateEventPageState extends ConsumerState<CreateEventPage> {
+  static const _restaurantSearchDebounce = Duration(milliseconds: 500);
+
   final _searchController = TextEditingController();
+  Timer? _restaurantSearchTimer;
 
   /// 0 = buscar/selecionar restaurante; 1 = data/hora.
   int _step = 0;
@@ -50,14 +55,39 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
 
   @override
   void dispose() {
+    _restaurantSearchTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   void _search() {
+    // Enter dispara a busca na hora - cancela um debounce pendente do
+    // `onChanged` para não disparar uma segunda busca (mesma query) 500ms
+    // depois, redundante.
+    _restaurantSearchTimer?.cancel();
     ref
         .read(eventRestaurantSearchControllerProvider.notifier)
         .search(_searchController.text);
+  }
+
+  /// ROLE-SEARCH-02: até aqui, o campo só buscava em `onSubmit` (Enter) -
+  /// digitar não tinha efeito nenhum (achado do ROLE-SEARCH-01). Mesmo
+  /// padrão de debounce de `SearchGoogleRestaurantPage._onQueryChanged`
+  /// (500ms, cancela/reinicia a cada tecla) - `onSubmit` continua intacto
+  /// abaixo, então Enter segue funcionando imediatamente, sem depender do
+  /// debounce. Texto vazio (apagar tudo/botão "limpar" do
+  /// `AppSearchField`) é tratado à parte: cancela a busca pendente e
+  /// limpa o estado na hora, sem esperar os 500ms - `search('')` do
+  /// controller já é síncrono até a linha do estado, não faz request.
+  void _onRestaurantQueryChanged(String value) {
+    _restaurantSearchTimer?.cancel();
+    if (value.trim().isEmpty) {
+      ref.read(eventRestaurantSearchControllerProvider.notifier).search(value);
+      return;
+    }
+    _restaurantSearchTimer = Timer(_restaurantSearchDebounce, () {
+      ref.read(eventRestaurantSearchControllerProvider.notifier).search(value);
+    });
   }
 
   void _selectRestaurant(Restaurant restaurant) {
@@ -230,6 +260,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
             AppSearchField(
               controller: _searchController,
               label: 'Buscar restaurante',
+              onChanged: _onRestaurantQueryChanged,
               onSubmit: (_) => _search(),
             ),
             const SizedBox(height: AppSpacing.lg),

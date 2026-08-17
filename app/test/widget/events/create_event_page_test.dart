@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event.dart';
@@ -136,7 +138,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField).first, 'Sushi Novo');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      // ROLE-SEARCH-02: busca automática (debounce) - digitar já é
+      // suficiente, sem precisar simular Enter.
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
       expect(find.text('Nenhum restaurante encontrado.'), findsOneWidget);
@@ -164,6 +168,208 @@ void main() {
       verify(() => repository.search(any())).called(1);
     },
   );
+
+  group('ROLE-SEARCH-02 - busca automática (debounce)', () {
+    testWidgets(
+      'digitar sem pressionar Enter dispara a busca depois de 500ms de '
+      'debounce',
+      (tester) async {
+        when(() => repository.search(any())).thenAnswer(
+          (_) async => PagedResult(
+            items: [_restaurant(name: 'Madero')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        await tester.pumpWidget(_wrap(repository));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).first, 'Madero');
+
+        // Menos de 500ms - ainda não deve ter disparado.
+        await tester.pump(const Duration(milliseconds: 100));
+        verifyNever(() => repository.search(any()));
+
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+
+        verify(() => repository.search(any())).called(1);
+        expect(find.text('Trocar restaurante'), findsNothing);
+        expect(find.text('Madero'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'digitar várias letras rapidamente resulta em apenas 1 busca (só a '
+      'última tecla, depois do debounce)',
+      (tester) async {
+        when(() => repository.search(any())).thenAnswer(
+          (_) async => PagedResult(
+            items: [_restaurant(name: 'Madero')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        await tester.pumpWidget(_wrap(repository));
+        await tester.pumpAndSettle();
+
+        final field = find.byType(TextFormField).first;
+        await tester.enterText(field, 'M');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.enterText(field, 'Ma');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.enterText(field, 'Mad');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.enterText(field, 'Madero');
+
+        verifyNever(() => repository.search(any()));
+
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+
+        verify(() => repository.search(any())).called(1);
+      },
+    );
+
+    testWidgets(
+      'ENTER continua disparando a busca imediatamente, sem esperar o '
+      'debounce',
+      (tester) async {
+        when(() => repository.search(any())).thenAnswer(
+          (_) async => PagedResult(
+            items: [_restaurant(name: 'Madero')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        await tester.pumpWidget(_wrap(repository));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).first, 'Madero');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+
+        // Já buscou via Enter, sem esperar os 500ms do debounce.
+        verify(() => repository.search(any())).called(1);
+        expect(find.text('Madero'), findsWidgets);
+
+        // Enter cancela o debounce pendente - avançar o tempo não deve
+        // disparar uma segunda busca redundante com a mesma query.
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
+        verifyNever(() => repository.search(any()));
+      },
+    );
+
+    testWidgets('apagar o texto cancela a busca pendente e limpa os resultados '
+        'antigos imediatamente', (tester) async {
+      when(() => repository.search(any())).thenAnswer(
+        (_) async => PagedResult(
+          items: [_restaurant(name: 'Madero')],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+
+      final field = find.byType(TextFormField).first;
+      await tester.enterText(field, 'Madero');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Madero'), findsWidgets);
+      verify(() => repository.search(any())).called(1);
+
+      await tester.enterText(field, '');
+      await tester.pump();
+
+      // Limpo na hora, sem esperar o debounce - nenhuma tela de
+      // resultado/estado antigo permanece.
+      expect(find.text('Nenhum restaurante encontrado.'), findsNothing);
+      expect(find.text('Trocar restaurante'), findsNothing);
+
+      // E o debounce cancelado não dispara uma nova busca depois.
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+      verifyNever(() => repository.search(any()));
+    });
+
+    testWidgets(
+      'busca consecutiva rápida: só o resultado da última query buscada é '
+      'exibido, mesmo se uma resposta antiga chegar depois',
+      (tester) async {
+        final maderoCompleter = Completer<PagedResult<Restaurant>>();
+        when(
+          () => repository.search(
+            any(
+              that: isA<RestaurantSearchFilters>().having(
+                (f) => f.query,
+                'query',
+                'Madero',
+              ),
+            ),
+          ),
+        ).thenAnswer((_) => maderoCompleter.future);
+        when(
+          () => repository.search(
+            any(
+              that: isA<RestaurantSearchFilters>().having(
+                (f) => f.query,
+                'query',
+                'Outback',
+              ),
+            ),
+          ),
+        ).thenAnswer(
+          (_) async => PagedResult(
+            items: [_restaurant(id: 'r-2', name: 'Outback')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        await tester.pumpWidget(_wrap(repository));
+        await tester.pumpAndSettle();
+
+        final field = find.byType(TextFormField).first;
+        await tester.enterText(field, 'Madero');
+        await tester.pump(const Duration(milliseconds: 500));
+        // Sem `pumpAndSettle()` aqui: a resposta de "Madero" foi deixada
+        // pendente de propósito (`maderoCompleter` só completa mais
+        // abaixo) - o spinner de loading indeterminado nunca se
+        // estabilizaria sozinho.
+        await tester.pump();
+
+        await tester.enterText(field, 'Outback');
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+
+        // "Madero" respondendo tarde não pode sobrescrever "Outback".
+        maderoCompleter.complete(
+          PagedResult(
+            items: [_restaurant(id: 'r-1', name: 'Madero')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Outback'), findsWidgets);
+        expect(find.text('Madero'), findsNothing);
+      },
+    );
+  });
 
   group('F36 - sugestão de rodízio', () {
     testWidgets('mostra a sugestão do membro que nunca organizou um rolê', (

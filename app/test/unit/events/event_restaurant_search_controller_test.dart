@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/features/events/application/event_restaurant_search_controller.dart';
 import 'package:app/features/events/presentation/states/event_restaurant_search_status.dart';
@@ -8,6 +10,9 @@ import 'package:app/features/restaurants/domain/restaurant_search_filters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+
+Matcher _filtersWithQuery(String query) =>
+    isA<RestaurantSearchFilters>().having((f) => f.query, 'query', query);
 
 class MockRestaurantRepository extends Mock implements RestaurantRepository {}
 
@@ -124,5 +129,78 @@ void main() {
         );
       },
     );
+
+    test(
+      'ROLE-SEARCH-02: concorrência - resposta desatualizada não sobrescreve '
+      'a busca mais recente',
+      () async {
+        final slowCompleter = Completer<PagedResult<Restaurant>>();
+        when(
+          () => repository.search(any(that: _filtersWithQuery('lento'))),
+        ).thenAnswer((_) => slowCompleter.future);
+        when(
+          () => repository.search(any(that: _filtersWithQuery('rapido'))),
+        ).thenAnswer(
+          (_) async => PagedResult<Restaurant>(
+            items: [_restaurant(name: 'Rápido')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        final notifier = container.read(
+          eventRestaurantSearchControllerProvider.notifier,
+        );
+        final slowFuture = notifier.search('lento');
+        await notifier.search('rapido');
+
+        slowCompleter.complete(
+          PagedResult<Restaurant>(
+            items: [_restaurant(name: 'Lento')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+        await slowFuture;
+
+        final status = container.read(eventRestaurantSearchControllerProvider);
+        expect(status, isA<EventRestaurantSearchLoaded>());
+        expect(
+          (status as EventRestaurantSearchLoaded).restaurants.single.name,
+          'Rápido',
+        );
+      },
+    );
+
+    test('ROLE-SEARCH-02: limpar a busca (query vazia) invalida uma resposta '
+        'pendente da busca anterior', () async {
+      final slowCompleter = Completer<PagedResult<Restaurant>>();
+      when(
+        () => repository.search(any(that: _filtersWithQuery('Madero'))),
+      ).thenAnswer((_) => slowCompleter.future);
+
+      final notifier = container.read(
+        eventRestaurantSearchControllerProvider.notifier,
+      );
+      final slowFuture = notifier.search('Madero');
+      await notifier.search('');
+
+      slowCompleter.complete(
+        PagedResult<Restaurant>(
+          items: [_restaurant()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      await slowFuture;
+
+      expect(
+        container.read(eventRestaurantSearchControllerProvider),
+        isA<EventRestaurantSearchInitial>(),
+      );
+    });
   });
 }

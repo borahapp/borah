@@ -20,22 +20,36 @@ class EventRestaurantSearchController
   RestaurantRepository get _repository =>
       ref.read(restaurantRepositoryProvider);
 
+  int _requestId = 0;
+
+  /// ROLE-SEARCH-02: agora chamado tanto pelo `onSubmit` (Enter) quanto
+  /// pelo `onChanged` debounçado da tela - duas buscas podem ficar em
+  /// voo ao mesmo tempo (ex.: "Madero" ainda respondendo quando
+  /// "McDonald" já foi digitado). `_requestId` garante que só a
+  /// resposta da busca mais recente é aplicada ao estado, mesmo que uma
+  /// busca antiga responda depois - mesmo padrão já usado em
+  /// `GooglePlaceSearchController.search`.
   Future<void> search(String query) async {
     if (query.trim().isEmpty) {
+      _requestId++;
       state = const EventRestaurantSearchInitial();
       return;
     }
+    final requestId = ++_requestId;
     state = const EventRestaurantSearchLoading();
     try {
       final result = await _repository.search(
         RestaurantSearchFilters(query: query, page: 1),
       );
+      if (requestId != _requestId) return;
       state = result.items.isEmpty
           ? const EventRestaurantSearchEmpty()
           : EventRestaurantSearchLoaded(result.items);
     } on RestaurantRepositoryException catch (e) {
+      if (requestId != _requestId) return;
       state = EventRestaurantSearchError(e.message);
     } catch (_) {
+      if (requestId != _requestId) return;
       state = const EventRestaurantSearchError(
         'Não foi possível buscar restaurantes.',
       );
