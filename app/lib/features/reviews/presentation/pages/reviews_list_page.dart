@@ -9,7 +9,10 @@ import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../authentication/application/auth_controller.dart';
+import '../../application/review_detail_controller.dart';
 import '../../application/reviews_controller.dart';
+import '../../domain/review.dart';
 import '../states/reviews_status.dart';
 import '../widgets/review_summary_tile.dart';
 
@@ -60,20 +63,57 @@ class _ReviewsListPageState extends ConsumerState<ReviewsListPage> {
     );
   }
 
+  /// BETA-RELEASE-09: `reviews_user_restaurant_unique` permite no máximo
+  /// uma avaliação por usuário por restaurante - localiza a review do
+  /// usuário atual entre os itens JÁ carregados por esta lista (sem
+  /// consulta extra) para decidir entre "Avaliar restaurante" e "Editar
+  /// minha avaliação". Só enxerga páginas já buscadas: se a review do
+  /// usuário estiver numa página posterior ainda não carregada, o botão
+  /// "+" aparece normalmente até essa página ser alcançada.
+  Review? _findMyReview(ReviewsStatus status, String? currentUserId) {
+    if (currentUserId == null || status is! ReviewsLoaded) return null;
+    for (final review in status.result.items) {
+      if (review.userId == currentUserId) return review;
+    }
+    return null;
+  }
+
+  /// Reaproveita exatamente o par `load()` + rota `/edit` já usado por
+  /// `ReviewDetailPage` (o `EditReviewPage` só pré-preenche o formulário
+  /// quando o controller já está em `ReviewDetailLoaded`) - nenhuma lógica
+  /// nova de carregamento/edição é criada aqui.
+  Future<void> _editMyReview(Review myReview, String currentUserId) async {
+    await ref
+        .read(reviewDetailControllerProvider.notifier)
+        .load(myReview.id, currentUserId: currentUserId);
+    if (!mounted) return;
+    context.push('/reviews/${myReview.id}/edit');
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(reviewsControllerProvider);
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final myReview = _findMyReview(status, currentUserId);
 
     return Scaffold(
       appBar: AppTopBar(
         title: 'Avaliações',
         actions: [
-          AppIconButton(
-            icon: Icons.add,
-            tooltip: 'Avaliar restaurante',
-            onPressed: () =>
-                context.push('/restaurants/${widget.restaurantId}/reviews/new'),
-          ),
+          if (myReview == null)
+            AppIconButton(
+              icon: Icons.add,
+              tooltip: 'Avaliar restaurante',
+              onPressed: () => context.push(
+                '/restaurants/${widget.restaurantId}/reviews/new',
+              ),
+            )
+          else
+            AppIconButton(
+              icon: Icons.edit,
+              tooltip: 'Editar minha avaliação',
+              onPressed: () => _editMyReview(myReview, currentUserId!),
+            ),
         ],
       ),
       body: AppAnimatedSwitcher(

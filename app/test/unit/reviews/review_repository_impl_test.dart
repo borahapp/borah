@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import 'package:app/features/reviews/data/review_remote_datasource.dart';
 import 'package:app/features/reviews/data/review_repository_impl.dart';
+import 'package:app/features/reviews/domain/review_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 class MockReviewRemoteDatasource extends Mock
     implements ReviewRemoteDatasource {}
@@ -198,6 +200,108 @@ void main() {
         expect(review.restaurantName, 'Outback');
       },
     );
+  });
+
+  // BETA-RELEASE-09: causa raiz confirmada em BETA-RELEASE-08 - o INSERT
+  // falha com Postgres 23505 (unique_violation) quando o usuário já tem
+  // avaliação para o restaurante. `_guard` deve traduzir especificamente
+  // essa violação para uma mensagem amigável, sem mascarar outras
+  // violações 23505 (de outras constraints) nem outros erros PostgREST.
+  group('BETA-RELEASE-09 - mapeamento de erro do create', () {
+    test(
+      '23505 da constraint reviews_user_restaurant_unique -> mensagem amigável',
+      () async {
+        when(() => datasource.insert(any())).thenThrow(
+          const PostgrestException(
+            message:
+                'duplicate key value violates unique constraint '
+                '"reviews_user_restaurant_unique"',
+            code: '23505',
+            details: 'Conflict',
+          ),
+        );
+
+        await expectLater(
+          repository.create(
+            restaurantId: 'r-1',
+            userId: 'user-1',
+            rating: 5,
+            ambienceScore: 5,
+            serviceScore: 5,
+            foodScore: 5,
+            costBenefitScore: 5,
+          ),
+          throwsA(
+            isA<ReviewRepositoryException>().having(
+              (e) => e.message,
+              'message',
+              'Você já avaliou este restaurante.',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      '23505 de outra constraint continua propagando a mensagem original',
+      () async {
+        when(() => datasource.insert(any())).thenThrow(
+          const PostgrestException(
+            message:
+                'duplicate key value violates unique constraint '
+                '"some_other_unique_constraint"',
+            code: '23505',
+          ),
+        );
+
+        await expectLater(
+          repository.create(
+            restaurantId: 'r-1',
+            userId: 'user-1',
+            rating: 5,
+            ambienceScore: 5,
+            serviceScore: 5,
+            foodScore: 5,
+            costBenefitScore: 5,
+          ),
+          throwsA(
+            isA<ReviewRepositoryException>().having(
+              (e) => e.message,
+              'message',
+              contains('some_other_unique_constraint'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test('outros códigos PostgREST continuam propagando normalmente', () async {
+      when(() => datasource.insert(any())).thenThrow(
+        const PostgrestException(
+          message: 'permission denied for table reviews',
+          code: '42501',
+        ),
+      );
+
+      await expectLater(
+        repository.create(
+          restaurantId: 'r-1',
+          userId: 'user-1',
+          rating: 5,
+          ambienceScore: 5,
+          serviceScore: 5,
+          foodScore: 5,
+          costBenefitScore: 5,
+        ),
+        throwsA(
+          isA<ReviewRepositoryException>().having(
+            (e) => e.message,
+            'message',
+            'permission denied for table reviews',
+          ),
+        ),
+      );
+    });
   });
 
   // BETA-RELEASE-03: regressão da causa raiz de BETA-RELEASE-02 - a lista

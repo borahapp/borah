@@ -255,6 +255,17 @@ class ReviewRepositoryImpl implements ReviewRepository {
     try {
       return await action();
     } on PostgrestException catch (e) {
+      // BETA-RELEASE-09: violação da constraint `reviews_user_restaurant_
+      // unique` (código 23505) tem causa conhecida e mensagem amigável
+      // dedicada - identificada pelo nome da constraint no corpo da
+      // mensagem (não só pelo código, que também é usado por qualquer
+      // outra `UNIQUE` do banco) para não mascarar outra violação.
+      if (e.code == '23505' &&
+          e.message.contains('reviews_user_restaurant_unique')) {
+        throw const ReviewRepositoryException(
+          'Você já avaliou este restaurante.',
+        );
+      }
       throw ReviewRepositoryException(e.message);
     } on StorageException catch (e) {
       throw ReviewRepositoryException(e.message);
