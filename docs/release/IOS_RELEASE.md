@@ -40,6 +40,12 @@ Não há automação de assinatura (Fastlane match ou equivalente) — a estrat�
 
 Não bloqueia o build nem a geração do IPA — só bloqueia o *fluxo* de login Google em runtime no iOS até ser substituído pelo Client ID real (Google Cloud Console → criar um OAuth Client ID do tipo iOS para `com.borah.app`, formato `com.googleusercontent.apps.<client-id>`).
 
+## Google Places — dependência de secret (IOS-PLACES-02)
+
+`AppEnvironment.googlePlacesApiKey` (`String.fromEnvironment('GOOGLE_PLACES_API_KEY')`, sem `defaultValue`) precisa do `--dart-define=GOOGLE_PLACES_API_KEY=...` presente na compilação — sem ele, a busca de restaurantes via Google Places falha imediatamente com uma mensagem genérica (`GooglePlacesMissingApiKeyException`), antes de qualquer chamada de rede. O job `build_release_ios` (`.github/workflows/release.yml`) já injeta essa flag a partir do secret `GOOGLE_PLACES_API_KEY_PRODUCTION` (ver `CI_CD_SECRETS.md` §2.1) — **mas o secret ainda não foi cadastrado no GitHub**, então, assim como os demais secrets desta seção, o build atual da CI continua funcionalmente vazio nesse campo até que seja cadastrado.
+
+Isso **não corrige** o runtime iOS por si só: nenhum `.ipa` foi gerado nem testado em dispositivo real nesta rodada (mesma limitação de ambiente já documentada acima — sem Mac/Xcode). O Google Places no iOS continua **não confirmado em runtime**.
+
 ## Permissões (`Info.plist`)
 
 Só `NSPhotoLibraryUsageDescription` (seleção de avatar/fotos via `image_picker`) — câmera, localização e notificações não são usadas, sem chaves correspondentes. Deep link `borah://password-recovery` registrado (mesmo esquema do Android) para o fluxo de recuperação de senha do `supabase_flutter`.

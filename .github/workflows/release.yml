@@ -179,4 +179,5 @@ jobs:
             --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN_PRODUCTION }} \
             --dart-define=POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY_PRODUCTION }} \
             --dart-define=POSTHOG_HOST=${{ secrets.POSTHOG_HOST_PRODUCTION }} \
-            --dart-define=APP_ENVIRONMENT=production
+            --dart-define=APP_ENVIRONMENT=production \
+            --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY_PRODUCTION }}
