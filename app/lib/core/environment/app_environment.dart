@@ -52,4 +52,13 @@ abstract final class AppEnvironment {
   static const googleIosClientId = String.fromEnvironment(
     'GOOGLE_IOS_CLIENT_ID',
   );
+
+  /// F12 - chave da Google Places API (New), restrita no Google Cloud a
+  /// `com.borah.app` + SHA-1 (Android). Vazio por padrão - mesmo espírito
+  /// de `sentryDsn`/`googleServerClientId`: `GooglePlacesRemoteDatasource`
+  /// recusa a busca com uma mensagem clara em vez de chamar a API sem
+  /// credencial. Nunca logada, nunca hardcoded, nunca commitada.
+  static const googlePlacesApiKey = String.fromEnvironment(
+    'GOOGLE_PLACES_API_KEY',
+  );
 }

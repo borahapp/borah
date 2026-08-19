@@ -65,7 +65,15 @@ abstract interface class RestaurantRepository {
     String? stateProvince,
     double? latitude,
     double? longitude,
+    String? googlePlaceId,
   });
+
+  /// F12 - resolve um restaurante já cadastrado a partir do
+  /// `google_place_id` (chave de deduplicação, ver migration
+  /// `20260810120000`). `null` quando nenhum restaurante existente tem
+  /// esse Place ID - sinal para `GooglePlaceSelectionController` criar um
+  /// novo em vez de reaproveitar.
+  Future<Restaurant?> findByGooglePlaceId(String placeId);
 
   /// Bucket `restaurants` é público (AR-08) — o path é armazenado em
   /// `cover_image`; a resolução para URL pública fica em `data/`.

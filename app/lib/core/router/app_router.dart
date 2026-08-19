@@ -52,6 +52,7 @@ import '../../features/rankings/presentation/pages/rankings_page.dart';
 import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
 import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
 import '../../features/restaurants/presentation/pages/restaurants_search_page.dart';
+import '../../features/restaurants/presentation/pages/search_google_restaurant_page.dart';
 import '../../features/reviews/presentation/pages/create_review_page.dart';
 import '../../features/reviews/presentation/pages/edit_review_page.dart';
 import '../../features/reviews/presentation/pages/review_detail_page.dart';
@@ -294,9 +295,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         // UX-01: `extra: true` só quando `CreateEventPage` chega aqui
         // (usuário sem o restaurante no catálogo, Etapa 1 de "Criar
         // rolê") - navegação normal (aba Restaurantes) nunca passa
-        // `extra`, cai no default `false`.
+        // `extra`, cai no default `false`. F12: também é o destino do
+        // link "Cadastrar manualmente" de `SearchGoogleRestaurantPage`
+        // (fallback, sem `extra`, mesmo default).
         builder: (context, state) =>
             CreateRestaurantPage(returnToCaller: state.extra as bool? ?? false),
+      ),
+      // F12 - Google Places API (New): destino do botão "Adicionar
+      // restaurante" de `RestaurantsSearchPage`, no lugar de
+      // `/restaurants/new` direto - busca restaurantes reais antes de
+      // qualquer cadastro manual.
+      GoRoute(
+        path: '/restaurants/search-google',
+        builder: (context, state) => const SearchGoogleRestaurantPage(),
       ),
       GoRoute(
         path: '/restaurants/:id',

@@ -86,6 +86,18 @@ class RestaurantRemoteDatasource {
     return _client.from(_table).select().eq('id', id).single();
   }
 
+  /// F12 - checagem de duplicidade antes de criar um restaurante a partir
+  /// da Google Places API (New). `.maybeSingle()` (não `.single()`) porque
+  /// "nenhum restaurante com este Place ID ainda" é o caminho esperado na
+  /// primeira vez que alguém seleciona um lugar novo, não um erro.
+  Future<Map<String, dynamic>?> fetchByGooglePlaceId(String placeId) {
+    return _client
+        .from(_table)
+        .select()
+        .eq('google_place_id', placeId)
+        .maybeSingle();
+  }
+
   Future<List<Map<String, dynamic>>> listAllForAdmin({
     String? query,
     required int page,

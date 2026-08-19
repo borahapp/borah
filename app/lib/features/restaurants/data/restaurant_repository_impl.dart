@@ -135,6 +135,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
     String? stateProvince,
     double? latitude,
     double? longitude,
+    String? googlePlaceId,
   }) {
     return _guard(() async {
       final row = await _datasource.insert({
@@ -147,8 +148,17 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
         'state': stateProvince,
         'latitude': latitude,
         'longitude': longitude,
+        'google_place_id': googlePlaceId,
       });
       return _mapRow(row);
+    });
+  }
+
+  @override
+  Future<Restaurant?> findByGooglePlaceId(String placeId) {
+    return _guard(() async {
+      final row = await _datasource.fetchByGooglePlaceId(placeId);
+      return row == null ? null : _mapRow(row);
     });
   }
 
@@ -197,6 +207,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
       createdBy: row['created_by'] as String,
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
+      googlePlaceId: row['google_place_id'] as String?,
     );
   }
 

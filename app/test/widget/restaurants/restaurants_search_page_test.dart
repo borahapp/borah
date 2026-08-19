@@ -42,8 +42,9 @@ Widget _wrap(MockRestaurantRepository repository) {
     routes: [
       GoRoute(path: '/', builder: (_, _) => const RestaurantsSearchPage()),
       GoRoute(
-        path: '/restaurants/new',
-        builder: (_, _) => const Scaffold(body: Text('Create Restaurant Page')),
+        path: '/restaurants/search-google',
+        builder: (_, _) =>
+            const Scaffold(body: Text('Search Google Restaurant Page')),
       ),
       GoRoute(
         path: '/restaurants/:id',
@@ -173,7 +174,7 @@ void main() {
     expect(find.text('Restaurant Detail Page r-1'), findsOneWidget);
   });
 
-  testWidgets('tocar em "+" navega para a criação de restaurante', (
+  testWidgets('tocar em "+" navega para a busca de restaurantes reais (F12)', (
     tester,
   ) async {
     when(() => repository.search(any())).thenAnswer(
@@ -187,7 +188,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create Restaurant Page'), findsOneWidget);
+    expect(find.text('Search Google Restaurant Page'), findsOneWidget);
   });
 
   group('responsividade', () {

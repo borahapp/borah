@@ -56,7 +56,10 @@ class _RestaurantsSearchPageState extends ConsumerState<RestaurantsSearchPage> {
           AppIconButton(
             icon: Icons.add,
             tooltip: 'Adicionar restaurante',
-            onPressed: () => context.push('/restaurants/new'),
+            // F12: busca restaurantes reais (Google Places) antes do
+            // cadastro manual - `/restaurants/new` continua existindo
+            // como alternativa dentro dessa tela.
+            onPressed: () => context.push('/restaurants/search-google'),
           ),
         ],
       ),
