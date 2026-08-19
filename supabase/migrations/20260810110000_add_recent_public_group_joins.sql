@@ -55,12 +55,12 @@ as $$
     p.full_name,
     p.username,
     p.avatar_url,
-    gm.created_at
+    gm.joined_at
   from public.group_members gm
   join public.groups g on g.id = gm.group_id
   join public.profiles p on p.id = gm.user_id
   where g.visibility = 'public'
-  order by gm.created_at desc
+  order by gm.joined_at desc
   limit p_limit offset p_offset;
 $$;
 
