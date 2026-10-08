@@ -73,6 +73,18 @@ Widget _wrap({
         path: '/groups',
         builder: (_, _) => const Scaffold(body: Text('Meus grupos (tela)')),
       ),
+      // Mesma ordem de `app_router.dart`: `/events/new` precisa vir ANTES
+      // de `/events/:eventId` - senão o segmento literal "new" seria
+      // capturado pelo parâmetro `:eventId` (achado real ao rodar os
+      // testes desta fase).
+      GoRoute(
+        path: '/groups/:groupId/events/new',
+        builder: (_, state) => Scaffold(
+          body: Text(
+            'Criar rolê (tela) no grupo ${state.pathParameters['groupId']}',
+          ),
+        ),
+      ),
       GoRoute(
         path: '/groups/:groupId/events/:eventId',
         builder: (_, state) => Scaffold(
@@ -228,7 +240,7 @@ void main() {
   );
 
   testWidgets(
-    'HOME-08: tocar em "Criar novo rolê" abre o fluxo atual de criação',
+    'HOME-08 / FASE02-TESTE1: 0 grupos -> "Criar novo rolê" vai para /groups',
     (tester) async {
       when(() => groupRepository.listMine()).thenAnswer((_) async => []);
 
@@ -239,6 +251,129 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Meus grupos (tela)'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'FASE02-TESTE2: 1 grupo -> "Criar novo rolê" vai direto para a criação, '
+    'sem /groups/GroupDetail/EventsList intermediários',
+    (tester) async {
+      when(
+        () => groupRepository.listMine(),
+      ).thenAnswer((_) async => [_group(id: 'g-1', name: 'Único Grupo')]);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar novo rolê'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Criar rolê (tela) no grupo g-1'), findsOneWidget);
+      expect(find.text('Meus grupos (tela)'), findsNothing);
+      expect(find.text('Detalhe do grupo g-1'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'FASE02-TESTE3: vários grupos -> "Criar novo rolê" abre o bottom sheet '
+    '"Escolha o grupo" com todos os grupos, sem nenhuma consulta nova',
+    (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer(
+        (_) async => [
+          _group(id: 'g-a', name: 'Grupo A'),
+          _group(id: 'g-b', name: 'Grupo B'),
+        ],
+      );
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar novo rolê'));
+      await tester.pumpAndSettle();
+
+      // A Home por trás continua montada (não some do widget tree só por
+      // o sheet estar aberto) - escopar ao `BottomSheet` evita achar o
+      // mesmo nome 2x (uma vez na seção "Meus grupos", outra no sheet).
+      final sheet = find.byType(BottomSheet);
+      expect(sheet, findsOneWidget);
+      expect(
+        find.descendant(of: sheet, matching: find.text('Escolha o grupo')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.text('Em qual grupo você quer criar este rolê?'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.text('Grupo A')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.text('Grupo B')),
+        findsOneWidget,
+      );
+      // listMine() só é chamado 1x pelo HomeController.load() inicial -
+      // abrir o sheet não dispara nenhuma consulta nova.
+      verify(() => groupRepository.listMine()).called(1);
+    },
+  );
+
+  testWidgets(
+    'FASE02-TESTE4: no bottom sheet, tocar no Grupo A vai para a criação '
+    'no grupo A',
+    (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer(
+        (_) async => [
+          _group(id: 'g-a', name: 'Grupo A'),
+          _group(id: 'g-b', name: 'Grupo B'),
+        ],
+      );
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar novo rolê'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Grupo A'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Criar rolê (tela) no grupo g-a'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'FASE02-TESTE5: no bottom sheet, tocar no Grupo B vai para a criação '
+    'no grupo B',
+    (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer(
+        (_) async => [
+          _group(id: 'g-a', name: 'Grupo A'),
+          _group(id: 'g-b', name: 'Grupo B'),
+        ],
+      );
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar novo rolê'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Grupo B'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Criar rolê (tela) no grupo g-b'), findsOneWidget);
     },
   );
 

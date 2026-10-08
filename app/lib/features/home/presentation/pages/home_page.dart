@@ -42,15 +42,84 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
-  /// FASE 01: só o novo ponto de entrada — reaproveita exatamente o
-  /// mesmo fluxo que o bottom sheet "Criar" já usa hoje
-  /// (`home_shell_page.dart._openCreateSheet`, item "Criar rolê"). A
-  /// melhoria de pular a escolha de grupo quando só há 1 fica para a
-  /// FASE 02 (não misturar as duas fases).
-  Future<void> _createEvent() async {
-    await context.push('/groups');
+  /// FASE 02: resolve o grupo ANTES de abrir `CreateEventPage`, que
+  /// continua exigindo `groupId` obrigatório (decisão explícita - ver
+  /// auditoria da fase) - a Home nunca constrói a página sem saber o
+  /// grupo, mesmo princípio que `EventsListPage` já aplicava para quem
+  /// entra criando um rolê de dentro de um grupo.
+  ///
+  /// - 0 grupos: `/groups` já mostra o empty state certo
+  ///   ("Criar grupo"/"Entrar com código") - nenhuma tela nova.
+  /// - 1 grupo: direto para `CreateEventPage`, sem nenhuma tela
+  ///   intermediária.
+  /// - 2+ grupos: bottom sheet leve (`_selectGroup`), reaproveitando
+  ///   `GroupCard` e os `groups` já carregados pelo `HomeController` -
+  ///   nenhuma consulta nova ao Supabase.
+  Future<void> _createEvent(List<Group> groups) async {
+    if (groups.isEmpty) {
+      await context.push('/groups');
+    } else if (groups.length == 1) {
+      await context.push('/groups/${groups.first.id}/events/new');
+    } else {
+      final selected = await _selectGroup(groups);
+      if (selected == null || !mounted) return;
+      await context.push('/groups/${selected.id}/events/new');
+    }
     if (!mounted) return;
     ref.read(homeControllerProvider.notifier).load();
+  }
+
+  /// Bottom sheet "Escolha o grupo" (FASE 02) - mesmo padrão estrutural
+  /// de `home_shell_page.dart._openCreateSheet` (`SafeArea`/`Column`
+  /// dentro de `showModalBottomSheet`), mas devolvendo o [Group]
+  /// escolhido em vez de navegar por dentro do próprio builder - quem
+  /// decide o que fazer com a escolha é sempre `_createEvent`, nunca o
+  /// sheet. Tocar num grupo fecha o sheet e devolve o valor; tocar fora
+  /// (dismiss) devolve `null`.
+  Future<Group?> _selectGroup(List<Group> groups) {
+    return showModalBottomSheet<Group>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Text(
+                'Escolha o grupo',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Text(
+                'Em qual grupo você quer criar este rolê?',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ...groups.map(
+              (group) => Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                child: GroupCard(
+                  name: group.name,
+                  memberCount: group.memberCount ?? 1,
+                  photoUrl: group.photoUrl,
+                  nextEventLabel: _nextEventLabel(group.nextEvent),
+                  onTap: () => Navigator.of(sheetContext).pop(group),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _createGroup() async {
@@ -80,7 +149,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               groups: groups,
               heroEvent: heroEvent,
               heroEventGroup: heroEventGroup,
-              onCreateEvent: _createEvent,
+              onCreateEvent: () => _createEvent(groups),
               onCreateGroup: _createGroup,
             ),
         },
@@ -122,10 +191,7 @@ class _HomeContent extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: AppSpacing.md),
-          AppPrimaryButton(
-            label: 'Criar novo rolê',
-            onPressed: onCreateEvent,
-          ),
+          AppPrimaryButton(label: 'Criar novo rolê', onPressed: onCreateEvent),
           const SizedBox(height: AppSpacing.lg),
           const SectionHeader(title: 'Próximo rolê'),
           const SizedBox(height: AppSpacing.sm),
@@ -244,14 +310,16 @@ class _MyGroupsSection extends StatelessWidget {
       }).toList(),
     );
   }
+}
 
-  /// Mesma formatação de `groups_list_page.dart._nextEventLabel` —
-  /// formatação pertence à apresentação, não ao domínio.
-  String? _nextEventLabel(EventSummary? nextEvent) {
-    if (nextEvent == null) return null;
-    final date = nextEvent.scheduledAt;
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return 'Próximo rolê: $day/$month';
-  }
+/// Mesma formatação de `groups_list_page.dart._nextEventLabel` —
+/// formatação pertence à apresentação, não ao domínio. Função de nível
+/// de arquivo (FASE 02): reaproveitada tanto por `_MyGroupsSection`
+/// quanto pelo bottom sheet "Escolha o grupo" de `_HomePageState`.
+String? _nextEventLabel(EventSummary? nextEvent) {
+  if (nextEvent == null) return null;
+  final date = nextEvent.scheduledAt;
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  return 'Próximo rolê: $day/$month';
 }
