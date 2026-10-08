@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../design_system/components/navigation/app_bottom_navigation.dart';
 import '../../design_system/tokens/app_spacing.dart';
 import '../../features/gamification/presentation/pages/ranking_users_page.dart';
+import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
-import '../../features/social/presentation/pages/feed_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
 
 /// FASE SOCIAL 1: shell de navegação pós-login em `/home`, conectando o
@@ -13,20 +13,18 @@ import '../../features/users/presentation/pages/profile_page.dart';
 /// estado de cada aba ao trocar (evita recarregar dados/perder posição
 /// de rolagem).
 ///
-/// Decisão de produto (FASE FEED SOCIAL, revertendo a decisão do BLOCO 9
-/// que havia tirado o Feed da barra): o Feed volta a ser a Home - "a
-/// sensação ao abrir o app deve ser 'quero ver o que meus amigos estão
-/// fazendo', não 'quero procurar um restaurante'". Restaurantes e
-/// Favoritos saem da barra principal (ambos continuam existindo, só
-/// mudam de porta de entrada - ver `_openCreateSheet`/`profile_page.dart`).
+/// FASE 01 (simplificação de produto, auditoria aprovada): o 1º item
+/// deixa de ser o Feed (`FeedPage`) e passa a ser a nova `HomePage`
+/// (próximo rolê + meus grupos + CTAs de criação) - "a sensação ao abrir
+/// o app deve ser 'o que eu faço agora', não 'o que meus amigos estão
+/// fazendo'". O Feed **não foi removido**: código, tabelas e RPCs
+/// continuam intactos (`features/social/`), só deixou de ter porta de
+/// entrada na navegação principal - decisão reversível, documentada na
+/// auditoria que precedeu esta fase.
 ///
-/// FASE SOCIAL 4: o 2º item deixa de ser "Grupos" (`GroupsListPage`) e
-/// passa a ser "Explorar" (`SearchPage`, Pessoas/Grupos/Restaurantes já
-/// existente desde a FASE SOCIAL 1) - o Feed já cobre a descoberta de
-/// atividade social, então a barra passa a priorizar descoberta de
-/// pessoas/grupos/restaurantes em vez de "meus grupos". "Meus Grupos"
-/// não desaparece - novo atalho em `ProfilePage` leva à mesma
-/// `GroupsListPage`/rota `/groups` de sempre.
+/// FASE SOCIAL 4 (ainda vigente): o 2º item é "Explorar" (`SearchPage`,
+/// Pessoas/Grupos/Restaurantes) - "Meus Grupos" tem atalho próprio em
+/// `ProfilePage`, além de aparecer diretamente na nova Home.
 ///
 /// A barra tem 5 itens, mas só 4 páginas: "Criar" (índice 2) nunca é
 /// uma aba do `IndexedStack` - abre um `BottomSheet` com atalhos para
@@ -44,7 +42,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
   int _navIndex = 0;
 
   static const _pages = [
-    FeedPage(),
+    HomePage(),
     SearchPage(),
     RankingUsersPage(),
     ProfilePage(),
@@ -52,9 +50,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
   static const _items = [
     AppBottomNavigationItem(
-      icon: Icons.dynamic_feed_outlined,
-      selectedIcon: Icons.dynamic_feed,
-      label: 'Feed',
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Início',
     ),
     AppBottomNavigationItem(
       icon: Icons.search_outlined,
