@@ -1,7 +1,9 @@
 import 'package:app/features/restaurants/data/restaurant_remote_datasource.dart';
 import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
+import 'package:app/features/restaurants/domain/restaurant_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 class MockRestaurantRemoteDatasource extends Mock
     implements RestaurantRemoteDatasource {}
@@ -99,5 +101,85 @@ void main() {
     final captured = verify(() => datasource.insert(captureAny())).captured;
     final sentData = captured.single as Map<String, dynamic>;
     expect(sentData['google_place_id'], isNull);
+  });
+
+  group('FASE 03 - corrida em create() por google_place_id (23505)', () {
+    test(
+      'violação de unicidade (23505) com googlePlaceId recupera o '
+      'restaurante que venceu a corrida, em vez de propagar o erro',
+      () async {
+        when(() => datasource.insert(any())).thenThrow(
+          const PostgrestException(message: 'duplicate key', code: '23505'),
+        );
+        when(
+          () => datasource.fetchByGooglePlaceId('ChIJ123'),
+        ).thenAnswer((_) async => _row());
+
+        final restaurant = await repository.create(
+          createdBy: 'user-1',
+          name: 'Madero',
+          category: 'Restaurant',
+          googlePlaceId: 'ChIJ123',
+        );
+
+        expect(restaurant.id, 'r-1');
+        expect(restaurant.googlePlaceId, 'ChIJ123');
+      },
+    );
+
+    test('23505 sem googlePlaceId não é mascarado - erro genuinamente '
+        'inesperado, propaga como RestaurantRepositoryException', () async {
+      when(() => datasource.insert(any())).thenThrow(
+        const PostgrestException(message: 'duplicate key', code: '23505'),
+      );
+
+      expect(
+        () => repository.create(
+          createdBy: 'user-1',
+          name: 'Bar do Zé',
+          category: 'Bar',
+        ),
+        throwsA(isA<RestaurantRepositoryException>()),
+      );
+      verifyNever(() => datasource.fetchByGooglePlaceId(any()));
+    });
+
+    test('erro do Postgres diferente de 23505 nunca é tratado como sucesso - '
+        'propaga normalmente', () async {
+      when(() => datasource.insert(any())).thenThrow(
+        const PostgrestException(message: 'permission denied', code: '42501'),
+      );
+
+      expect(
+        () => repository.create(
+          createdBy: 'user-1',
+          name: 'Madero',
+          category: 'Restaurant',
+          googlePlaceId: 'ChIJ123',
+        ),
+        throwsA(isA<RestaurantRepositoryException>()),
+      );
+      verifyNever(() => datasource.fetchByGooglePlaceId(any()));
+    });
+
+    test('23505 recuperado, mas o concorrente some antes da releitura - '
+        'propaga o erro original em vez de forjar um resultado', () async {
+      when(() => datasource.insert(any())).thenThrow(
+        const PostgrestException(message: 'duplicate key', code: '23505'),
+      );
+      when(
+        () => datasource.fetchByGooglePlaceId('ChIJ123'),
+      ).thenAnswer((_) async => null);
+
+      expect(
+        () => repository.create(
+          createdBy: 'user-1',
+          name: 'Madero',
+          category: 'Restaurant',
+          googlePlaceId: 'ChIJ123',
+        ),
+        throwsA(isA<RestaurantRepositoryException>()),
+      );
+    });
   });
 }

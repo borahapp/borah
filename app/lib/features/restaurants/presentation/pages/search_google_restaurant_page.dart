@@ -25,8 +25,17 @@ import '../states/google_place_selection_status.dart';
 /// principal do fluxo "Adicionar restaurante" (`RestaurantsSearchPage`);
 /// `/restaurants/new` (cadastro 100% manual) continua existindo como
 /// alternativa, oferecida aqui como link de saída, nunca removida.
+///
+/// [returnToCaller] (FASE 03 - Google Places na criação de rolês): mesmo
+/// mecanismo de `CreateRestaurantPage.returnToCaller` (`app_router.dart`,
+/// `state.extra as bool? ?? false`) - `false` por padrão (navegação
+/// normal, aba Restaurantes, segue indo para o Detalhe); `true` só
+/// quando `CreateEventPage` chega aqui (Etapa 1 de "Criar rolê"), e em
+/// vez de navegar devolve o `Restaurant` resolvido via `context.pop`.
 class SearchGoogleRestaurantPage extends ConsumerStatefulWidget {
-  const SearchGoogleRestaurantPage({super.key});
+  const SearchGoogleRestaurantPage({super.key, this.returnToCaller = false});
+
+  final bool returnToCaller;
 
   @override
   ConsumerState<SearchGoogleRestaurantPage> createState() =>
@@ -86,7 +95,11 @@ class _SearchGoogleRestaurantPageState
               ),
             ),
           );
-          context.pushReplacement('/restaurants/${next.restaurant.id}');
+          if (widget.returnToCaller) {
+            context.pop(next.restaurant);
+          } else {
+            context.pushReplacement('/restaurants/${next.restaurant.id}');
+          }
         } else if (next is GooglePlaceSelectionError) {
           ScaffoldMessenger.of(
             context,

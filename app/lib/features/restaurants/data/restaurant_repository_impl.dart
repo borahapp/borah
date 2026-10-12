@@ -138,19 +138,43 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
     String? googlePlaceId,
   }) {
     return _guard(() async {
-      final row = await _datasource.insert({
-        'created_by': createdBy,
-        'name': name,
-        'category': category,
-        'description': description,
-        'address': address,
-        'city': city,
-        'state': stateProvince,
-        'latitude': latitude,
-        'longitude': longitude,
-        'google_place_id': googlePlaceId,
-      });
-      return _mapRow(row);
+      try {
+        final row = await _datasource.insert({
+          'created_by': createdBy,
+          'name': name,
+          'category': category,
+          'description': description,
+          'address': address,
+          'city': city,
+          'state': stateProvince,
+          'latitude': latitude,
+          'longitude': longitude,
+          'google_place_id': googlePlaceId,
+        });
+        return _mapRow(row);
+      } on PostgrestException catch (e) {
+        // F12 - corrida entre 2 clientes resolvendo o mesmo
+        // `GooglePlaceResult` ao mesmo tempo: `GooglePlaceSelectionController.
+        // selectPlace` já checou `findByGooglePlaceId` antes de chamar
+        // `create`, mas a checagem e a inserção não são atômicas - o
+        // índice único parcial (`restaurants_google_place_id_unique_idx`,
+        // migration 20260810120000) é quem decide de fato, rejeitando a
+        // segunda inserção com 23505. Em vez de propagar esse erro bruto,
+        // busca quem já venceu a corrida e devolve ele - mesmo resultado
+        // funcional de `findByGooglePlaceId` ter encontrado algo de
+        // início, só que descoberto depois da tentativa de criação.
+        // `googlePlaceId` é a única coluna com índice único desta tabela
+        // (`id` é gerado pelo banco, nunca colide) - um 23505 sem
+        // `googlePlaceId` seria inesperado e não deve ser mascarado como
+        // sucesso, por isso o `rethrow` abaixo cobre esse caso.
+        if (e.code == '23505' && googlePlaceId != null) {
+          final existing = await _datasource.fetchByGooglePlaceId(
+            googlePlaceId,
+          );
+          if (existing != null) return _mapRow(existing);
+        }
+        rethrow;
+      }
     });
   }
 

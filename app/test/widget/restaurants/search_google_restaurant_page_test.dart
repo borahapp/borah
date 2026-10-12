@@ -330,4 +330,152 @@ void main() {
 
     expect(find.text('Create Restaurant Page'), findsOneWidget);
   });
+
+  group('FASE 03 - returnToCaller (origem explícita em CreateEventPage)', () {
+    testWidgets(
+      'restaurante existente: devolve via pop em vez de navegar ao detalhe',
+      (tester) async {
+        when(
+          () => placesRepository.searchText('Madero'),
+        ).thenAnswer((_) async => [_place()]);
+        when(
+          () => restaurantRepository.findByGooglePlaceId('ChIJ123'),
+        ).thenAnswer((_) async => _restaurant());
+
+        await tester.pumpWidget(
+          _wrapWithCaller(
+            placesRepository: placesRepository,
+            restaurantRepository: restaurantRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Abrir busca'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField), 'Madero');
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(AppCard, 'Madero'));
+        await tester.pumpAndSettle();
+
+        // Voltou para quem chamou (não foi para a tela de Detalhe) com o
+        // restaurante resolvido - mesmo veredito de reaproveitamento
+        // (`wasCreated: false`) do teste acima, só que devolvido por pop.
+        expect(find.text('Restaurant Detail Page r-1'), findsNothing);
+        expect(find.text('Resultado: r-1'), findsOneWidget);
+        verifyNever(
+          () => restaurantRepository.create(
+            createdBy: any(named: 'createdBy'),
+            name: any(named: 'name'),
+            category: any(named: 'category'),
+          ),
+        );
+      },
+    );
+
+    testWidgets('restaurante novo: cria e devolve via pop em vez de navegar ao '
+        'detalhe', (tester) async {
+      when(
+        () => placesRepository.searchText('Madero'),
+      ).thenAnswer((_) async => [_place()]);
+      when(
+        () => restaurantRepository.findByGooglePlaceId('ChIJ123'),
+      ).thenAnswer((_) async => null);
+      when(
+        () => restaurantRepository.create(
+          createdBy: any(named: 'createdBy'),
+          name: any(named: 'name'),
+          category: any(named: 'category'),
+          address: any(named: 'address'),
+          latitude: any(named: 'latitude'),
+          longitude: any(named: 'longitude'),
+          googlePlaceId: any(named: 'googlePlaceId'),
+        ),
+      ).thenAnswer((_) async => _restaurant());
+
+      await tester.pumpWidget(
+        _wrapWithCaller(
+          placesRepository: placesRepository,
+          restaurantRepository: restaurantRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abrir busca'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'Madero');
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(AppCard, 'Madero'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Restaurant Detail Page r-1'), findsNothing);
+      expect(find.text('Resultado: r-1'), findsOneWidget);
+    });
+  });
+}
+
+/// Pequeno host de teste (FASE 03) - `SearchGoogleRestaurantPage` com
+/// `returnToCaller: true` precisa de uma tela empilhada abaixo dela para
+/// o `context.pop(restaurant)` ter para onde voltar; este widget simula
+/// exatamente o papel de `CreateEventPage._searchGooglePlaces` (`push` +
+/// capturar o valor devolvido), sem nenhuma dependência do feature
+/// `events`.
+class _CallerPage extends StatefulWidget {
+  const _CallerPage();
+
+  @override
+  State<_CallerPage> createState() => _CallerPageState();
+}
+
+class _CallerPageState extends State<_CallerPage> {
+  Restaurant? _result;
+
+  Future<void> _openSearch() async {
+    final restaurant = await context.push<Restaurant>('/search');
+    if (!mounted) return;
+    setState(() => _result = restaurant);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          TextButton(onPressed: _openSearch, child: const Text('Abrir busca')),
+          Text('Resultado: ${_result?.id ?? "nenhum"}'),
+        ],
+      ),
+    );
+  }
+}
+
+Widget _wrapWithCaller({
+  required MockGooglePlacesRepository placesRepository,
+  required MockRestaurantRepository restaurantRepository,
+}) {
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(path: '/', builder: (_, _) => const _CallerPage()),
+      GoRoute(
+        path: '/search',
+        builder: (_, _) =>
+            const SearchGoogleRestaurantPage(returnToCaller: true),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      googlePlacesRepositoryProvider.overrideWithValue(placesRepository),
+      restaurantRepositoryProvider.overrideWithValue(restaurantRepository),
+      currentUserIdProvider.overrideWithValue('user-1'),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
 }

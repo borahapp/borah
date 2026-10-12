@@ -304,10 +304,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // F12 - Google Places API (New): destino do botão "Adicionar
       // restaurante" de `RestaurantsSearchPage`, no lugar de
       // `/restaurants/new` direto - busca restaurantes reais antes de
-      // qualquer cadastro manual.
+      // qualquer cadastro manual. FASE 03: também o destino de "Buscar no
+      // Google Maps" de `CreateEventPage` (Etapa 1 de "Criar rolê") - com
+      // `extra: true`, mesmo padrão de `/restaurants/new` acima.
       GoRoute(
         path: '/restaurants/search-google',
-        builder: (context, state) => const SearchGoogleRestaurantPage(),
+        builder: (context, state) => SearchGoogleRestaurantPage(
+          returnToCaller: state.extra as bool? ?? false,
+        ),
       ),
       GoRoute(
         path: '/restaurants/:id',

@@ -123,6 +123,24 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     setState(() => _selectedRestaurant = restaurant);
   }
 
+  /// FASE 03: busca via Google Places (Alternativa B - origem explícita,
+  /// decisão aprovada no plano técnico) - reaproveita `SearchGoogleRestaurantPage`
+  /// + `GooglePlaceSearchController`/`GooglePlaceSelectionController`
+  /// como já existem (sem duplicar UI de busca), no modo `returnToCaller`
+  /// (mesmo mecanismo `extra: true` de `_createRestaurant` acima, não um
+  /// padrão novo). A busca do catálogo interno (`_onRestaurantQueryChanged`)
+  /// nunca é afetada por esta ação: são dois `Notifier`s/estados
+  /// totalmente independentes - uma falha aqui (chave ausente, rede) não
+  /// bloqueia nem suja o estado da busca interna.
+  Future<void> _searchGooglePlaces() async {
+    final restaurant = await context.push<Restaurant>(
+      '/restaurants/search-google',
+      extra: true,
+    );
+    if (!mounted || restaurant == null) return;
+    setState(() => _selectedRestaurant = restaurant);
+  }
+
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -262,6 +280,11 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
               label: 'Buscar restaurante',
               onChanged: _onRestaurantQueryChanged,
               onSubmit: (_) => _search(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppOutlinedButton(
+              label: 'Buscar no Google Maps',
+              onPressed: _searchGooglePlaces,
             ),
             const SizedBox(height: AppSpacing.lg),
             Expanded(child: _buildSearchResults(searchStatus)),

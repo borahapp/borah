@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:app/core/models/paged_result.dart';
+import 'package:app/design_system/components/buttons/app_primary_button.dart';
+import 'package:app/design_system/components/cards/app_card.dart';
+import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event.dart';
 import 'package:app/features/events/domain/event_repository.dart';
@@ -10,10 +13,14 @@ import 'package:app/features/groups/domain/group.dart';
 import 'package:app/features/groups/domain/group_details.dart';
 import 'package:app/features/groups/domain/group_member.dart';
 import 'package:app/features/groups/domain/group_repository.dart';
+import 'package:app/features/restaurants/data/google_places_repository_impl.dart';
 import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
+import 'package:app/features/restaurants/domain/google_place_result.dart';
+import 'package:app/features/restaurants/domain/google_places_repository.dart';
 import 'package:app/features/restaurants/domain/restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant_repository.dart';
 import 'package:app/features/restaurants/domain/restaurant_search_filters.dart';
+import 'package:app/features/restaurants/presentation/pages/search_google_restaurant_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,8 +33,22 @@ class MockGroupRepository extends Mock implements GroupRepository {}
 
 class MockEventRepository extends Mock implements EventRepository {}
 
+class MockGooglePlacesRepository extends Mock
+    implements GooglePlacesRepository {}
+
 class FakeRestaurantSearchFilters extends Fake
     implements RestaurantSearchFilters {}
+
+GooglePlaceResult _place({String placeId = 'ChIJ123', String name = 'Madero'}) {
+  return GooglePlaceResult(
+    placeId: placeId,
+    name: name,
+    address: 'Av. XXXXX, Jundiaí - SP',
+    latitude: -23.1,
+    longitude: -46.8,
+    types: const ['restaurant'],
+  );
+}
 
 GroupMember _member(String userId, String name) {
   return GroupMember(
@@ -58,6 +79,14 @@ Widget _wrap(
   MockRestaurantRepository repository, {
   MockGroupRepository? groupRepository,
   MockEventRepository? eventRepository,
+  MockGooglePlacesRepository? placesRepository,
+  // FASE 03: só usado pelo teste de fluxo completo - `CreateEventPage`
+  // sempre é empilhada sobre outra tela em produção (`HomePage`/
+  // `EventsListPage`), então `_create()` ter sucesso e chamar
+  // `context.pop()` precisa de alguém abaixo para onde voltar (sem isto,
+  // GoRouter lança "There is nothing to pop"). Os demais testes não
+  // chegam a criar o rolê de fato, então não precisam deste host.
+  bool withHost = false,
 }) {
   if (groupRepository != null) {
     when(() => groupRepository.getById('g-1')).thenAnswer(
@@ -76,8 +105,18 @@ Widget _wrap(
   final router = GoRouter(
     initialLocation: '/',
     routes: [
+      if (withHost)
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: TextButton(
+              onPressed: () => context.push('/create'),
+              child: const Text('Abrir criação de rolê'),
+            ),
+          ),
+        ),
       GoRoute(
-        path: '/',
+        path: withHost ? '/create' : '/',
         builder: (_, _) => const CreateEventPage(groupId: 'g-1'),
       ),
       GoRoute(
@@ -95,6 +134,16 @@ Widget _wrap(
           ),
         ),
       ),
+      // FASE 03: página real (não stub) - exercita de ponta a ponta o
+      // mesmo caminho de `CreateEventPage._searchGooglePlaces` (`push` +
+      // `returnToCaller: true`) usado em produção, inclusive erros de
+      // rede/chave ausente, sem reimplementar a tela de busca aqui.
+      GoRoute(
+        path: '/restaurants/search-google',
+        builder: (context, state) => SearchGoogleRestaurantPage(
+          returnToCaller: state.extra as bool? ?? false,
+        ),
+      ),
     ],
   );
 
@@ -105,6 +154,10 @@ Widget _wrap(
         groupRepositoryProvider.overrideWithValue(groupRepository),
       if (eventRepository != null)
         eventRepositoryProvider.overrideWithValue(eventRepository),
+      if (placesRepository != null) ...[
+        googlePlacesRepositoryProvider.overrideWithValue(placesRepository),
+        currentUserIdProvider.overrideWithValue('user-1'),
+      ],
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -454,5 +507,265 @@ void main() {
 
       expect(find.text('Favoritos do grupo ainda não visitados'), findsNothing);
     });
+  });
+
+  group('FASE 03 - Google Places na criação de rolês (Alternativa B)', () {
+    setUp(() {
+      when(() => repository.search(any())).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+    });
+
+    testWidgets('ação "Buscar no Google Maps" aparece na Etapa 1', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Buscar no Google Maps'), findsOneWidget);
+    });
+
+    testWidgets(
+      'selecionar restaurante existente no Places retorna à criação e o '
+      'resumo da Etapa 1 mostra o restaurante correto',
+      (tester) async {
+        final placesRepository = MockGooglePlacesRepository();
+        when(
+          () => placesRepository.searchText('Madero'),
+        ).thenAnswer((_) async => [_place()]);
+        when(
+          () => repository.findByGooglePlaceId('ChIJ123'),
+        ).thenAnswer((_) async => _restaurant(id: 'r-places', name: 'Madero'));
+
+        await tester.pumpWidget(
+          _wrap(repository, placesRepository: placesRepository),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Buscar no Google Maps'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).last, 'Madero');
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(AppCard, 'Madero'));
+        await tester.pumpAndSettle();
+
+        // Voltou para a Etapa 1 do mesmo CreateEventPage (não ficou na
+        // tela de busca do Places, não foi para o Detalhe do
+        // restaurante) com o restaurante resolvido já selecionado -
+        // mesmo contrato de `_createRestaurant`/`/restaurants/new`.
+        expect(
+          find.text('Este restaurante já existe no BORAH.'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Japonês'), findsOneWidget);
+        expect(find.text('Trocar restaurante'), findsOneWidget);
+        verifyNever(
+          () => repository.create(
+            createdBy: any(named: 'createdBy'),
+            name: any(named: 'name'),
+            category: any(named: 'category'),
+          ),
+        );
+      },
+    );
+
+    testWidgets('selecionar restaurante novo no Places cria e associa por ID, '
+        'aparecendo no resumo da Etapa 1', (tester) async {
+      final placesRepository = MockGooglePlacesRepository();
+      when(
+        () => placesRepository.searchText('Madero'),
+      ).thenAnswer((_) async => [_place()]);
+      when(
+        () => repository.findByGooglePlaceId('ChIJ123'),
+      ).thenAnswer((_) async => null);
+      when(
+        () => repository.create(
+          createdBy: any(named: 'createdBy'),
+          name: any(named: 'name'),
+          category: any(named: 'category'),
+          address: any(named: 'address'),
+          latitude: any(named: 'latitude'),
+          longitude: any(named: 'longitude'),
+          googlePlaceId: any(named: 'googlePlaceId'),
+        ),
+      ).thenAnswer(
+        (_) async => _restaurant(id: 'r-places-new', name: 'Madero'),
+      );
+
+      await tester.pumpWidget(
+        _wrap(repository, placesRepository: placesRepository),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Buscar no Google Maps'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).last, 'Madero');
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(AppCard, 'Madero'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Restaurante cadastrado.'), findsOneWidget);
+      expect(find.textContaining('Japonês'), findsOneWidget);
+      expect(find.text('Trocar restaurante'), findsOneWidget);
+    });
+
+    testWidgets(
+      'falha do Google Places (chave ausente/rede) não derruba a tela e a '
+      'busca do catálogo interno continua funcionando depois',
+      (tester) async {
+        final placesRepository = MockGooglePlacesRepository();
+        when(() => placesRepository.searchText('Madero')).thenThrow(
+          const GooglePlacesRepositoryException(
+            'Serviço temporariamente indisponível.',
+          ),
+        );
+        when(() => repository.search(any())).thenAnswer(
+          (_) async => PagedResult(
+            items: [_restaurant(name: 'Outback')],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+
+        await tester.pumpWidget(
+          _wrap(repository, placesRepository: placesRepository),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Buscar no Google Maps'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).last, 'Madero');
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
+
+        // Erro amigável, sem crash - nenhuma exceção não tratada chega
+        // ao `tester.pumpAndSettle()` acima (o teste falharia sozinho se
+        // chegasse).
+        expect(
+          find.text('Serviço temporariamente indisponível.'),
+          findsOneWidget,
+        );
+
+        // Volta para a Etapa 1 (sem selecionar nada) - a busca do
+        // catálogo interno, um `Notifier`/estado totalmente
+        // independente do Places, nunca foi afetada pela falha.
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).first, 'Outback');
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Outback'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'fluxo completo: restaurante vindo do Google Places até "Rolê criado '
+      'com sucesso."',
+      (tester) async {
+        final placesRepository = MockGooglePlacesRepository();
+        final eventRepository = MockEventRepository();
+        when(
+          () => placesRepository.searchText('Madero'),
+        ).thenAnswer((_) async => [_place()]);
+        when(
+          () => repository.findByGooglePlaceId('ChIJ123'),
+        ).thenAnswer((_) async => _restaurant(id: 'r-places', name: 'Madero'));
+        when(
+          () => eventRepository.create(
+            groupId: 'g-1',
+            restaurantId: 'r-places',
+            scheduledAt: any(named: 'scheduledAt'),
+          ),
+        ).thenAnswer(
+          (_) async => Event(
+            id: 'e-1',
+            groupId: 'g-1',
+            restaurantId: 'r-places',
+            organizerId: 'user-1',
+            scheduledAt: DateTime(2026, 10, 20, 19),
+            status: 'scheduled',
+          ),
+        );
+        when(
+          () => eventRepository.listByGroup('g-1'),
+        ).thenAnswer((_) async => const []);
+
+        await tester.pumpWidget(
+          _wrap(
+            repository,
+            placesRepository: placesRepository,
+            eventRepository: eventRepository,
+            withHost: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Abrir criação de rolê'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Buscar no Google Maps'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).last, 'Madero');
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(AppCard, 'Madero'));
+        await tester.pumpAndSettle();
+
+        // Deixa o SnackBar de confirmação ("Este restaurante já existe no
+        // BORAH.") terminar seu tempo de exibição - em telas de teste
+        // pequenas, ele cobre o botão "Continuar" (ancorado embaixo via
+        // `Spacer`) até sumir, mesmo depois de `pumpAndSettle()` (que não
+        // espera o timer de auto-dismiss do SnackBar, só as animações).
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Continuar'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Selecionar data'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Selecionar hora'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        // `find.text('Criar rolê')` seria ambíguo (título do `AppTopBar` +
+        // botão) - o botão é o único `AppPrimaryButton` com esse texto.
+        await tester.tap(find.widgetWithText(AppPrimaryButton, 'Criar rolê'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Rolê criado com sucesso.'), findsOneWidget);
+        // Voltou para quem empilhou `CreateEventPage` - mesmo `pop()` de
+        // produção, sem erro de navegação.
+        expect(find.text('Abrir criação de rolê'), findsOneWidget);
+        verify(
+          () => eventRepository.create(
+            groupId: 'g-1',
+            restaurantId: 'r-places',
+            scheduledAt: any(named: 'scheduledAt'),
+          ),
+        ).called(1);
+      },
+    );
   });
 }
