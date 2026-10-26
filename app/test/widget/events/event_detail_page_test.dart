@@ -32,18 +32,29 @@ EventDetails _details({String status = 'scheduled'}) {
   );
 }
 
-EventReview _review({String id = 'r-1', String? photoUrl}) {
+EventReview _review({
+  String id = 'r-1',
+  String userId = 'user-2',
+  String fullName = 'Amigo do grupo',
+  String? photoUrl,
+  String? comment,
+  double foodScore = 5,
+  double serviceScore = 5,
+  double ambienceScore = 5,
+  double costBenefitScore = 5,
+  double overallScore = 5,
+}) {
   return EventReview(
     id: id,
     eventId: 'e-1',
-    userId: 'user-2',
-    foodScore: 5,
-    serviceScore: 5,
-    ambienceScore: 5,
-    costBenefitScore: 5,
-    overallScore: 5,
-    comment: null,
-    fullName: 'Amigo do grupo',
+    userId: userId,
+    foodScore: foodScore,
+    serviceScore: serviceScore,
+    ambienceScore: ambienceScore,
+    costBenefitScore: costBenefitScore,
+    overallScore: overallScore,
+    comment: comment,
+    fullName: fullName,
     avatarUrl: null,
     photoUrl: photoUrl,
   );
@@ -139,5 +150,109 @@ void main() {
 
     expect(find.text('Ninguém avaliou este rolê ainda.'), findsOneWidget);
     expect(find.byType(Image), findsNothing);
+  });
+
+  group('FASE 04 - critérios individuais da avaliação coletiva', () {
+    testWidgets(
+      'mostra os 5 critérios com rótulo e nota correta, cada um em texto '
+      'próprio (nunca separado do rótulo)',
+      (tester) async {
+        when(() => reviewRepository.listByEvent('e-1')).thenAnswer(
+          (_) async => [
+            _review(
+              foodScore: 4,
+              serviceScore: 3,
+              ambienceScore: 5,
+              costBenefitScore: 2,
+              overallScore: 4,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(_wrap(eventRepository, reviewRepository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Comida: 4.0'), findsOneWidget);
+        expect(find.text('Atendimento: 3.0'), findsOneWidget);
+        expect(find.text('Ambiente: 5.0'), findsOneWidget);
+        expect(find.text('Custo-benefício: 2.0'), findsOneWidget);
+        expect(find.text('Experiência geral: 4.0'), findsOneWidget);
+        // Média geral (trailing/AppBadge) continua visível e correta -
+        // (4+3+5+2+4)/5 = 3.6 - inalterada por esta fase.
+        expect(find.text('3.6'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'duas avaliações mostram, cada uma, os critérios do seu próprio '
+      'avaliador, sem misturar valores',
+      (tester) async {
+        when(() => reviewRepository.listByEvent('e-1')).thenAnswer(
+          (_) async => [
+            _review(
+              id: 'r-1',
+              userId: 'user-2',
+              fullName: 'Ana',
+              foodScore: 5,
+              serviceScore: 5,
+              ambienceScore: 5,
+              costBenefitScore: 5,
+              overallScore: 5,
+            ),
+            _review(
+              id: 'r-2',
+              userId: 'user-3',
+              fullName: 'Bruno',
+              foodScore: 1,
+              serviceScore: 2,
+              ambienceScore: 1,
+              costBenefitScore: 2,
+              overallScore: 1,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(_wrap(eventRepository, reviewRepository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Ana'), findsOneWidget);
+        expect(find.text('Bruno'), findsOneWidget);
+        // Ana: todos os 5 critérios em 5.0.
+        expect(find.text('Comida: 5.0'), findsOneWidget);
+        expect(find.text('Atendimento: 5.0'), findsOneWidget);
+        expect(find.text('Ambiente: 5.0'), findsOneWidget);
+        expect(find.text('Custo-benefício: 5.0'), findsOneWidget);
+        expect(find.text('Experiência geral: 5.0'), findsOneWidget);
+        // Bruno: valores bem diferentes, nunca confundidos com os de Ana.
+        expect(find.text('Comida: 1.0'), findsOneWidget);
+        expect(find.text('Atendimento: 2.0'), findsOneWidget);
+        expect(find.text('Ambiente: 1.0'), findsOneWidget);
+        expect(find.text('Custo-benefício: 2.0'), findsOneWidget);
+        expect(find.text('Experiência geral: 1.0'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'avaliação com comentário e foto continua mostrando os dois, além '
+      'dos 5 critérios',
+      (tester) async {
+        when(() => reviewRepository.listByEvent('e-1')).thenAnswer(
+          (_) async => [
+            _review(
+              comment: 'Lugar ótimo!',
+              photoUrl: 'https://x/e-1/photo.jpg',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(_wrap(eventRepository, reviewRepository));
+        await tester.pumpAndSettle();
+        while (tester.takeException() != null) {}
+
+        expect(find.text('Comida: 5.0'), findsOneWidget);
+        expect(find.text('Lugar ótimo!'), findsOneWidget);
+        expect(find.byType(Image), findsNWidgets(2));
+      },
+    );
   });
 }

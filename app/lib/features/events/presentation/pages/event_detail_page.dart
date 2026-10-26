@@ -500,37 +500,78 @@ class _ReviewsSection extends ConsumerWidget {
                         // em `trailing`, orçamento de largura apertado
                         // ao lado do selo de nota) para não competir por
                         // espaço com o `AppBadge`.
-                        subtitle:
-                            (entry.$2.comment != null &&
-                                    entry.$2.comment!.isNotEmpty) ||
-                                entry.$2.photoUrl != null
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (entry.$2.comment != null &&
-                                      entry.$2.comment!.isNotEmpty)
-                                    Text(entry.$2.comment!),
-                                  if (entry.$2.photoUrl != null) ...[
-                                    const SizedBox(height: AppSpacing.xs),
-                                    GestureDetector(
-                                      onTap: () => BorahPhotoViewer.open(
-                                        context,
-                                        imageUrls: [entry.$2.photoUrl!],
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: AppRadius.radiusSm,
-                                        child: Image.network(
-                                          entry.$2.photoUrl!,
-                                          width: 56,
-                                          height: 56,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              )
-                            : null,
+                        //
+                        // FASE 04: os 5 critérios individuais (antes só
+                        // a média, no `trailing`) agora abrem o
+                        // `subtitle` - por isso ele deixa de ser
+                        // condicional (sempre há algo a mostrar agora).
+                        // Rótulo e nota no mesmo `Text` (`"Comida: 4.0"`),
+                        // nunca separados - evita colidir com o
+                        // `find.text('5.0')` que já testa o `AppBadge` da
+                        // média, e é mais compacto que repetir o rótulo
+                        // num `Text` e o número noutro. `Wrap` (não
+                        // `Row`) porque 5 critérios não cabem numa linha
+                        // só em telas estreitas - quebra naturalmente,
+                        // sem overflow.
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.xs,
+                              children: [
+                                Text(
+                                  'Comida: '
+                                  '${entry.$2.foodScore.toStringAsFixed(1)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Atendimento: '
+                                  '${entry.$2.serviceScore.toStringAsFixed(1)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Ambiente: '
+                                  '${entry.$2.ambienceScore.toStringAsFixed(1)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Custo-benefício: '
+                                  '${entry.$2.costBenefitScore.toStringAsFixed(1)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Experiência geral: '
+                                  '${entry.$2.overallScore.toStringAsFixed(1)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                            if (entry.$2.comment != null &&
+                                entry.$2.comment!.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(entry.$2.comment!),
+                            ],
+                            if (entry.$2.photoUrl != null) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              GestureDetector(
+                                onTap: () => BorahPhotoViewer.open(
+                                  context,
+                                  imageUrls: [entry.$2.photoUrl!],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: AppRadius.radiusSm,
+                                  child: Image.network(
+                                    entry.$2.photoUrl!,
+                                    width: 56,
+                                    height: 56,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                         trailing: AppBadge(
                           label: entry.$2.averageScore.toStringAsFixed(1),
                         ),
