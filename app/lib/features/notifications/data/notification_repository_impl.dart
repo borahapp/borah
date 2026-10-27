@@ -48,6 +48,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
+  Future<int> countUnread(String userId) {
+    return _guard(() => _datasource.countUnread(userId));
+  }
+
+  @override
   Future<PagedResult<AppNotification>> listGroupActivity(
     String groupId, {
     required int page,

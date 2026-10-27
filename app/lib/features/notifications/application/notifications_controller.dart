@@ -5,6 +5,7 @@ import '../data/notification_repository_impl.dart';
 import '../domain/app_notification.dart';
 import '../domain/notification_repository.dart';
 import '../presentation/states/notifications_status.dart';
+import 'unread_notifications_count_provider.dart';
 
 /// Fluxo simples NotificationRepository -> Controller (mesmo padrão do
 /// DV-01 em diante), sem use cases intermediários. Nunca cria uma
@@ -54,6 +55,10 @@ class NotificationsController extends Notifier<NotificationsStatus> {
       // carregada individualmente - mesma simplificação já aplicada em
       // `markAllAsRead`.
       _page = 1;
+      // FASE 05: o sino da Home (IndexedStack, nunca desmontado) escuta
+      // este provider o tempo todo - invalidar aqui já atualiza o badge
+      // antes mesmo do usuário voltar para a Home, sem polling/realtime.
+      ref.invalidate(unreadNotificationsCountProvider);
       await _run(const NotificationsLoading(), requestId: requestId);
     } on NotificationRepositoryException catch (e) {
       if (requestId != _requestId) return;
@@ -71,6 +76,7 @@ class NotificationsController extends Notifier<NotificationsStatus> {
       await _repository.markAllAsRead(_userId!);
       if (requestId != _requestId) return;
       _page = 1;
+      ref.invalidate(unreadNotificationsCountProvider);
       await _run(const NotificationsLoading(), requestId: requestId);
     } on NotificationRepositoryException catch (e) {
       if (requestId != _requestId) return;

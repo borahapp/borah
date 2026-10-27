@@ -24,6 +24,12 @@ abstract interface class NotificationRepository {
   /// Atualiza apenas as notificações ainda não lidas (decisão 8 do DV-09).
   Future<void> markAllAsRead(String userId);
 
+  /// FASE 05 - contagem exata via `count` do PostgREST (mesmo padrão de
+  /// `DashboardRemoteDatasource._count`), nunca buscando as linhas para
+  /// contar no cliente - usado pelo sino de notificações na Home, onde
+  /// só o número importa, não o conteúdo.
+  Future<int> countUnread(String userId);
+
   /// RC-03 F25 - atividade do grupo (novo rolê, resposta de presença,
   /// novo membro), deduplicada entre destinatários do mesmo evento -
   /// reaproveita `notifications` como fonte, nunca uma tabela paralela

@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:app/core/models/paged_result.dart';
+import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/notifications/application/notifications_controller.dart';
+import 'package:app/features/notifications/application/unread_notifications_count_provider.dart';
 import 'package:app/features/notifications/data/notification_repository_impl.dart';
 import 'package:app/features/notifications/domain/app_notification.dart';
 import 'package:app/features/notifications/domain/notification_repository.dart';
@@ -289,5 +291,106 @@ void main() {
     final items = (status as NotificationsLoaded).result.items;
     expect(items.map((n) => n.id), ['n-1']);
     expect(items.single.isRead, isTrue);
+  });
+
+  group('FASE 05 - invalidação do contador do sino', () {
+    test(
+      'markAsRead invalida unreadNotificationsCountProvider, forçando uma '
+      'nova contagem na próxima leitura',
+      () async {
+        final authedContainer = ProviderContainer(
+          overrides: [
+            notificationRepositoryProvider.overrideWithValue(repository),
+            currentUserIdProvider.overrideWithValue('user-1'),
+          ],
+        );
+        addTearDown(authedContainer.dispose);
+
+        when(
+          () => repository.countUnread('user-1'),
+        ).thenAnswer((_) async => 3);
+        expect(
+          await authedContainer.read(unreadNotificationsCountProvider.future),
+          3,
+        );
+
+        when(
+          () => repository.listForUser('user-1', page: 1, limit: 20),
+        ).thenAnswer(
+          (_) async => const PagedResult(
+            items: [],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+        when(() => repository.markAsRead('n-1')).thenAnswer((_) async {});
+
+        final notifier = authedContainer.read(
+          notificationsControllerProvider.notifier,
+        );
+        await notifier.loadForUser('user-1');
+        await notifier.markAsRead('n-1');
+
+        when(
+          () => repository.countUnread('user-1'),
+        ).thenAnswer((_) async => 2);
+        expect(
+          await authedContainer.read(unreadNotificationsCountProvider.future),
+          2,
+        );
+        verify(() => repository.countUnread('user-1')).called(2);
+      },
+    );
+
+    test(
+      'markAllAsRead invalida unreadNotificationsCountProvider',
+      () async {
+        final authedContainer = ProviderContainer(
+          overrides: [
+            notificationRepositoryProvider.overrideWithValue(repository),
+            currentUserIdProvider.overrideWithValue('user-1'),
+          ],
+        );
+        addTearDown(authedContainer.dispose);
+
+        when(
+          () => repository.countUnread('user-1'),
+        ).thenAnswer((_) async => 5);
+        expect(
+          await authedContainer.read(unreadNotificationsCountProvider.future),
+          5,
+        );
+
+        when(
+          () => repository.listForUser('user-1', page: 1, limit: 20),
+        ).thenAnswer(
+          (_) async => const PagedResult(
+            items: [],
+            page: 1,
+            limit: 20,
+            hasNextPage: false,
+          ),
+        );
+        when(
+          () => repository.markAllAsRead('user-1'),
+        ).thenAnswer((_) async {});
+
+        final notifier = authedContainer.read(
+          notificationsControllerProvider.notifier,
+        );
+        await notifier.loadForUser('user-1');
+        await notifier.markAllAsRead();
+
+        when(
+          () => repository.countUnread('user-1'),
+        ).thenAnswer((_) async => 0);
+        expect(
+          await authedContainer.read(unreadNotificationsCountProvider.future),
+          0,
+        );
+        verify(() => repository.countUnread('user-1')).called(2);
+      },
+    );
   });
 }

@@ -1,3 +1,4 @@
+import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event.dart';
 import 'package:app/features/events/domain/event_details.dart';
@@ -7,6 +8,8 @@ import 'package:app/features/groups/domain/event_summary.dart';
 import 'package:app/features/groups/domain/group.dart';
 import 'package:app/features/groups/domain/group_repository.dart';
 import 'package:app/features/home/presentation/pages/home_page.dart';
+import 'package:app/features/notifications/data/notification_repository_impl.dart';
+import 'package:app/features/notifications/domain/notification_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +19,9 @@ import 'package:mocktail/mocktail.dart';
 class MockGroupRepository extends Mock implements GroupRepository {}
 
 class MockEventRepository extends Mock implements EventRepository {}
+
+class MockNotificationRepository extends Mock
+    implements NotificationRepository {}
 
 Group _group({
   String id = 'g-1',
@@ -54,11 +60,20 @@ Event _event({
 Widget _wrap({
   required MockGroupRepository groupRepository,
   required MockEventRepository eventRepository,
+  required MockNotificationRepository notificationRepository,
 }) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (_, _) => const HomePage()),
+      // FASE 05: stub de destino do sino - o conteúdo real de
+      // `/notifications` é testado em `notifications_page_test.dart`,
+      // não aqui; esta tela só precisa existir para a navegação
+      // funcionar e o `pop` devolver o controle à Home.
+      GoRoute(
+        path: '/notifications',
+        builder: (_, _) => const Scaffold(body: Text('Notificações (tela)')),
+      ),
       GoRoute(
         path: '/groups/new',
         builder: (_, _) => const Scaffold(body: Text('Criar grupo (tela)')),
@@ -101,6 +116,13 @@ Widget _wrap({
     overrides: [
       groupRepositoryProvider.overrideWithValue(groupRepository),
       eventRepositoryProvider.overrideWithValue(eventRepository),
+      notificationRepositoryProvider.overrideWithValue(notificationRepository),
+      // FASE 05: `_NotificationBellAction` agora faz parte da `AppTopBar`
+      // da Home incondicionalmente - sem este override, qualquer teste
+      // deste arquivo (mesmo os que não mexem com notificações) tocaria
+      // o `authControllerProvider` real, que depende do Supabase não
+      // inicializado neste ambiente de teste.
+      currentUserIdProvider.overrideWithValue('user-1'),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -109,14 +131,24 @@ Widget _wrap({
 void main() {
   late MockGroupRepository groupRepository;
   late MockEventRepository eventRepository;
+  late MockNotificationRepository notificationRepository;
 
   setUp(() {
     groupRepository = MockGroupRepository();
     eventRepository = MockEventRepository();
+    notificationRepository = MockNotificationRepository();
+    // Default neutro: testes que não mexem com o sino não precisam
+    // estubar nada - só os novos testes da FASE 05 sobrescrevem isto.
+    when(
+      () => notificationRepository.countUnread('user-1'),
+    ).thenAnswer((_) async => 0);
   });
 
-  Widget wrap() =>
-      _wrap(groupRepository: groupRepository, eventRepository: eventRepository);
+  Widget wrap() => _wrap(
+    groupRepository: groupRepository,
+    eventRepository: eventRepository,
+    notificationRepository: notificationRepository,
+  );
 
   testWidgets('HOME-01: Home carregada mostra título e CTA principal', (
     tester,
@@ -448,4 +480,80 @@ void main() {
       verifyNever(() => eventRepository.getById('e-far'));
     },
   );
+
+  group('FASE 05 - sino de notificações', () {
+    testWidgets('sem notificações não lidas, o sino aparece sem badge', (
+      tester,
+    ) async {
+      when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+      // `countUnread` já estubado em 0 no `setUp()` - nada a mais aqui.
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+      expect(find.byType(Badge), findsOneWidget);
+      final badge = tester.widget<Badge>(find.byType(Badge));
+      expect(badge.isLabelVisible, isFalse);
+    });
+
+    testWidgets('com notificações não lidas, mostra o badge com a '
+        'contagem correta', (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+      when(
+        () => notificationRepository.countUnread('user-1'),
+      ).thenAnswer((_) async => 3);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      expect(find.text('3'), findsOneWidget);
+      final badge = tester.widget<Badge>(find.byType(Badge));
+      expect(badge.isLabelVisible, isTrue);
+      expect(find.byTooltip('Notificações, 3 não lidas'), findsOneWidget);
+    });
+
+    testWidgets('contagem acima de 99 é exibida como "99+"', (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+      when(
+        () => notificationRepository.countUnread('user-1'),
+      ).thenAnswer((_) async => 134);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      expect(find.text('99+'), findsOneWidget);
+      expect(find.text('134'), findsNothing);
+    });
+
+    testWidgets('tocar no sino navega para /notifications', (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.notifications_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Notificações (tela)'), findsOneWidget);
+    });
+
+    testWidgets(
+      'erro ao carregar a contagem não esconde o sino nem quebra a Home',
+      (tester) async {
+        when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+        when(() => notificationRepository.countUnread('user-1')).thenThrow(
+          const NotificationRepositoryException('Falha ao contar.'),
+        );
+
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+        expect(find.text('BORAH'), findsOneWidget);
+        final badge = tester.widget<Badge>(find.byType(Badge));
+        expect(badge.isLabelVisible, isFalse);
+      },
+    );
+  });
 }

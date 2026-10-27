@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/cards/event_card.dart';
@@ -17,6 +18,7 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../events/domain/event.dart';
 import '../../../groups/domain/event_summary.dart';
 import '../../../groups/domain/group.dart';
+import '../../../notifications/application/unread_notifications_count_provider.dart';
 import '../../application/home_controller.dart';
 import '../states/home_status.dart';
 
@@ -128,12 +130,27 @@ class _HomePageState extends ConsumerState<HomePage> {
     ref.read(homeControllerProvider.notifier).load();
   }
 
+  /// FASE 05: o controller de `/notifications` já invalida
+  /// `unreadNotificationsCountProvider` sozinho ao marcar como lida (o
+  /// sino, nunca desmontado pelo `IndexedStack` da shell, atualiza antes
+  /// mesmo do retorno) - esta invalidação aqui é só rede de segurança
+  /// para o momento exato do retorno, mesmo padrão já usado por
+  /// `_createGroup`/`_createEvent` acima.
+  Future<void> _openNotifications() async {
+    await context.push('/notifications');
+    if (!mounted) return;
+    ref.invalidate(unreadNotificationsCountProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(homeControllerProvider);
 
     return Scaffold(
-      appBar: const AppTopBar(title: 'BORAH'),
+      appBar: AppTopBar(
+        title: 'BORAH',
+        actions: [_NotificationBellAction(onPressed: _openNotifications)],
+      ),
       body: AppAnimatedSwitcher(
         child: switch (status) {
           HomeInitial() ||
@@ -153,6 +170,39 @@ class _HomePageState extends ConsumerState<HomePage> {
               onCreateGroup: _createGroup,
             ),
         },
+      ),
+    );
+  }
+}
+
+/// FASE 05 - sino de notificações no `AppTopBar` da Home. `ConsumerWidget`
+/// próprio (não inline em `_HomePageState.build`) para que só o badge
+/// recomponha quando `unreadNotificationsCountProvider` mudar, sem
+/// reconstruir o resto da `AppTopBar`/Home.
+class _NotificationBellAction extends ConsumerWidget {
+  const _NotificationBellAction({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // `.valueOrNull` (não `.when`): carregamento e erro de contagem
+    // nunca escondem o sino nem bloqueiam o acesso a `/notifications` -
+    // só o badge numérico fica ausente nesses dois casos, mesmo
+    // comportamento visual de "sem notificações não lidas" (FASE 05,
+    // critério de aceite 7).
+    final count = ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
+    final compactCount = count > 99 ? '99+' : '$count';
+
+    return Badge(
+      label: Text(compactCount),
+      isLabelVisible: count > 0,
+      child: AppIconButton(
+        icon: Icons.notifications_outlined,
+        tooltip: count > 0
+            ? 'Notificações, $count não lida${count == 1 ? '' : 's'}'
+            : 'Notificações',
+        onPressed: onPressed,
       ),
     );
   }

@@ -47,6 +47,19 @@ class NotificationRemoteDatasource {
         .eq('is_read', false);
   }
 
+  /// FASE 05 - mesmo padrão de `DashboardRemoteDatasource._count`:
+  /// `count` do PostgREST, nunca `listForUser` só para contar no
+  /// cliente.
+  Future<int> countUnread(String userId) async {
+    final response = await _client
+        .from(_table)
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_read', false)
+        .count(CountOption.exact);
+    return response.count;
+  }
+
   /// RC-03 F25 - RPC porque `notifications_select_own` restringe SELECT
   /// ao próprio destinatário; agregação por grupo exige `security
   /// definer` do lado do banco (`group_activity_feed`). Busca
