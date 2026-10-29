@@ -170,7 +170,7 @@ void main() {
     expect(find.text('Início'), findsWidgets); // rótulo da barra
     expect(find.text('Explorar'), findsOneWidget);
     expect(find.text('Criar'), findsOneWidget);
-    expect(find.text('Rankings'), findsOneWidget);
+    expect(find.text('Pontuação'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
     // Início é a aba inicial (FASE 01) - título + CTA principal da nova
     // Home, sem grupos/rolês mockados (estado vazio).

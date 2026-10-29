@@ -153,7 +153,7 @@ void main() {
 
     expect(find.text('Feed'), findsOneWidget);
     expect(find.text('Gamificação'), findsOneWidget);
-    expect(find.text('Rankings'), findsOneWidget);
+    expect(find.text('Rankings de restaurantes'), findsOneWidget);
     expect(find.text('Meus Grupos'), findsOneWidget);
     expect(find.text('Notificações'), findsOneWidget);
     expect(find.text('Favoritos'), findsOneWidget);

@@ -67,7 +67,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
     AppBottomNavigationItem(
       icon: Icons.emoji_events_outlined,
       selectedIcon: Icons.emoji_events,
-      label: 'Rankings',
+      label: 'Pontuação',
     ),
     AppBottomNavigationItem(
       icon: Icons.person_outline,

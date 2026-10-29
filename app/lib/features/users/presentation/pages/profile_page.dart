@@ -217,7 +217,7 @@ class _ProfileView extends ConsumerWidget {
         ),
         _ShortcutCard(
           icon: Icons.leaderboard_outlined,
-          label: 'Rankings',
+          label: 'Rankings de restaurantes',
           onTap: () => context.push('/rankings'),
         ),
         // FASE SOCIAL 4: "Grupos" saiu da barra de navegação principal
