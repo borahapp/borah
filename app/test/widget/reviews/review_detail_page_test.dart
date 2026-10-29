@@ -24,12 +24,20 @@ Review _review({
   int likesCount = 3,
   String? authorFullName,
   String? restaurantName,
+  double? ambienceScore,
+  double? serviceScore,
+  double? foodScore,
+  double? costBenefitScore,
 }) {
   return Review(
     id: id,
     restaurantId: 'r-1',
     userId: userId,
     rating: rating,
+    ambienceScore: ambienceScore,
+    serviceScore: serviceScore,
+    foodScore: foodScore,
+    costBenefitScore: costBenefitScore,
     comment: comment,
     likesCount: likesCount,
     photosCount: 0,
@@ -176,6 +184,75 @@ void main() {
 
     expect(find.text('4.5'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  group('critérios individuais (FASE 07)', () {
+    testWidgets('avaliação completa (4 critérios) mostra o detalhamento', (
+      tester,
+    ) async {
+      when(() => repository.getById('rv-1')).thenAnswer(
+        (_) async => _review(
+          ambienceScore: 4.0,
+          serviceScore: 5.0,
+          foodScore: 4.5,
+          costBenefitScore: 3.5,
+        ),
+      );
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>[]);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comida: 4.5'), findsOneWidget);
+      expect(find.text('Atendimento: 5.0'), findsOneWidget);
+      expect(find.text('Ambiente: 4.0'), findsOneWidget);
+      expect(find.text('Custo-benefício: 3.5'), findsOneWidget);
+    });
+
+    testWidgets('avaliação antiga sem critérios não mostra o detalhamento', (
+      tester,
+    ) async {
+      when(() => repository.getById('rv-1')).thenAnswer((_) async => _review());
+      when(
+        () => repository.listPhotoUrls('rv-1'),
+      ).thenAnswer((_) async => <String>[]);
+      when(
+        () => repository.isLikedByUser('rv-1', 'user-1'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(_wrap(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Comida:'), findsNothing);
+      expect(find.text('4.5'), findsOneWidget);
+    });
+
+    testWidgets(
+      'avaliação parcialmente preenchida é tratada como sem critérios',
+      (tester) async {
+        when(() => repository.getById('rv-1')).thenAnswer(
+          (_) async => _review(foodScore: 4.0, serviceScore: 4.0),
+        );
+        when(
+          () => repository.listPhotoUrls('rv-1'),
+        ).thenAnswer((_) async => <String>[]);
+        when(
+          () => repository.isLikedByUser('rv-1', 'user-1'),
+        ).thenAnswer((_) async => false);
+
+        await tester.pumpWidget(_wrap(repository));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Comida:'), findsNothing);
+        expect(find.textContaining('Atendimento:'), findsNothing);
+        expect(find.text('4.5'), findsOneWidget);
+      },
+    );
   });
 
   testWidgets('estado de carregamento mostra indicador', (tester) async {

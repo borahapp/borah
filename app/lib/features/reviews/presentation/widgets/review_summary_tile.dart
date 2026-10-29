@@ -72,6 +72,29 @@ class ReviewSummaryTile extends StatelessWidget {
               ].join(' · '),
               style: theme.textTheme.labelMedium,
             ),
+          if (review.hasCriteriaScores)
+            Wrap(
+              spacing: 8,
+              runSpacing: 2,
+              children: [
+                Text(
+                  'Comida: ${review.foodScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Atendimento: ${review.serviceScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Ambiente: ${review.ambienceScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Custo-benefício: ${review.costBenefitScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
           if (review.comment != null && review.comment!.isNotEmpty)
             Text(review.comment!),
         ],

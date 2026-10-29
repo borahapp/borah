@@ -7,12 +7,20 @@ Review _review({
   String? authorFullName,
   String? restaurantName,
   String? comment = 'Ótimo!',
+  double? ambienceScore,
+  double? serviceScore,
+  double? foodScore,
+  double? costBenefitScore,
 }) {
   return Review(
     id: 'rv-1',
     restaurantId: 'r-1',
     userId: 'user-1',
     rating: 4.5,
+    ambienceScore: ambienceScore,
+    serviceScore: serviceScore,
+    foodScore: foodScore,
+    costBenefitScore: costBenefitScore,
     comment: comment,
     likesCount: 0,
     photosCount: 0,
@@ -56,5 +64,49 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('07/03/2026'), findsOneWidget);
+  });
+
+  group('critérios individuais (FASE 07)', () {
+    testWidgets('avaliação completa (4 critérios) mostra o detalhamento', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          _review(
+            ambienceScore: 4.0,
+            serviceScore: 5.0,
+            foodScore: 4.5,
+            costBenefitScore: 3.5,
+          ),
+        ),
+      );
+
+      expect(find.text('Comida: 4.5'), findsOneWidget);
+      expect(find.text('Atendimento: 5.0'), findsOneWidget);
+      expect(find.text('Ambiente: 4.0'), findsOneWidget);
+      expect(find.text('Custo-benefício: 3.5'), findsOneWidget);
+    });
+
+    testWidgets('avaliação antiga sem critérios não mostra o detalhamento', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(_review()));
+
+      expect(find.textContaining('Comida:'), findsNothing);
+      expect(find.text('4.5'), findsOneWidget);
+    });
+
+    testWidgets(
+      'avaliação parcialmente preenchida é tratada como sem critérios',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(_review(foodScore: 4.0, serviceScore: 4.0)),
+        );
+
+        expect(find.textContaining('Comida:'), findsNothing);
+        expect(find.textContaining('Atendimento:'), findsNothing);
+        expect(find.text('4.5'), findsOneWidget);
+      },
+    );
   });
 }

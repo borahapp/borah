@@ -264,6 +264,31 @@ class _DetailView extends StatelessWidget {
           Text(_formatDate(review.createdAt), style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.sm),
           ScoreBubble(rating: review.rating),
+          if (review.hasCriteriaScores) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                Text(
+                  'Comida: ${review.foodScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Atendimento: ${review.serviceScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Ambiente: ${review.ambienceScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Custo-benefício: ${review.costBenefitScore!.toStringAsFixed(1)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ],
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Text(review.comment!),
