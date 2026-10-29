@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../../authentication/application/auth_controller.dart';
 import '../data/event_repository_impl.dart';
 import '../domain/event_attendance.dart';
@@ -50,15 +53,9 @@ class EventDetailController extends Notifier<EventDetailStatus> {
     }
   }
 
-  /// Analytics (ROLÊ-03, não implementado - só documentado):
-  /// `AppAnalytics.trackAttendanceConfirmed()` seria disparado aqui, só
-  /// após o `await` ter sucesso (nunca no valor otimista, para não
-  /// registrar uma confirmação que pode ainda ser revertida).
   Future<void> confirm(String attendanceId) =>
       _respond(attendanceId, status: 'confirmed');
 
-  /// Analytics (ROLÊ-03, não implementado - só documentado): mesma
-  /// observação de [confirm], com `AppAnalytics.trackAttendanceDeclined()`.
   Future<void> decline(String attendanceId) =>
       _respond(attendanceId, status: 'declined');
 
@@ -93,8 +90,10 @@ class EventDetailController extends Notifier<EventDetailStatus> {
     try {
       if (status == 'confirmed') {
         await _repository.confirmAttendance(attendanceId);
+        unawaited(AppAnalytics.trackAttendanceConfirmed(previous.event.id));
       } else {
         await _repository.declineAttendance(attendanceId);
+        unawaited(AppAnalytics.trackAttendanceDeclined(previous.event.id));
       }
     } on EventRepositoryException catch (e) {
       state = EventDetailError(e.message, previous, current.canManage);

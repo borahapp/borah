@@ -1,3 +1,6 @@
+import 'package:app/core/analytics/analytics_event.dart';
+import 'package:app/core/analytics/analytics_service.dart';
+import 'package:app/core/analytics/app_analytics.dart';
 import 'package:app/features/groups/application/create_group_controller.dart';
 import 'package:app/features/groups/data/group_repository_impl.dart';
 import 'package:app/features/groups/domain/group.dart';
@@ -8,6 +11,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockGroupRepository extends Mock implements GroupRepository {}
+
+class _RecordingAnalyticsService implements AnalyticsService {
+  final List<AnalyticsEvent> trackedEvents = [];
+
+  @override
+  Future<void> setup() async {}
+
+  @override
+  Future<void> track(AnalyticsEvent event) async {
+    trackedEvents.add(event);
+  }
+
+  @override
+  Future<void> identify(String userId) async {}
+
+  @override
+  Future<void> reset() async {}
+}
 
 Group _group({String name = 'Turma do João'}) {
   return Group(
@@ -22,6 +43,7 @@ Group _group({String name = 'Turma do João'}) {
 void main() {
   late MockGroupRepository repository;
   late ProviderContainer container;
+  late _RecordingAnalyticsService analyticsService;
 
   setUp(() {
     repository = MockGroupRepository();
@@ -29,6 +51,15 @@ void main() {
       overrides: [groupRepositoryProvider.overrideWithValue(repository)],
     );
     addTearDown(container.dispose);
+
+    analyticsService = _RecordingAnalyticsService();
+    AppAnalytics.debugServiceOverride = analyticsService;
+    AppAnalytics.debugSendsEventsOverride = true;
+  });
+
+  tearDown(() {
+    AppAnalytics.debugServiceOverride = null;
+    AppAnalytics.debugSendsEventsOverride = null;
   });
 
   test('estado inicial é CreateGroupInitial', () {
@@ -153,5 +184,46 @@ void main() {
         );
       },
     );
+
+    group('analytics (FASE 08)', () {
+      test(
+        'sucesso dispara trackGroupCreated exatamente 1 vez com group_id/visibility',
+        () async {
+          when(
+            () => repository.create(
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              photoUrl: any(named: 'photoUrl'),
+              visibility: any(named: 'visibility'),
+            ),
+          ).thenAnswer((_) async => _group());
+
+          await container
+              .read(createGroupControllerProvider.notifier)
+              .create(name: 'Turma do João');
+
+          final event = analyticsService.trackedEvents.single;
+          expect(event.name, 'group_created');
+          expect(event.properties['group_id'], 'g-1');
+          expect(event.properties['visibility'], 'private');
+        },
+      );
+
+      test('falha não dispara trackGroupCreated', () async {
+        when(
+          () => repository.create(
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            photoUrl: any(named: 'photoUrl'),
+          ),
+        ).thenThrow(const GroupRepositoryException('Nome inválido.'));
+
+        await container
+            .read(createGroupControllerProvider.notifier)
+            .create(name: '   ');
+
+        expect(analyticsService.trackedEvents, isEmpty);
+      });
+    });
   });
 }

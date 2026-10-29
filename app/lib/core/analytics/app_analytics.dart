@@ -219,4 +219,39 @@ abstract final class AppAnalytics {
     required String type,
     required bool success,
   }) => track('photo_uploaded', properties: {'type': type, 'success': success});
+
+  /// FASE 08 — início do funil do loop central (Visão, Cap. 11: nenhuma
+  /// outra prioridade de retenção pode ser validada sem esta
+  /// instrumentação mínima). [groupId]/[visibility] não são dados
+  /// pessoais - mesmo nível de identificabilidade de `restaurant_id` já
+  /// enviado por `trackRestaurantFavorited`.
+  static Future<void> trackGroupCreated({
+    required String groupId,
+    required String visibility,
+  }) => track(
+    'group_created',
+    properties: {'group_id': groupId, 'visibility': visibility},
+  );
+
+  static Future<void> trackEventCreated({
+    required String eventId,
+    required String groupId,
+    required String restaurantId,
+  }) => track(
+    'event_created',
+    properties: {
+      'event_id': eventId,
+      'group_id': groupId,
+      'restaurant_id': restaurantId,
+    },
+  );
+
+  /// Disparado só depois do `await` ao repositório ter sucesso em
+  /// `EventDetailController._respond` - nunca no valor otimista
+  /// aplicado antes da chamada (poderia ainda ser revertido).
+  static Future<void> trackAttendanceConfirmed(String eventId) =>
+      track('attendance_confirmed', properties: {'event_id': eventId});
+
+  static Future<void> trackAttendanceDeclined(String eventId) =>
+      track('attendance_declined', properties: {'event_id': eventId});
 }

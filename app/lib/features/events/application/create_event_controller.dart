@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../data/event_repository_impl.dart';
 import '../domain/event_repository.dart';
 import '../presentation/states/create_event_status.dart';
@@ -10,12 +13,6 @@ class CreateEventController extends Notifier<CreateEventStatus> {
 
   EventRepository get _repository => ref.read(eventRepositoryProvider);
 
-  /// Analytics (ROLÊ-03, não implementado - só documentado por decisão
-  /// desta rodada): `AppAnalytics.trackEventCreated()` seria disparado
-  /// aqui, só no `CreateEventSaveSuccess`, mesmo padrão de
-  /// `trackReviewCreated`/`trackSignup` (RC-03C) - método ainda não
-  /// existe em `AppAnalytics`, fica para quando o wiring de Analytics
-  /// desta feature for decidido como rodada própria.
   Future<void> create({
     required String groupId,
     required String restaurantId,
@@ -27,6 +24,13 @@ class CreateEventController extends Notifier<CreateEventStatus> {
         groupId: groupId,
         restaurantId: restaurantId,
         scheduledAt: scheduledAt,
+      );
+      unawaited(
+        AppAnalytics.trackEventCreated(
+          eventId: event.id,
+          groupId: event.groupId,
+          restaurantId: event.restaurantId,
+        ),
       );
       state = CreateEventSaveSuccess(event);
     } on EventRepositoryException catch (e) {

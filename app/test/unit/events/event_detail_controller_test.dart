@@ -1,3 +1,6 @@
+import 'package:app/core/analytics/analytics_event.dart';
+import 'package:app/core/analytics/analytics_service.dart';
+import 'package:app/core/analytics/app_analytics.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/events/application/event_detail_controller.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
@@ -11,6 +14,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockEventRepository extends Mock implements EventRepository {}
+
+class _RecordingAnalyticsService implements AnalyticsService {
+  final List<AnalyticsEvent> trackedEvents = [];
+
+  @override
+  Future<void> setup() async {}
+
+  @override
+  Future<void> track(AnalyticsEvent event) async {
+    trackedEvents.add(event);
+  }
+
+  @override
+  Future<void> identify(String userId) async {}
+
+  @override
+  Future<void> reset() async {}
+}
 
 Event _event({String status = 'scheduled'}) {
   return Event(
@@ -54,6 +75,7 @@ EventDetails _details({
 void main() {
   late MockEventRepository repository;
   late ProviderContainer container;
+  late _RecordingAnalyticsService analyticsService;
 
   setUp(() {
     repository = MockEventRepository();
@@ -70,6 +92,15 @@ void main() {
         userId: any(named: 'userId'),
       ),
     ).thenAnswer((_) async => false);
+
+    analyticsService = _RecordingAnalyticsService();
+    AppAnalytics.debugServiceOverride = analyticsService;
+    AppAnalytics.debugSendsEventsOverride = true;
+  });
+
+  tearDown(() {
+    AppAnalytics.debugServiceOverride = null;
+    AppAnalytics.debugSendsEventsOverride = null;
   });
 
   test('estado inicial é EventDetailInitial', () {
@@ -195,6 +226,48 @@ void main() {
         container.read(eventDetailControllerProvider),
         isA<EventDetailInitial>(),
       );
+      expect(analyticsService.trackedEvents, isEmpty);
+    });
+
+    group('analytics (FASE 08)', () {
+      test(
+        'sucesso dispara trackAttendanceConfirmed exatamente 1 vez, nunca trackAttendanceDeclined',
+        () async {
+          when(
+            () => repository.getById('e-1'),
+          ).thenAnswer((_) async => _details());
+          when(
+            () => repository.confirmAttendance('a-1'),
+          ).thenAnswer((_) async {});
+
+          final notifier = container.read(
+            eventDetailControllerProvider.notifier,
+          );
+          await notifier.load('e-1', 'g-1');
+          await notifier.confirm('a-1');
+
+          final event = analyticsService.trackedEvents.single;
+          expect(event.name, 'attendance_confirmed');
+          expect(event.properties['event_id'], 'e-1');
+        },
+      );
+
+      test('falha não dispara trackAttendanceConfirmed', () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        when(() => repository.confirmAttendance('a-1')).thenThrow(
+          const EventRepositoryException('Não foi possível confirmar.'),
+        );
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+        await notifier.confirm('a-1');
+
+        expect(analyticsService.trackedEvents, isEmpty);
+      });
     });
   });
 
@@ -230,6 +303,48 @@ void main() {
         'Não foi possível registrar sua resposta.',
       );
       expect(status.details!.attendances.first.status, 'pending');
+      expect(analyticsService.trackedEvents, isEmpty);
+    });
+
+    group('analytics (FASE 08)', () {
+      test(
+        'sucesso dispara trackAttendanceDeclined exatamente 1 vez, nunca trackAttendanceConfirmed',
+        () async {
+          when(
+            () => repository.getById('e-1'),
+          ).thenAnswer((_) async => _details());
+          when(
+            () => repository.declineAttendance('a-1'),
+          ).thenAnswer((_) async {});
+
+          final notifier = container.read(
+            eventDetailControllerProvider.notifier,
+          );
+          await notifier.load('e-1', 'g-1');
+          await notifier.decline('a-1');
+
+          final event = analyticsService.trackedEvents.single;
+          expect(event.name, 'attendance_declined');
+          expect(event.properties['event_id'], 'e-1');
+        },
+      );
+
+      test('falha não dispara trackAttendanceDeclined', () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        when(
+          () => repository.declineAttendance('a-1'),
+        ).thenThrow(Exception('erro de rede'));
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+        await notifier.decline('a-1');
+
+        expect(analyticsService.trackedEvents, isEmpty);
+      });
     });
   });
 

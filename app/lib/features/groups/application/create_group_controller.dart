@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/app_analytics.dart';
 import '../data/group_repository_impl.dart';
 import '../domain/group_repository.dart';
 import '../presentation/states/create_group_status.dart';
@@ -23,6 +26,12 @@ class CreateGroupController extends Notifier<CreateGroupStatus> {
         description: description,
         photoUrl: photoUrl,
         visibility: visibility,
+      );
+      unawaited(
+        AppAnalytics.trackGroupCreated(
+          groupId: group.id,
+          visibility: group.visibility,
+        ),
       );
       state = CreateGroupSaveSuccess(group);
     } on GroupRepositoryException catch (e) {

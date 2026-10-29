@@ -268,6 +268,44 @@ void main() {
       expect(event.properties['type'], 'review');
       expect(event.properties['success'], false);
     });
+
+    test('trackGroupCreated', () async {
+      await AppAnalytics.trackGroupCreated(
+        groupId: 'g-1',
+        visibility: 'public',
+      );
+      final event = service.trackedEvents.single;
+      expect(event.name, 'group_created');
+      expect(event.properties['group_id'], 'g-1');
+      expect(event.properties['visibility'], 'public');
+    });
+
+    test('trackEventCreated', () async {
+      await AppAnalytics.trackEventCreated(
+        eventId: 'e-1',
+        groupId: 'g-1',
+        restaurantId: 'r-1',
+      );
+      final event = service.trackedEvents.single;
+      expect(event.name, 'event_created');
+      expect(event.properties['event_id'], 'e-1');
+      expect(event.properties['group_id'], 'g-1');
+      expect(event.properties['restaurant_id'], 'r-1');
+    });
+
+    test('trackAttendanceConfirmed', () async {
+      await AppAnalytics.trackAttendanceConfirmed('e-1');
+      final event = service.trackedEvents.single;
+      expect(event.name, 'attendance_confirmed');
+      expect(event.properties['event_id'], 'e-1');
+    });
+
+    test('trackAttendanceDeclined', () async {
+      await AppAnalytics.trackAttendanceDeclined('e-1');
+      final event = service.trackedEvents.single;
+      expect(event.name, 'attendance_declined');
+      expect(event.properties['event_id'], 'e-1');
+    });
   });
 
   group('sanitização (RC-03A/RC-03C)', () {
