@@ -94,6 +94,37 @@ void main() {
 
       expect(message, 'Something unexpected happened on the server');
     });
+
+    test('ClientException (falha de rede, ex. "Failed to fetch") -> '
+        'mensagem de conectividade em português', () {
+      final message = SupabaseErrorTranslator.translateAuthError(
+        const AuthException(
+          'ClientException: Failed to fetch, uri=https://x.supabase.co/'
+          'auth/v1/token?grant_type=password',
+        ),
+      );
+
+      expect(
+        message,
+        'Não foi possível conectar. Verifique sua conexão com a internet '
+        'e tente novamente.',
+      );
+    });
+
+    test('SocketException (sem internet/DNS) -> mesma mensagem de '
+        'conectividade', () {
+      final message = SupabaseErrorTranslator.translateAuthError(
+        const AuthException(
+          'SocketException: Failed host lookup: \'x.supabase.co\'',
+        ),
+      );
+
+      expect(
+        message,
+        'Não foi possível conectar. Verifique sua conexão com a internet '
+        'e tente novamente.',
+      );
+    });
   });
 
   group('translatePostgrestError', () {
@@ -103,6 +134,22 @@ void main() {
       );
 
       expect(message, 'permission denied for table x');
+    });
+
+    test('ClientException (falha de rede) -> mensagem de conectividade '
+        'em português (mesmo tratamento de translateAuthError)', () {
+      final message = SupabaseErrorTranslator.translatePostgrestError(
+        const PostgrestException(
+          message: 'ClientException: Failed to fetch, uri=https://x.'
+              'supabase.co/rest/v1/reviews',
+        ),
+      );
+
+      expect(
+        message,
+        'Não foi possível conectar. Verifique sua conexão com a internet '
+        'e tente novamente.',
+      );
     });
   });
 }

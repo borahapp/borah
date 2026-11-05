@@ -45,6 +45,25 @@ abstract final class SupabaseErrorTranslator {
   static String? _translate(String? code, String message) {
     final normalized = message.toLowerCase();
 
+    // Falha de transporte (sem internet, DNS, servidor inalcançável) -
+    // chega aqui como `AuthException` com a mensagem crua da exceção de
+    // rede subjacente (`ClientException`/`SocketException` etc.), sem
+    // `code` estruturado (nunca chegou a uma resposta HTTP do Supabase
+    // para ter um). Verificada antes dos demais casos, puramente por
+    // texto - achado real (BORAH, verificação manual contra um backend
+    // indisponível): sem isto, o usuário via a mensagem técnica crua
+    // (ex. "ClientException: Failed to fetch, uri=...").
+    if (normalized.contains('clientexception') ||
+        normalized.contains('failed to fetch') ||
+        normalized.contains('socketexception') ||
+        normalized.contains('failed host lookup') ||
+        normalized.contains('connection refused') ||
+        normalized.contains('connection failed') ||
+        normalized.contains('network is unreachable')) {
+      return 'Não foi possível conectar. Verifique sua conexão com a '
+          'internet e tente novamente.';
+    }
+
     if (code == 'invalid_credentials' ||
         normalized.contains('invalid login credentials')) {
       return 'E-mail ou senha incorretos.';
