@@ -133,6 +133,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
       _ => null,
     };
     final canCancelOrReschedule = canManage && event?.status == 'scheduled';
+    final isMutating = status is EventDetailLoaded && status.isMutating;
 
     return Scaffold(
       appBar: AppTopBar(
@@ -142,12 +143,14 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
             AppIconButton(
               icon: Icons.schedule_outlined,
               tooltip: 'Reagendar',
-              onPressed: () => _rescheduleEvent(event!.scheduledAt),
+              onPressed: isMutating
+                  ? null
+                  : () => _rescheduleEvent(event!.scheduledAt),
             ),
             AppIconButton(
               icon: Icons.event_busy_outlined,
               tooltip: 'Cancelar rolê',
-              onPressed: _cancelEvent,
+              onPressed: isMutating ? null : _cancelEvent,
             ),
           ],
         ],
@@ -163,12 +166,14 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage> {
                 .read(eventDetailControllerProvider.notifier)
                 .load(widget.eventId, widget.groupId),
           ),
-          EventDetailLoaded(:final details) => _EventDetailContent(
-            key: const ValueKey('loaded'),
-            groupId: widget.groupId,
-            details: details,
-            currentUserId: currentUserId,
-          ),
+          EventDetailLoaded(:final details, :final pendingAttendanceId) =>
+            _EventDetailContent(
+              key: const ValueKey('loaded'),
+              groupId: widget.groupId,
+              details: details,
+              currentUserId: currentUserId,
+              pendingAttendanceId: pendingAttendanceId,
+            ),
           // Mesma `key` de `EventDetailLoaded` de propósito: uma falha em
           // confirmar/recusar/cancelar/reagendar não deve re-animar a
           // tela inteira (o `AppAnimatedSwitcher` trataria uma key
@@ -192,11 +197,17 @@ class _EventDetailContent extends ConsumerWidget {
     required this.groupId,
     required this.details,
     required this.currentUserId,
+    this.pendingAttendanceId,
   });
 
   final String groupId;
   final EventDetails details;
   final String? currentUserId;
+
+  /// Id da própria presença com confirmar/recusar em andamento (ver
+  /// `EventDetailLoaded.pendingAttendanceId`) - `null` fora de
+  /// `EventDetailLoaded` (estado de erro nunca tem ação em voo).
+  final String? pendingAttendanceId;
 
   void _confirm(WidgetRef ref, String attendanceId) {
     ref.read(eventDetailControllerProvider.notifier).confirm(attendanceId);
@@ -267,8 +278,15 @@ class _EventDetailContent extends ConsumerWidget {
                 isOwn:
                     entry.$2.userId == currentUserId &&
                     event.status == 'scheduled',
-                onConfirm: () => _confirm(ref, entry.$2.id),
-                onDecline: () => _decline(ref, entry.$2.id),
+                // Proteção contra duplo toque: enquanto esta presença tem
+                // uma resposta em andamento, os botões ficam desabilitados
+                // (`onPressed: null`) em vez de aceitar um segundo toque.
+                onConfirm: pendingAttendanceId == entry.$2.id
+                    ? null
+                    : () => _confirm(ref, entry.$2.id),
+                onDecline: pendingAttendanceId == entry.$2.id
+                    ? null
+                    : () => _decline(ref, entry.$2.id),
               ),
             ),
           ),
@@ -303,8 +321,8 @@ class _AttendanceTile extends StatelessWidget {
 
   final EventAttendance attendance;
   final bool isOwn;
-  final VoidCallback onConfirm;
-  final VoidCallback onDecline;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onDecline;
 
   @override
   Widget build(BuildContext context) {

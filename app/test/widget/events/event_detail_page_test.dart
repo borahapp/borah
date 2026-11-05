@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/event_reviews/data/event_review_repository_impl.dart';
 import 'package:app/features/event_reviews/domain/event_review.dart';
 import 'package:app/features/event_reviews/domain/event_review_repository.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event.dart';
+import 'package:app/features/events/domain/event_attendance.dart';
 import 'package:app/features/events/domain/event_details.dart';
 import 'package:app/features/events/domain/event_repository.dart';
 import 'package:app/features/events/presentation/pages/event_detail_page.dart';
@@ -62,8 +65,9 @@ EventReview _review({
 
 Widget _wrap(
   MockEventRepository eventRepository,
-  MockEventReviewRepository reviewRepository,
-) {
+  MockEventReviewRepository reviewRepository, {
+  String? currentUserId,
+}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -82,7 +86,7 @@ Widget _wrap(
       // `null` evita precisar mockar `isGroupAdmin` (só chamado quando
       // há usuário autenticado) - irrelevante para o que estes testes
       // verificam (miniatura de foto na lista de avaliações).
-      currentUserIdProvider.overrideWithValue(null),
+      currentUserIdProvider.overrideWithValue(currentUserId),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -252,6 +256,70 @@ void main() {
         expect(find.text('Comida: 5.0'), findsOneWidget);
         expect(find.text('Lugar ótimo!'), findsOneWidget);
         expect(find.byType(Image), findsNWidgets(2));
+      },
+    );
+  });
+
+  group('proteção contra duplo toque (confirmar/recusar presença)', () {
+    testWidgets(
+      'tocar 2 vezes seguidas em "Confirmar presença", antes da tela '
+      'reconstruir com a atualização otimista, só chama o repository 1 '
+      'vez',
+      (tester) async {
+        final eventRepository = MockEventRepository();
+        final reviewRepository = MockEventReviewRepository();
+        when(
+          () => reviewRepository.listByEvent('e-1'),
+        ).thenAnswer((_) async => []);
+        when(
+          () => eventRepository.isGroupAdmin(
+            groupId: any(named: 'groupId'),
+            userId: any(named: 'userId'),
+          ),
+        ).thenAnswer((_) async => false);
+        when(() => eventRepository.getById('e-1')).thenAnswer(
+          (_) async => EventDetails(
+            event: Event(
+              id: 'e-1',
+              groupId: 'g-1',
+              restaurantId: 'r-1',
+              organizerId: 'u-organizer',
+              scheduledAt: DateTime(2026, 1, 1),
+              status: 'scheduled',
+              restaurantName: 'Cantina da Vila',
+            ),
+            attendances: const [
+              EventAttendance(
+                id: 'a-1',
+                userId: 'user-1',
+                status: 'pending',
+                fullName: 'Você',
+                avatarUrl: null,
+              ),
+            ],
+          ),
+        );
+        final completer = Completer<void>();
+        when(
+          () => eventRepository.confirmAttendance('a-1'),
+        ).thenAnswer((_) => completer.future);
+
+        await tester.pumpWidget(
+          _wrap(eventRepository, reviewRepository, currentUserId: 'user-1'),
+        );
+        await tester.pumpAndSettle();
+
+        // Mesma janela de corrida comprovada no controller: os 2 toques
+        // acontecem antes de qualquer `pump()`, ou seja, antes da árvore
+        // ser reconstruída com o estado otimista - exatamente o cenário
+        // em que a proteção precisa agir no controller, não só na UI.
+        await tester.tap(find.byTooltip('Confirmar presença'));
+        await tester.tap(find.byTooltip('Confirmar presença'));
+
+        completer.complete();
+        await tester.pumpAndSettle();
+
+        verify(() => eventRepository.confirmAttendance('a-1')).called(1);
       },
     );
   });

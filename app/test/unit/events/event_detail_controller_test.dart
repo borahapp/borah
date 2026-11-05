@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/analytics/analytics_event.dart';
 import 'package:app/core/analytics/analytics_service.dart';
 import 'package:app/core/analytics/app_analytics.dart';
@@ -229,6 +231,66 @@ void main() {
       expect(analyticsService.trackedEvents, isEmpty);
     });
 
+    test(
+      'durante um confirm em andamento, pendingAttendanceId fica '
+      'preenchido e volta a null ao concluir',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        final completer = Completer<void>();
+        when(
+          () => repository.confirmAttendance('a-1'),
+        ).thenAnswer((_) => completer.future);
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+
+        final pending = notifier.confirm('a-1');
+        final duringCall = container.read(eventDetailControllerProvider);
+        expect(
+          (duringCall as EventDetailLoaded).pendingAttendanceId,
+          'a-1',
+        );
+
+        completer.complete();
+        await pending;
+
+        final afterCall = container.read(eventDetailControllerProvider);
+        expect((afterCall as EventDetailLoaded).pendingAttendanceId, isNull);
+      },
+    );
+
+    test(
+      'confirm chamado 2 vezes antes do primeiro completar -> chama o '
+      'repository só 1 vez (proteção contra duplo toque)',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        final completer = Completer<void>();
+        when(
+          () => repository.confirmAttendance('a-1'),
+        ).thenAnswer((_) => completer.future);
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+
+        final first = notifier.confirm('a-1');
+        final second = notifier.confirm('a-1');
+
+        completer.complete();
+        await first;
+        await second;
+
+        verify(() => repository.confirmAttendance('a-1')).called(1);
+      },
+    );
+
     group('analytics (FASE 08)', () {
       test(
         'sucesso dispara trackAttendanceConfirmed exatamente 1 vez, nunca trackAttendanceDeclined',
@@ -305,6 +367,63 @@ void main() {
       expect(status.details!.attendances.first.status, 'pending');
       expect(analyticsService.trackedEvents, isEmpty);
     });
+
+    test(
+      'decline chamado 2 vezes antes do primeiro completar -> chama o '
+      'repository só 1 vez (proteção contra duplo toque)',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        final completer = Completer<void>();
+        when(
+          () => repository.declineAttendance('a-1'),
+        ).thenAnswer((_) => completer.future);
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+
+        final first = notifier.decline('a-1');
+        final second = notifier.decline('a-1');
+
+        completer.complete();
+        await first;
+        await second;
+
+        verify(() => repository.declineAttendance('a-1')).called(1);
+      },
+    );
+
+    test(
+      'confirm chamado enquanto um decline está em andamento (mesma '
+      'presença) -> ignorado, repository só chamado para o decline',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        final completer = Completer<void>();
+        when(
+          () => repository.declineAttendance('a-1'),
+        ).thenAnswer((_) => completer.future);
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+
+        final decline = notifier.decline('a-1');
+        final confirm = notifier.confirm('a-1');
+
+        completer.complete();
+        await decline;
+        await confirm;
+
+        verify(() => repository.declineAttendance('a-1')).called(1);
+        verifyNever(() => repository.confirmAttendance(any()));
+      },
+    );
 
     group('analytics (FASE 08)', () {
       test(
@@ -387,6 +506,34 @@ void main() {
       expect(status.details, isNotNull);
       expect(status.canManage, isTrue);
     });
+
+    test(
+      'cancel chamado 2 vezes antes do primeiro completar -> chama o '
+      'repository só 1 vez (proteção contra duplo toque)',
+      () async {
+        when(
+          () => repository.getById('e-1'),
+        ).thenAnswer((_) async => _details());
+        final completer = Completer<void>();
+        when(
+          () => repository.cancel('e-1'),
+        ).thenAnswer((_) => completer.future);
+
+        final notifier = container.read(
+          eventDetailControllerProvider.notifier,
+        );
+        await notifier.load('e-1', 'g-1');
+
+        final first = notifier.cancel('e-1');
+        final second = notifier.cancel('e-1');
+
+        completer.complete();
+        await first;
+        await second;
+
+        verify(() => repository.cancel('e-1')).called(1);
+      },
+    );
   });
 
   group('reschedule', () {

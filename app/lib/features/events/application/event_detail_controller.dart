@@ -67,6 +67,10 @@ class EventDetailController extends Notifier<EventDetailStatus> {
   Future<void> _respond(String attendanceId, {required String status}) async {
     final current = state;
     if (current is! EventDetailLoaded) return;
+    // Proteção contra duplo toque: já existe uma resposta em andamento
+    // (para esta ou qualquer outra presença) - ignora a chamada extra em
+    // vez de disparar uma segunda requisição concorrente.
+    if (current.pendingAttendanceId != null) return;
 
     final previous = current.details;
     final optimistic = EventDetails(
@@ -85,7 +89,11 @@ class EventDetailController extends Notifier<EventDetailStatus> {
             attendance,
       ],
     );
-    state = EventDetailLoaded(optimistic, current.canManage);
+    state = EventDetailLoaded(
+      optimistic,
+      current.canManage,
+      pendingAttendanceId: attendanceId,
+    );
 
     try {
       if (status == 'confirmed') {
@@ -95,6 +103,7 @@ class EventDetailController extends Notifier<EventDetailStatus> {
         await _repository.declineAttendance(attendanceId);
         unawaited(AppAnalytics.trackAttendanceDeclined(previous.event.id));
       }
+      state = EventDetailLoaded(optimistic, current.canManage);
     } on EventRepositoryException catch (e) {
       state = EventDetailError(e.message, previous, current.canManage);
     } catch (_) {
@@ -123,6 +132,9 @@ class EventDetailController extends Notifier<EventDetailStatus> {
     final EventDetails? details;
     final bool canManage;
     if (current is EventDetailLoaded) {
+      // Proteção contra duplo toque: cancelar/reagendar já em andamento -
+      // ignora a chamada extra (mesmo motivo de `_respond`).
+      if (current.isMutating) return;
       details = current.details;
       canManage = current.canManage;
     } else if (current is EventDetailError) {
@@ -132,6 +144,8 @@ class EventDetailController extends Notifier<EventDetailStatus> {
       return;
     }
     if (details == null) return;
+
+    state = EventDetailLoaded(details, canManage, isMutating: true);
 
     try {
       await action();

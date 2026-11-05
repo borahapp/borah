@@ -15,7 +15,12 @@ final class EventDetailLoading extends EventDetailStatus {
 }
 
 final class EventDetailLoaded extends EventDetailStatus {
-  const EventDetailLoaded(this.details, this.canManage);
+  const EventDetailLoaded(
+    this.details,
+    this.canManage, {
+    this.pendingAttendanceId,
+    this.isMutating = false,
+  });
 
   final EventDetails details;
 
@@ -24,6 +29,20 @@ final class EventDetailLoaded extends EventDetailStatus {
   /// `load()` (`EventRepository.isGroupAdmin`), não muda durante a
   /// sessão da tela.
   final bool canManage;
+
+  /// Id da própria presença (`EventAttendance.id`) com um confirmar/
+  /// recusar em andamento - `null` quando nenhum está em voo. Achado
+  /// real (verificação manual): sem isto, nada impedia tocar
+  /// confirmar/recusar várias vezes antes da resposta do servidor,
+  /// disparando chamadas duplicadas ao repositório. A UI usa este
+  /// campo para desabilitar os botões da própria linha enquanto a
+  /// chamada está em andamento.
+  final String? pendingAttendanceId;
+
+  /// `true` enquanto cancelar/reagendar está em andamento - mesmo
+  /// motivo de [pendingAttendanceId], para a ação de admin/owner (que
+  /// afeta o rolê inteiro, não uma linha específica).
+  final bool isMutating;
 }
 
 /// Confirmar/recusar presença é uma atualização otimista (mesmo padrão
