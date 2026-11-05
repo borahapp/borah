@@ -62,6 +62,28 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="borah" android:host="group" android:path="/join"/>
             </intent-filter>
+            <!-- Item 4 (rodada de melhorias pós-FASE 08) - App Link real
+                 (https://appborah.com.br/group/join?invite=X), reaproveitando
+                 o mesmo `DeepLinkParser` (core/deep_link/deep_link_parser.
+                 dart já aceita os dois formatos). `android:autoVerify="true"`
+                 pede ao Android para validar contra `assetlinks.json` em
+                 `https://appborah.com.br/.well-known/assetlinks.json` antes
+                 de tratar este link como "owned app link" (abre direto no
+                 app, sem passar pelo navegador/seletor de app) - sem esse
+                 arquivo publicado e assinado com o fingerprint SHA-256 da
+                 keystore de release, a verificação falha silenciosamente e
+                 o link volta a abrir no navegador normalmente (nenhuma
+                 quebra, só a melhoria de UX não se ativa ainda - pendência
+                 já registrada em docs/release/CHECKLIST.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="appborah.com.br"
+                    android:path="/group/join"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

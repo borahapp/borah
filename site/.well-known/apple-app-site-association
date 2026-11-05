@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "SUBSTITUA-PELO-TEAM-ID.com.borah.app",
+        "paths": ["/group/join", "/group/join?*"]
+      }
+    ]
+  }
+}

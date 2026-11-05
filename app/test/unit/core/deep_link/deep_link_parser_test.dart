@@ -21,6 +21,55 @@ void main() {
       expect((result as UnknownDeepLink).uri, uri);
     });
 
+    test(
+      'https://appborah.com.br/group/join?invite=X vira GroupJoinDeepLink '
+      '(App Links/Universal Links, item 4)',
+      () {
+        final result = DeepLinkParser.parse(
+          Uri.parse('https://appborah.com.br/group/join?invite=ABCD1234'),
+        );
+
+        expect(result, isA<GroupJoinDeepLink>());
+        expect((result as GroupJoinDeepLink).inviteCode, 'ABCD1234');
+      },
+    );
+
+    test(
+      'https://www.appborah.com.br/group/join?invite=X também vira '
+      'GroupJoinDeepLink (CNAME do GitHub Pages usa o subdomínio www)',
+      () {
+        final result = DeepLinkParser.parse(
+          Uri.parse(
+            'https://www.appborah.com.br/group/join?invite=ABCD1234',
+          ),
+        );
+
+        expect(result, isA<GroupJoinDeepLink>());
+        expect((result as GroupJoinDeepLink).inviteCode, 'ABCD1234');
+      },
+    );
+
+    test('https de um domínio não reconhecido vira UnknownDeepLink', () {
+      final uri = Uri.parse(
+        'https://appborah.com.br.evil.example/group/join?invite=ABCD1234',
+      );
+      final result = DeepLinkParser.parse(uri);
+
+      expect(result, isA<UnknownDeepLink>());
+    });
+
+    test(
+      'https://appborah.com.br com só 1 segmento de path vira '
+      'UnknownDeepLink, nunca lança',
+      () {
+        final result = DeepLinkParser.parse(
+          Uri.parse('https://appborah.com.br/group'),
+        );
+
+        expect(result, isA<UnknownDeepLink>());
+      },
+    );
+
     test('domínio desconhecido vira UnknownDeepLink', () {
       final result = DeepLinkParser.parse(
         Uri.parse('borah://restaurant/join?invite=ABCD1234'),

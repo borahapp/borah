@@ -133,8 +133,14 @@ void main() {
         expect(message, contains('Turma do João'));
         expect(message, contains('FS575HP5'));
         // Deep Link de convite (core/deep_link/) - quem já tem o app
-        // entra direto, sem digitar o código.
-        expect(message, contains('borah://group/join?invite=FS575HP5'));
+        // entra direto, sem digitar o código. Item 4 (App Links/
+        // Universal Links): link `https` real, não mais o esquema
+        // customizado `borah://` (clicável automaticamente em apps de
+        // mensagem - `DeepLinkParser` continua aceitando os dois).
+        expect(
+          message,
+          contains('https://appborah.com.br/group/join?invite=FS575HP5'),
+        );
       },
     );
   });

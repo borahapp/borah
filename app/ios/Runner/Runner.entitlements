@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Item 4 (rodada de melhorias pós-FASE 08) - Universal Links para o
+	     Deep Link de convite de grupo (core/deep_link/). Requer:
+	     1. `apple-app-site-association` publicado em
+	        https://appborah.com.br/.well-known/apple-app-site-association
+	        (ou na raiz do site), com o Team ID real do Apple Developer
+	        Program (`<TEAM_ID>.com.borah.app` em vez de um bundle id cru).
+	     2. A capability "Associated Domains" habilitada para este target
+	        no Apple Developer Portal / App ID.
+	     Sem isso, o sistema operacional simplesmente ignora esta entrada -
+	     nenhuma quebra, só a verificação não se completa (mesma pendência
+	     documentada em docs/release/CHECKLIST.md). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:appborah.com.br</string>
+	</array>
+</dict>
+</plist>

@@ -31,18 +31,29 @@ class GroupDetailController extends Notifier<GroupDetailStatus> {
   /// o botão de compartilhar quando o estado já é `GroupDetailLoaded`,
   /// então isso é só uma proteção defensiva).
   ///
-  /// Deep Link de convite (`borah://group/join?invite=X`) incluído a
-  /// partir daqui - quem recebe e já tem o app instalado entra direto,
-  /// sem digitar o código; o código continua no texto para quem não
-  /// reconhece o link (mesmo cliente que já ignorava um esquema
-  /// customizado antes disso).
+  /// Deep Link de convite incluído a partir daqui - quem recebe e já tem
+  /// o app instalado entra direto, sem digitar o código; o código
+  /// continua no texto para quem não reconhece o link.
+  ///
+  /// Item 4 (rodada de melhorias pós-FASE 08): troca o antigo esquema
+  /// customizado (`borah://group/join?invite=X`) por um link `https`
+  /// real (`DeepLinkParser` já aceita os dois, ver `deep_link_parser.
+  /// dart`) - um link `https` é clicável automaticamente em apps de
+  /// mensagem (WhatsApp/SMS), diferente de `borah://`, que chega como
+  /// texto puro (achado da própria Visão do produto, Cap. 6: fricção do
+  /// convite deve tender a zero). A verificação nativa como App Link/
+  /// Universal Link de verdade (abrir o app direto, sem passar pelo
+  /// navegador) depende de `assetlinks.json`/`apple-app-site-
+  /// association` publicados em `appborah.com.br` - até lá, o link
+  /// abre o navegador normalmente, que pode redirecionar para a loja
+  /// ou uma página de fallback (fora do escopo desta mudança).
   String? buildInviteShareMessage() {
     final current = state;
     if (current is! GroupDetailLoaded) return null;
 
     final group = current.details.group;
     return 'Entre no meu grupo "${group.name}" no BORAH! '
-        'borah://group/join?invite=${group.inviteCode}\n'
+        'https://appborah.com.br/group/join?invite=${group.inviteCode}\n'
         'Ou use o código de convite: ${group.inviteCode}';
   }
 
