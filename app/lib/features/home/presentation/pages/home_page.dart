@@ -81,6 +81,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   Future<Group?> _selectGroup(List<Group> groups) {
     return showModalBottomSheet<Group>(
       context: context,
+      // Achado real (verificação manual contra conta com 6+ grupos): sem
+      // isto, o `Column` abaixo (`mainAxisSize: MainAxisSize.min`) estoura
+      // a altura padrão do bottom sheet (~RenderFlex overflow) a partir de
+      // poucos grupos, já que a lista inteira era montada sem rolagem
+      // própria. `isScrollControlled: true` permite que o sheet cresça até
+      // quase a tela inteira; a lista em si rola dentro do `Flexible`
+      // abaixo quando ainda não couber.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -102,18 +110,27 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            ...groups.map(
-              (group) => Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
-                child: GroupCard(
-                  name: group.name,
-                  memberCount: group.memberCount ?? 1,
-                  photoUrl: group.photoUrl,
-                  nextEventLabel: _nextEventLabel(group.nextEvent),
-                  onTap: () => Navigator.of(sheetContext).pop(group),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: groups
+                      .map(
+                        (group) => Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: GroupCard(
+                            name: group.name,
+                            memberCount: group.memberCount ?? 1,
+                            photoUrl: group.photoUrl,
+                            nextEventLabel: _nextEventLabel(group.nextEvent),
+                            onTap: () => Navigator.of(sheetContext).pop(group),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),

@@ -409,6 +409,52 @@ void main() {
     },
   );
 
+  testWidgets(
+    'muitos grupos (conta com 8+ grupos) -> bottom sheet "Escolha o '
+    'grupo" rola em vez de estourar a tela (achado real, verificação '
+    'manual contra conta com 6 grupos)',
+    (tester) async {
+      when(() => groupRepository.listMine()).thenAnswer(
+        (_) async => List.generate(
+          8,
+          (i) => _group(id: 'g-$i', name: 'Grupo $i'),
+        ),
+      );
+
+      // Tamanho próximo do que expôs o bug na verificação manual (celular
+      // comum) - num viewport grande o suficiente, o Column antigo não
+      // estourava, então o teste não pegaria a regressão.
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Criar novo rolê'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      final sheet = find.byType(BottomSheet);
+      expect(sheet, findsOneWidget);
+      // O último grupo só fica visível depois de rolar a lista dentro do
+      // sheet - confirma que a rolagem funciona de verdade, não só que a
+      // tela não quebrou.
+      await tester.dragUntilVisible(
+        find.descendant(of: sheet, matching: find.text('Grupo 7')),
+        find.descendant(of: sheet, matching: find.byType(SingleChildScrollView)),
+        const Offset(0, -100),
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.text('Grupo 7')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('tocar no card do próximo rolê abre o detalhe correto do rolê', (
     tester,
   ) async {
