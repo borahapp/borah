@@ -127,6 +127,11 @@ void main() {
         hasNextPage: false,
       ),
     );
+    // Padrão: 0 avaliações - os testes que precisam de outro valor
+    // sobrescrevem no corpo do teste (roda depois do setUp).
+    when(
+      () => reviewRepository.countByUser('other-1'),
+    ).thenAnswer((_) async => 0);
     when(
       () => gamificationRepository.getProgress('other-1'),
     ).thenAnswer((_) async => _progress());
@@ -165,6 +170,38 @@ void main() {
       expect(find.text('Seguir'), findsOneWidget);
       expect(find.text('Nível 12'), findsOneWidget);
       expect(find.text('1840 XP'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'mostra a quantidade de restaurantes avaliados, sem navegar ao '
+    'tocar (rodada "perfil individual como centro", pós-FASE 09)',
+    (tester) async {
+      when(
+        () => followerRepository.isFollowing('me', 'other-1'),
+      ).thenAnswer((_) async => false);
+      when(
+        () => reviewRepository.countByUser('other-1'),
+      ).thenAnswer((_) async => 3);
+
+      await tester.pumpWidget(
+        _wrap(
+          userProfileRepository: userProfileRepository,
+          followerRepository: followerRepository,
+          reviewRepository: reviewRepository,
+          gamificationRepository: gamificationRepository,
+          groupRepository: groupRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.ancestor(
+          of: find.text('3 avaliações'),
+          matching: find.byType(TextButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
     },
   );
 

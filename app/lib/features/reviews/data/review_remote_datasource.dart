@@ -76,6 +76,19 @@ class ReviewRemoteDatasource {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// Rodada "perfil individual como centro" (pós-FASE 09) - mesmo padrão
+  /// de `NotificationRemoteDatasource.countUnread`: `count` do PostgREST,
+  /// nunca `listByUser` só para contar no cliente.
+  Future<int> countByUser(String userId) async {
+    final response = await _client
+        .from(_table)
+        .select('id')
+        .eq('user_id', userId)
+        .isFilter('deleted_at', null)
+        .count(CountOption.exact);
+    return response.count;
+  }
+
   Future<Map<String, dynamic>> fetchById(String id) {
     return _client
         .from(_table)

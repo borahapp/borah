@@ -14,6 +14,7 @@ import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../gamification/application/gamification_profile_controller.dart';
 import '../../../gamification/presentation/states/gamification_profile_status.dart';
+import '../../../reviews/application/user_reviews_count_provider.dart';
 import '../../application/user_profile_controller.dart';
 import '../states/user_profile_status.dart';
 import '../widgets/profile_avatar.dart';
@@ -128,6 +129,8 @@ class _ProfileView extends ConsumerWidget {
       if (city != null && city!.isNotEmpty) city,
       if (state != null && state!.isNotEmpty) state,
     ].join(', ');
+    // Rodada "perfil individual como centro" (pós-FASE 09).
+    final reviewsCount = ref.watch(userReviewsCountProvider).valueOrNull ?? 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -165,6 +168,15 @@ class _ProfileView extends ConsumerWidget {
               AppTextButton(
                 label: '$followingCount seguindo',
                 onPressed: () => context.push('/users/$userId/following'),
+              ),
+              // O próprio contador já funciona como atalho - o Perfil
+              // Público (reaproveitado aqui para o próprio usuário, que
+              // já trata `isOwnProfile`) é quem mostra a lista completa
+              // de avaliações, sem precisar de uma tela nova.
+              AppTextButton(
+                label:
+                    '$reviewsCount avaliaç${reviewsCount == 1 ? 'ão' : 'ões'}',
+                onPressed: () => context.push('/users/$userId'),
               ),
             ],
           ),

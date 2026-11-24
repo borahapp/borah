@@ -3,6 +3,8 @@ import 'package:app/features/gamification/data/gamification_repository_impl.dart
 import 'package:app/features/gamification/domain/gamification_repository.dart';
 import 'package:app/features/gamification/domain/groups_activity_summary.dart';
 import 'package:app/features/gamification/domain/user_progress.dart';
+import 'package:app/features/reviews/data/review_repository_impl.dart';
+import 'package:app/features/reviews/domain/review_repository.dart';
 import 'package:app/features/users/data/user_profile_repository_impl.dart';
 import 'package:app/features/users/domain/user_profile.dart';
 import 'package:app/features/users/domain/user_profile_repository.dart';
@@ -17,6 +19,8 @@ class MockUserProfileRepository extends Mock implements UserProfileRepository {}
 
 class MockGamificationRepository extends Mock
     implements GamificationRepository {}
+
+class MockReviewRepository extends Mock implements ReviewRepository {}
 
 UserProfile _profile() {
   return UserProfile(
@@ -47,6 +51,7 @@ UserProgress _progress({int level = 3, int xp = 420}) {
 Widget _wrap(
   MockUserProfileRepository profileRepository,
   MockGamificationRepository gamificationRepository,
+  MockReviewRepository reviewRepository,
 ) {
   final router = GoRouter(
     initialLocation: '/',
@@ -72,6 +77,14 @@ Widget _wrap(
         path: '/users/:id/following',
         builder: (_, _) => const Scaffold(body: Text('Following Page')),
       ),
+      // Rodada "perfil individual como centro" (pós-FASE 09) - destino
+      // do novo atalho "X avaliações" (reaproveita o Perfil Público).
+      GoRoute(
+        path: '/users/:id',
+        builder: (_, state) => Scaffold(
+          body: Text('Public Profile Page ${state.pathParameters['id']}'),
+        ),
+      ),
     ],
   );
 
@@ -79,6 +92,7 @@ Widget _wrap(
     overrides: [
       userProfileRepositoryProvider.overrideWithValue(profileRepository),
       gamificationRepositoryProvider.overrideWithValue(gamificationRepository),
+      reviewRepositoryProvider.overrideWithValue(reviewRepository),
       currentUserIdProvider.overrideWithValue('user-1'),
     ],
     child: MaterialApp.router(routerConfig: router),
@@ -88,10 +102,12 @@ Widget _wrap(
 void main() {
   late MockUserProfileRepository profileRepository;
   late MockGamificationRepository gamificationRepository;
+  late MockReviewRepository reviewRepository;
 
   setUp(() {
     profileRepository = MockUserProfileRepository();
     gamificationRepository = MockGamificationRepository();
+    reviewRepository = MockReviewRepository();
 
     when(
       () => profileRepository.getProfile('user-1'),
@@ -110,12 +126,17 @@ void main() {
     ).thenAnswer(
       (_) async => const GroupsActivitySummary(eventsCount: 0, reviewsCount: 0),
     );
+    // Padrão: 0 avaliações - os testes que precisam de outro valor
+    // sobrescrevem no corpo do teste (roda depois do setUp).
+    when(
+      () => reviewRepository.countByUser('user-1'),
+    ).thenAnswer((_) async => 0);
   });
 
   testWidgets('mostra username e contadores de seguidores/seguindo', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     expect(find.text('@anasilva'), findsOneWidget);
@@ -123,10 +144,61 @@ void main() {
     expect(find.text('2 seguindo'), findsOneWidget);
   });
 
+  group('contador de avaliações (rodada "perfil individual como centro", '
+      'pós-FASE 09)', () {
+    testWidgets('mostra a quantidade de restaurantes avaliados', (
+      tester,
+    ) async {
+      when(
+        () => reviewRepository.countByUser('user-1'),
+      ).thenAnswer((_) async => 7);
+
+      await tester.pumpWidget(
+        _wrap(profileRepository, gamificationRepository, reviewRepository),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('7 avaliações'), findsOneWidget);
+    });
+
+    testWidgets('com exatamente 1 avaliação, usa o singular', (tester) async {
+      when(
+        () => reviewRepository.countByUser('user-1'),
+      ).thenAnswer((_) async => 1);
+
+      await tester.pumpWidget(
+        _wrap(profileRepository, gamificationRepository, reviewRepository),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 avaliação'), findsOneWidget);
+    });
+
+    testWidgets(
+      'tocar no contador navega para o próprio perfil público (lista '
+      'completa de avaliações)',
+      (tester) async {
+        when(
+          () => reviewRepository.countByUser('user-1'),
+        ).thenAnswer((_) async => 7);
+
+        await tester.pumpWidget(
+          _wrap(profileRepository, gamificationRepository, reviewRepository),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('7 avaliações'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Public Profile Page user-1'), findsOneWidget);
+      },
+    );
+  });
+
   testWidgets('tocar em seguidores navega até a lista de seguidores', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('5 seguidores'));
@@ -138,7 +210,7 @@ void main() {
   testWidgets('tocar em seguindo navega até a lista de seguindo', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('2 seguindo'));
@@ -148,7 +220,7 @@ void main() {
   });
 
   testWidgets('mostra os 6 atalhos', (tester) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     expect(find.text('Feed'), findsOneWidget);
@@ -163,7 +235,7 @@ void main() {
     'tocar no atalho de Meus Grupos navega até a rota (FASE SOCIAL 4 - '
     '"Grupos" saiu da barra principal)',
     (tester) async {
-      await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+      await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Meus Grupos'));
@@ -176,7 +248,7 @@ void main() {
   );
 
   testWidgets('tocar no atalho de Favoritos navega até a rota', (tester) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Favoritos'));
@@ -190,7 +262,7 @@ void main() {
   testWidgets('atalho de Gamificação mostra prévia de nível/XP', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     expect(find.text('Nível 3 · 420 XP'), findsOneWidget);
@@ -199,7 +271,7 @@ void main() {
   testWidgets('tocar no atalho de Gamificação navega até a rota', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository));
+    await tester.pumpWidget(_wrap(profileRepository, gamificationRepository, reviewRepository));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Gamificação'));

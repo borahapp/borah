@@ -72,6 +72,11 @@ class ReviewRepositoryImpl implements ReviewRepository {
   }
 
   @override
+  Future<int> countByUser(String userId) {
+    return _guard(() => _datasource.countByUser(userId));
+  }
+
+  @override
   Future<Review> getById(String id) {
     return _guard(() async {
       final row = await _datasource.fetchById(id);

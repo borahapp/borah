@@ -10,6 +10,8 @@ import 'package:app/features/groups/domain/group_repository.dart';
 import 'package:app/features/home/presentation/pages/home_page.dart';
 import 'package:app/features/notifications/data/notification_repository_impl.dart';
 import 'package:app/features/notifications/domain/notification_repository.dart';
+import 'package:app/features/reviews/data/review_repository_impl.dart';
+import 'package:app/features/reviews/domain/review_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +24,8 @@ class MockEventRepository extends Mock implements EventRepository {}
 
 class MockNotificationRepository extends Mock
     implements NotificationRepository {}
+
+class MockReviewRepository extends Mock implements ReviewRepository {}
 
 Group _group({
   String id = 'g-1',
@@ -61,6 +65,7 @@ Widget _wrap({
   required MockGroupRepository groupRepository,
   required MockEventRepository eventRepository,
   required MockNotificationRepository notificationRepository,
+  required MockReviewRepository reviewRepository,
 }) {
   final router = GoRouter(
     initialLocation: '/',
@@ -115,6 +120,14 @@ Widget _wrap({
         path: '/restaurants',
         builder: (_, _) => const Scaffold(body: Text('Restaurantes (tela)')),
       ),
+      // Rodada "perfil individual como centro" (pós-FASE 09): destino do
+      // novo banner de contagem de avaliações na Home.
+      GoRoute(
+        path: '/users/:id',
+        builder: (_, state) => Scaffold(
+          body: Text('Public Profile Page ${state.pathParameters['id']}'),
+        ),
+      ),
     ],
   );
 
@@ -123,6 +136,7 @@ Widget _wrap({
       groupRepositoryProvider.overrideWithValue(groupRepository),
       eventRepositoryProvider.overrideWithValue(eventRepository),
       notificationRepositoryProvider.overrideWithValue(notificationRepository),
+      reviewRepositoryProvider.overrideWithValue(reviewRepository),
       // FASE 05: `_NotificationBellAction` agora faz parte da `AppTopBar`
       // da Home incondicionalmente - sem este override, qualquer teste
       // deste arquivo (mesmo os que não mexem com notificações) tocaria
@@ -138,15 +152,23 @@ void main() {
   late MockGroupRepository groupRepository;
   late MockEventRepository eventRepository;
   late MockNotificationRepository notificationRepository;
+  late MockReviewRepository reviewRepository;
 
   setUp(() {
     groupRepository = MockGroupRepository();
     eventRepository = MockEventRepository();
     notificationRepository = MockNotificationRepository();
+    reviewRepository = MockReviewRepository();
     // Default neutro: testes que não mexem com o sino não precisam
     // estubar nada - só os novos testes da FASE 05 sobrescrevem isto.
     when(
       () => notificationRepository.countUnread('user-1'),
+    ).thenAnswer((_) async => 0);
+    // Default neutro: testes que não mexem com o banner de avaliações
+    // não precisam estubar nada - só o novo grupo da rodada "perfil
+    // individual como centro" (pós-FASE 09) sobrescreve isto.
+    when(
+      () => reviewRepository.countByUser('user-1'),
     ).thenAnswer((_) async => 0);
   });
 
@@ -154,6 +176,7 @@ void main() {
     groupRepository: groupRepository,
     eventRepository: eventRepository,
     notificationRepository: notificationRepository,
+    reviewRepository: reviewRepository,
   );
 
   testWidgets('HOME-01: Home carregada mostra título e CTA principal', (
@@ -256,6 +279,11 @@ void main() {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
 
+    // Rodada "perfil individual como centro" (pós-FASE 09): o novo
+    // banner de avaliações empurrou o grupo para fora da viewport
+    // padrão do teste - precisa rolar até ele antes de tocar.
+    await tester.ensureVisible(find.text('Galera do Rolê'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Galera do Rolê'));
     await tester.pumpAndSettle();
 
@@ -590,6 +618,57 @@ void main() {
       },
     );
   });
+
+  group(
+    'banner de avaliações (rodada "perfil individual como centro", '
+    'pós-FASE 09)',
+    () {
+      testWidgets('mostra a quantidade de restaurantes avaliados', (
+        tester,
+      ) async {
+        when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+        when(
+          () => reviewRepository.countByUser('user-1'),
+        ).thenAnswer((_) async => 5);
+
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Você já avaliou 5 restaurantes'), findsOneWidget);
+      });
+
+      testWidgets('com exatamente 1 restaurante, usa o singular', (
+        tester,
+      ) async {
+        when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+        when(
+          () => reviewRepository.countByUser('user-1'),
+        ).thenAnswer((_) async => 1);
+
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Você já avaliou 1 restaurante'), findsOneWidget);
+      });
+
+      testWidgets('tocar no banner navega para o próprio perfil público', (
+        tester,
+      ) async {
+        when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+        when(
+          () => reviewRepository.countByUser('user-1'),
+        ).thenAnswer((_) async => 5);
+
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Você já avaliou 5 restaurantes'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Public Profile Page user-1'), findsOneWidget);
+      });
+    },
+  );
 
   group('FASE 05 - sino de notificações', () {
     testWidgets('sem notificações não lidas, o sino aparece sem badge', (

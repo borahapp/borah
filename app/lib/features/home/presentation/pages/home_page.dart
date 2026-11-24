@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../design_system/components/buttons/app_icon_button.dart';
 import '../../../../design_system/components/buttons/app_primary_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/cards/event_card.dart';
 import '../../../../design_system/components/cards/group_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
@@ -15,10 +16,12 @@ import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
+import '../../../authentication/application/auth_controller.dart';
 import '../../../events/domain/event.dart';
 import '../../../groups/domain/event_summary.dart';
 import '../../../groups/domain/group.dart';
 import '../../../notifications/application/unread_notifications_count_provider.dart';
+import '../../../reviews/application/user_reviews_count_provider.dart';
 import '../../application/home_controller.dart';
 import '../states/home_status.dart';
 
@@ -277,6 +280,39 @@ class _NotificationBellAction extends ConsumerWidget {
   }
 }
 
+/// Rodada "perfil individual como centro" (pós-FASE 09) - destaque
+/// imediato da conquista pessoal ao abrir o app, sem substituir nada do
+/// que já existe abaixo (grupos/rolês continuam intactos). Mesmo padrão
+/// de `_NotificationBellAction`: `ConsumerWidget` próprio para que só
+/// este card recomponha quando `userReviewsCountProvider` mudar.
+class _ReviewsCountBanner extends ConsumerWidget {
+  const _ReviewsCountBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId = ref.watch(currentUserIdProvider);
+    if (userId == null) return const SizedBox.shrink();
+
+    final count = ref.watch(userReviewsCountProvider).valueOrNull ?? 0;
+
+    return AppCard(
+      onTap: () => context.push('/users/$userId'),
+      child: Row(
+        children: [
+          const Icon(Icons.restaurant_outlined),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Você já avaliou $count restaurante${count == 1 ? '' : 's'}',
+            ),
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+    );
+  }
+}
+
 class _HomeContent extends StatelessWidget {
   const _HomeContent({
     super.key,
@@ -305,6 +341,8 @@ class _HomeContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const _ReviewsCountBanner(),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             'Qual vai ser o próximo rolê?',
             style: Theme.of(context).textTheme.titleLarge,

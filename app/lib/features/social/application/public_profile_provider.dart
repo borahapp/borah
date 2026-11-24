@@ -6,6 +6,7 @@ import '../../gamification/domain/gamification_badge.dart';
 import '../../gamification/domain/user_progress.dart';
 import '../../groups/data/group_repository_impl.dart';
 import '../../groups/domain/group.dart';
+import '../../reviews/data/review_repository_impl.dart';
 import '../../users/data/user_profile_repository_impl.dart';
 import '../../users/domain/user_profile.dart';
 
@@ -60,6 +61,19 @@ final publicProfileGamificationProvider =
 /// 2) - ver `GroupRepository.listCommonGroups`. Sem usuário logado
 /// (não deveria acontecer numa tela protegida), retorna lista vazia em
 /// vez de lançar.
+/// Quantidade de restaurantes avaliados por um usuário arbitrário
+/// (rodada "perfil individual como centro", pós-FASE 09) - mesmo padrão
+/// de `publicProfileGamificationProvider` acima (`FutureProvider.family`,
+/// isolado por [userId]). `ReviewRepository.countByUser` já exclui
+/// avaliações apagadas e, graças à constraint `reviews_user_restaurant_
+/// unique`, o número já É a quantidade de restaurantes distintos.
+final publicProfileReviewsCountProvider = FutureProvider.family<int, String>((
+  ref,
+  userId,
+) {
+  return ref.watch(reviewRepositoryProvider).countByUser(userId);
+});
+
 final publicProfileCommonGroupsProvider =
     FutureProvider.family<List<Group>, String>((ref, otherUserId) async {
       final currentUserId = ref.watch(currentUserIdProvider);

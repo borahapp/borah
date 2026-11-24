@@ -29,6 +29,13 @@ abstract interface class ReviewRepository {
     required int limit,
   });
 
+  /// Quantidade de avaliações ativas (`deleted_at is null`) de um usuário
+  /// - rodada "perfil individual como centro" (pós-FASE 09). A constraint
+  /// `reviews_user_restaurant_unique` (1 avaliação por restaurante, por
+  /// usuário) garante que este número já É a quantidade de restaurantes
+  /// avaliados, sem precisar de `distinct restaurant_id`.
+  Future<int> countByUser(String userId);
+
   Future<Review> getById(String id);
 
   /// RC-03 F16 - os 5 critérios seguem exatamente o mesmo papel de

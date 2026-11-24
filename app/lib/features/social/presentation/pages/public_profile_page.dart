@@ -68,6 +68,10 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
     final reviewsStatus = ref.watch(userReviewsControllerProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
     final isOwnProfile = currentUserId == widget.userId;
+    // Rodada "perfil individual como centro" (pós-FASE 09).
+    final reviewsCount =
+        ref.watch(publicProfileReviewsCountProvider(widget.userId)).valueOrNull ??
+        0;
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Perfil'),
@@ -124,6 +128,18 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
                             onPressed: () => context.push(
                               '/users/${widget.userId}/following',
                             ),
+                          ),
+                          // Rodada "perfil individual como centro"
+                          // (pós-FASE 09) - `onPressed: null` de
+                          // propósito (`AppTextButton` já renderiza
+                          // desabilitado): a lista de avaliações já
+                          // está logo abaixo, nesta mesma tela, sem
+                          // necessidade de navegar a lugar nenhum.
+                          AppTextButton(
+                            label:
+                                '$reviewsCount avaliaç'
+                                '${reviewsCount == 1 ? 'ão' : 'ões'}',
+                            onPressed: null,
                           ),
                         ],
                       ),

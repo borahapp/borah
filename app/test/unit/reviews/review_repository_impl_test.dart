@@ -164,6 +164,32 @@ void main() {
     });
   });
 
+  group(
+    'countByUser (rodada "perfil individual como centro", pós-FASE 09)',
+    () {
+      test('delega direto ao datasource e repassa o valor', () async {
+        when(
+          () => datasource.countByUser('user-2'),
+        ).thenAnswer((_) async => 7);
+
+        final count = await repository.countByUser('user-2');
+
+        expect(count, 7);
+      });
+
+      test('erro do datasource propaga como ReviewRepositoryException', () async {
+        when(() => datasource.countByUser('user-2')).thenThrow(
+          const PostgrestException(message: 'erro inesperado'),
+        );
+
+        expect(
+          () => repository.countByUser('user-2'),
+          throwsA(isA<ReviewRepositoryException>()),
+        );
+      });
+    },
+  );
+
   group('getById', () {
     test('resolve autor e restaurante para uma única review', () async {
       when(
