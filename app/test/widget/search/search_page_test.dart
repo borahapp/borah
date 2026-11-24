@@ -94,6 +94,15 @@ Widget _wrap(
         path: '/users/:id',
         builder: (_, _) => const Scaffold(body: Text('Profile Page')),
       ),
+      // Precisa vir ANTES de `/restaurants/:id` - senão o segmento
+      // literal "search-google" seria capturado pelo parâmetro `:id`
+      // (mesmo achado real já documentado em outros testes deste
+      // projeto para `/events/new` vs. `/events/:eventId`).
+      GoRoute(
+        path: '/restaurants/search-google',
+        builder: (_, _) =>
+            const Scaffold(body: Text('Search Google Restaurant Page')),
+      ),
       GoRoute(
         path: '/restaurants/:id',
         builder: (_, _) => const Scaffold(body: Text('Restaurant Page')),
@@ -486,6 +495,111 @@ void main() {
 
     expect(find.text('Restaurant Page'), findsOneWidget);
   });
+
+  testWidgets(
+    'resultado de restaurantes sempre mostra "Buscar no Google Maps", '
+    'mesmo com resultados locais (rodada pós-FASE 09)',
+    (tester) async {
+      when(
+        () => followerRepository.searchProfiles('bella', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => groupRepository.search('bella', page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => restaurantRepository.search(any())).thenAnswer(
+        (_) async => PagedResult(
+          items: [_restaurant()],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submit(tester, 'bella');
+
+      expect(find.text('Cantina Bella'), findsOneWidget);
+      expect(find.text('Buscar no Google Maps'), findsOneWidget);
+
+      await tester.tap(find.text('Buscar no Google Maps'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search Google Restaurant Page'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'sem nenhum restaurante local, "Buscar no Google Maps" continua '
+    'visível (rodada pós-FASE 09)',
+    (tester) async {
+      when(
+        () => followerRepository.searchProfiles(any(), page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(
+        () => groupRepository.search(any(), page: 1, limit: 20),
+      ).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+      when(() => restaurantRepository.search(any())).thenAnswer(
+        (_) async => const PagedResult(
+          items: [],
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submit(tester, 'restaurante-inexistente');
+
+      expect(find.text('Nenhum restaurante encontrado.'), findsOneWidget);
+      expect(find.text('Buscar no Google Maps'), findsOneWidget);
+    },
+  );
 
   testWidgets('erro na busca mostra estado de erro com retry', (tester) async {
     when(

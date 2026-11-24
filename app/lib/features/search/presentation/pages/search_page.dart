@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
-import '../../../../design_system/components/feedback/empty_state.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/feedback/score_bubble.dart';
@@ -382,10 +382,13 @@ class _SearchResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (people.isEmpty && groups.isEmpty && restaurants.isEmpty) {
-      return const EmptyState(message: 'Nenhum resultado encontrado.');
-    }
-
+    // Rodada pós-FASE 09: removido o atalho que trocava a tela inteira
+    // por um único "Nenhum resultado encontrado." quando as 3 categorias
+    // vinham vazias - ele escondia a seção de Restaurantes (e o botão
+    // "Buscar no Google Maps" dentro dela), que precisa continuar
+    // visível mesmo nesse caso, para quem quer localizar um restaurante
+    // que ainda não existe no BORAH. Cada seção já trata seu próprio
+    // estado vazio individualmente (abaixo).
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
@@ -465,6 +468,25 @@ class _SearchResults extends StatelessWidget {
                   : null,
               onTap: () => context.push('/restaurants/${restaurant.id}'),
             ),
+        // Rodada de melhorias pós-FASE 09: localizar um restaurante que
+        // ainda não está cadastrado no BORAH - reaproveita 100% a busca
+        // real via Google Places (F12, já usada em `RestaurantsSearchPage`
+        // e na criação de rolês), sem nenhuma tela/dependência nova.
+        // Sempre visível (não só quando a busca local não encontra nada):
+        // a pessoa pode já saber que o restaurante existe de verdade e
+        // só ainda não foi cadastrado por ninguém.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: AppOutlinedButton(
+            label: 'Buscar no Google Maps',
+            onPressed: () => context.push('/restaurants/search-google'),
+          ),
+        ),
       ],
     );
   }
