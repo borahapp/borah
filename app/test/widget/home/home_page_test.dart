@@ -109,6 +109,12 @@ Widget _wrap({
           ),
         ),
       ),
+      // Rodada pós-FASE 09: destino de "Avaliar restaurante" no bottom
+      // sheet "Criar", movido de `home_shell_page_test.dart` para cá.
+      GoRoute(
+        path: '/restaurants',
+        builder: (_, _) => const Scaffold(body: Text('Restaurantes (tela)')),
+      ),
     ],
   );
 
@@ -526,6 +532,64 @@ void main() {
       verifyNever(() => eventRepository.getById('e-far'));
     },
   );
+
+  group('Criar (rodada pós-FASE 09 - botão na Home, não mais na barra)', () {
+    testWidgets('tocar no ícone "Criar" abre o bottom sheet com os 3 atalhos', (
+      tester,
+    ) async {
+      when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Criar'));
+      await tester.pumpAndSettle();
+
+      // `find.widgetWithText(ListTile, ...)`, não `find.text(...)`: a
+      // Home por trás do sheet também mostra "Criar grupo" (ação do
+      // estado vazio de "Meus grupos") - os itens do sheet são
+      // `ListTile`, o botão da Home não é.
+      expect(find.widgetWithText(ListTile, 'Criar grupo'), findsOneWidget);
+      expect(find.widgetWithText(ListTile, 'Criar rolê'), findsOneWidget);
+      expect(
+        find.widgetWithText(ListTile, 'Avaliar restaurante'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('"Criar grupo" no sheet navega para a criação de grupo', (
+      tester,
+    ) async {
+      when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Criar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Criar grupo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Criar grupo (tela)'), findsOneWidget);
+    });
+
+    testWidgets(
+      '"Avaliar restaurante" no sheet navega para a lista de restaurantes',
+      (tester) async {
+        when(() => groupRepository.listMine()).thenAnswer((_) async => []);
+
+        await tester.pumpWidget(wrap());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Criar'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ListTile, 'Avaliar restaurante'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Restaurantes (tela)'), findsOneWidget);
+      },
+    );
+  });
 
   group('FASE 05 - sino de notificações', () {
     testWidgets('sem notificações não lidas, o sino aparece sem badge', (

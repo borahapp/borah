@@ -13,7 +13,9 @@ import 'package:app/features/groups/data/group_repository_impl.dart';
 import 'package:app/features/groups/domain/group_repository.dart';
 import 'package:app/features/search/data/discovery_repository_impl.dart';
 import 'package:app/features/search/domain/discovery_repository.dart';
+import 'package:app/features/social/data/feed_repository_impl.dart';
 import 'package:app/features/social/data/follower_repository_impl.dart';
+import 'package:app/features/social/domain/feed_repository.dart';
 import 'package:app/features/social/domain/follower_repository.dart';
 import 'package:app/features/users/data/user_profile_repository_impl.dart';
 import 'package:app/features/users/domain/user_profile.dart';
@@ -30,6 +32,8 @@ class MockEventRepository extends Mock implements EventRepository {}
 class MockFollowerRepository extends Mock implements FollowerRepository {}
 
 class MockDiscoveryRepository extends Mock implements DiscoveryRepository {}
+
+class MockFeedRepository extends Mock implements FeedRepository {}
 
 class MockGamificationRepository extends Mock
     implements GamificationRepository {}
@@ -62,17 +66,17 @@ UserProgress _progress() {
   );
 }
 
-/// `HomeShellPage` renderiza as 4 páginas simultaneamente via
+/// `HomeShellPage` renderiza as 5 páginas simultaneamente via
 /// `IndexedStack` (preserva estado) - todas precisam de suas
 /// dependências mockadas, não só a inicialmente visível (Home, FASE 01).
-/// `FeedRepository` não é mais necessário aqui - desde a FASE 01 o Feed
-/// não tem mais porta de entrada em `HomeShellPage` (continua existindo
-/// em `features/social/`, só não aparece nesta árvore de widgets).
+/// `FeedRepository` voltou a ser necessário aqui (rodada pós-FASE 09):
+/// o Feed voltou a ter porta de entrada direta em `HomeShellPage`.
 Widget _wrap({
   required MockGroupRepository groupRepository,
   required MockEventRepository eventRepository,
   required MockFollowerRepository followerRepository,
   required MockDiscoveryRepository discoveryRepository,
+  required MockFeedRepository feedRepository,
   required MockGamificationRepository gamificationRepository,
   required MockUserProfileRepository userProfileRepository,
 }) {
@@ -122,6 +126,26 @@ Widget _wrap({
   when(
     () => userProfileRepository.getProfile('user-1'),
   ).thenAnswer((_) async => _profile());
+  when(
+    () => feedRepository.listForYou(
+      'user-1',
+      page: any(named: 'page'),
+      limit: any(named: 'limit'),
+    ),
+  ).thenAnswer(
+    (_) async =>
+        const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+  );
+  when(
+    () => feedRepository.listFollowing(
+      'user-1',
+      page: any(named: 'page'),
+      limit: any(named: 'limit'),
+    ),
+  ).thenAnswer(
+    (_) async =>
+        const PagedResult(items: [], page: 1, limit: 20, hasNextPage: false),
+  );
 
   return ProviderScope(
     overrides: [
@@ -129,6 +153,7 @@ Widget _wrap({
       eventRepositoryProvider.overrideWithValue(eventRepository),
       followerRepositoryProvider.overrideWithValue(followerRepository),
       discoveryRepositoryProvider.overrideWithValue(discoveryRepository),
+      feedRepositoryProvider.overrideWithValue(feedRepository),
       gamificationRepositoryProvider.overrideWithValue(gamificationRepository),
       userProfileRepositoryProvider.overrideWithValue(userProfileRepository),
       currentUserIdProvider.overrideWithValue('user-1'),
@@ -142,6 +167,7 @@ void main() {
   late MockEventRepository eventRepository;
   late MockFollowerRepository followerRepository;
   late MockDiscoveryRepository discoveryRepository;
+  late MockFeedRepository feedRepository;
   late MockGamificationRepository gamificationRepository;
   late MockUserProfileRepository userProfileRepository;
 
@@ -150,6 +176,7 @@ void main() {
     eventRepository = MockEventRepository();
     followerRepository = MockFollowerRepository();
     discoveryRepository = MockDiscoveryRepository();
+    feedRepository = MockFeedRepository();
     gamificationRepository = MockGamificationRepository();
     userProfileRepository = MockUserProfileRepository();
   });
@@ -159,6 +186,7 @@ void main() {
     eventRepository: eventRepository,
     followerRepository: followerRepository,
     discoveryRepository: discoveryRepository,
+    feedRepository: feedRepository,
     gamificationRepository: gamificationRepository,
     userProfileRepository: userProfileRepository,
   );
@@ -169,7 +197,10 @@ void main() {
 
     expect(find.text('Início'), findsWidgets); // rótulo da barra
     expect(find.text('Explorar'), findsOneWidget);
-    expect(find.text('Criar'), findsOneWidget);
+    // `findsWidgets`, não `findsOneWidget`: o rótulo da barra e o título
+    // do `AppTopBar` da própria `FeedPage` (sempre montada via
+    // `IndexedStack`, mesmo fora da aba visível) colidem no mesmo texto.
+    expect(find.text('Feed'), findsWidgets);
     expect(find.text('Pontuação'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
     // Início é a aba inicial (FASE 01) - título + CTA principal da nova
@@ -182,16 +213,16 @@ void main() {
     );
   });
 
-  testWidgets('HOME-09: Feed não aparece em nenhum lugar da navegação', (
-    tester,
-  ) async {
-    await tester.pumpWidget(wrap());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'Criar não aparece mais na barra (rodada pós-FASE 09 - virou botão '
+    'na Home)',
+    (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
 
-    expect(find.text('Feed'), findsNothing);
-    expect(find.text('Para Você'), findsNothing);
-    expect(find.text('Seguindo'), findsNothing);
-  });
+      expect(find.text('Criar'), findsNothing);
+    },
+  );
 
   testWidgets('tocar em Explorar troca de aba para a Pesquisa', (tester) async {
     await tester.pumpWidget(wrap());
@@ -204,30 +235,18 @@ void main() {
     expect(find.text('Você pode conhecer'), findsOneWidget);
   });
 
-  testWidgets('tocar em Criar abre o bottom sheet sem trocar de aba', (
-    tester,
-  ) async {
-    await tester.pumpWidget(wrap());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'tocar em Feed troca de aba para o Feed (rodada pós-FASE 09 - volta '
+    'a ter porta de entrada direta na navegação)',
+    (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Criar'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Feed'));
+      await tester.pumpAndSettle();
 
-    // `find.widgetWithText(ListTile, ...)`, não `find.text(...)`: a Home
-    // por trás do sheet também mostra "Criar grupo" (ação do estado
-    // vazio de "Meus grupos", sem nenhum grupo mockado) - os itens do
-    // sheet são `ListTile`, o botão da Home não é.
-    expect(find.widgetWithText(ListTile, 'Criar grupo'), findsOneWidget);
-    expect(find.widgetWithText(ListTile, 'Criar rolê'), findsOneWidget);
-    expect(
-      find.widgetWithText(ListTile, 'Avaliar restaurante'),
-      findsOneWidget,
-    );
-
-    // Fecha o sheet e confirma que a aba selecionada continua Início (a
-    // seleção da barra nunca mudou para "Criar", só o sheet abriu).
-    await tester.tapAt(const Offset(200, 50));
-    await tester.pumpAndSettle();
-    expect(find.text('Criar novo rolê'), findsOneWidget);
-  });
+      expect(find.text('Para Você'), findsOneWidget);
+      expect(find.text('Seguindo'), findsOneWidget);
+    },
+  );
 }

@@ -147,6 +147,51 @@ class _HomePageState extends ConsumerState<HomePage> {
     ref.read(homeControllerProvider.notifier).load();
   }
 
+  /// Bottom sheet "Criar" (rodada de melhorias pós-FASE 09) - movido de
+  /// `home_shell_page.dart`: "Criar" deixou de ser um item da barra de
+  /// navegação (virou um botão aqui na Home) para abrir espaço ao Feed
+  /// na barra. Mesmos 3 atalhos de sempre, sem nenhuma tela nova.
+  Future<void> _openCreateSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            ListTile(
+              leading: const Icon(Icons.groups_outlined),
+              title: const Text('Criar grupo'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.push('/groups/new');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.event_outlined),
+              title: const Text('Criar rolê'),
+              subtitle: const Text('Escolha o grupo'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.push('/groups');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.rate_review_outlined),
+              title: const Text('Avaliar restaurante'),
+              subtitle: const Text('Escolha o restaurante'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                context.push('/restaurants');
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// FASE 05: o controller de `/notifications` já invalida
   /// `unreadNotificationsCountProvider` sozinho ao marcar como lida (o
   /// sino, nunca desmontado pelo `IndexedStack` da shell, atualiza antes
@@ -166,7 +211,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       appBar: AppTopBar(
         title: 'BORAH',
-        actions: [_NotificationBellAction(onPressed: _openNotifications)],
+        actions: [
+          AppIconButton(
+            icon: Icons.add_circle_outline,
+            tooltip: 'Criar',
+            onPressed: _openCreateSheet,
+          ),
+          _NotificationBellAction(onPressed: _openNotifications),
+        ],
       ),
       body: AppAnimatedSwitcher(
         child: switch (status) {
