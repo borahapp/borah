@@ -74,6 +74,14 @@ final publicProfileReviewsCountProvider = FutureProvider.family<int, String>((
   return ref.watch(reviewRepositoryProvider).countByUser(userId);
 });
 
+/// Grade de fotos de um usuário arbitrário (rodada "perfil individual
+/// como centro", pós-FASE 09) - mesmo padrão de
+/// `publicProfileReviewsCountProvider` acima.
+final publicProfilePhotosProvider =
+    FutureProvider.family<List<String>, String>((ref, userId) {
+      return ref.watch(reviewRepositoryProvider).listUserPhotos(userId);
+    });
+
 final publicProfileCommonGroupsProvider =
     FutureProvider.family<List<Group>, String>((ref, otherUserId) async {
       final currentUserId = ref.watch(currentUserIdProvider);

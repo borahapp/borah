@@ -132,6 +132,11 @@ void main() {
     when(
       () => reviewRepository.countByUser('other-1'),
     ).thenAnswer((_) async => 0);
+    // Padrão: sem fotos - os testes que precisam de outro valor
+    // sobrescrevem no corpo do teste (roda depois do setUp).
+    when(
+      () => reviewRepository.listUserPhotos('other-1'),
+    ).thenAnswer((_) async => []);
     when(
       () => gamificationRepository.getProgress('other-1'),
     ).thenAnswer((_) async => _progress());
@@ -202,6 +207,56 @@ void main() {
         ),
       );
       expect(button.onPressed, isNull);
+    },
+  );
+
+  group(
+    'grade de fotos (rodada "perfil individual como centro", '
+    'pós-FASE 09)',
+    () {
+      testWidgets('sem fotos, não mostra a seção "Fotos"', (tester) async {
+        when(
+          () => followerRepository.isFollowing('me', 'other-1'),
+        ).thenAnswer((_) async => false);
+
+        await tester.pumpWidget(
+          _wrap(
+            userProfileRepository: userProfileRepository,
+            followerRepository: followerRepository,
+            reviewRepository: reviewRepository,
+            gamificationRepository: gamificationRepository,
+            groupRepository: groupRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Fotos'), findsNothing);
+      });
+
+      testWidgets('com fotos, mostra a seção "Fotos" com uma miniatura '
+          'por URL', (tester) async {
+        when(
+          () => followerRepository.isFollowing('me', 'other-1'),
+        ).thenAnswer((_) async => false);
+        when(() => reviewRepository.listUserPhotos('other-1')).thenAnswer(
+          (_) async => ['https://x/photo-1.jpg', 'https://x/photo-2.jpg'],
+        );
+
+        await tester.pumpWidget(
+          _wrap(
+            userProfileRepository: userProfileRepository,
+            followerRepository: followerRepository,
+            reviewRepository: reviewRepository,
+            gamificationRepository: gamificationRepository,
+            groupRepository: groupRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+        while (tester.takeException() != null) {}
+
+        expect(find.text('Fotos'), findsOneWidget);
+        expect(find.byType(Image), findsNWidgets(2));
+      });
     },
   );
 

@@ -14,6 +14,7 @@ import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../reviews/presentation/states/reviews_status.dart';
+import '../../../reviews/presentation/widgets/review_photo_grid.dart';
 import '../../../reviews/presentation/widgets/review_summary_tile.dart';
 import '../../../users/presentation/widgets/profile_avatar.dart';
 import '../../application/follow_controller.dart';
@@ -72,6 +73,9 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
     final reviewsCount =
         ref.watch(publicProfileReviewsCountProvider(widget.userId)).valueOrNull ??
         0;
+    final photos =
+        ref.watch(publicProfilePhotosProvider(widget.userId)).valueOrNull ??
+        const <String>[];
 
     return Scaffold(
       appBar: const AppTopBar(title: 'Perfil'),
@@ -170,6 +174,15 @@ class _PublicProfilePageState extends ConsumerState<PublicProfilePage> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
+                // Rodada "perfil individual como centro" (pós-FASE 09) -
+                // some por completo sem fotos, mesma convenção de
+                // `restaurant_detail_page.dart`.
+                if (photos.isNotEmpty) ...[
+                  const SectionHeader(title: 'Fotos'),
+                  const SizedBox(height: AppSpacing.sm),
+                  ReviewPhotoGrid(photoUrls: photos),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
                 _GamificationSection(userId: widget.userId),
                 _CommonGroupsSection(userId: widget.userId),
                 const SectionHeader(title: 'Avaliações'),

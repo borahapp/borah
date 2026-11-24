@@ -10,11 +10,14 @@ import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
+import '../../../../design_system/components/navigation/section_header.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
 import '../../../authentication/application/auth_controller.dart';
 import '../../../gamification/application/gamification_profile_controller.dart';
 import '../../../gamification/presentation/states/gamification_profile_status.dart';
+import '../../../reviews/application/user_photos_provider.dart';
 import '../../../reviews/application/user_reviews_count_provider.dart';
+import '../../../reviews/presentation/widgets/review_photo_grid.dart';
 import '../../application/user_profile_controller.dart';
 import '../states/user_profile_status.dart';
 import '../widgets/profile_avatar.dart';
@@ -131,6 +134,7 @@ class _ProfileView extends ConsumerWidget {
     ].join(', ');
     // Rodada "perfil individual como centro" (pós-FASE 09).
     final reviewsCount = ref.watch(userReviewsCountProvider).valueOrNull ?? 0;
+    final photos = ref.watch(userPhotosProvider).valueOrNull ?? const [];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -180,6 +184,15 @@ class _ProfileView extends ConsumerWidget {
               ),
             ],
           ),
+          // Rodada "perfil individual como centro" (pós-FASE 09) - some
+          // por completo sem fotos, mesma convenção de
+          // `restaurant_detail_page.dart`.
+          if (photos.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            const SectionHeader(title: 'Fotos'),
+            const SizedBox(height: AppSpacing.sm),
+            ReviewPhotoGrid(photoUrls: photos),
+          ],
           const SizedBox(height: AppSpacing.lg),
           AppOutlinedButton(
             label: 'Editar perfil',

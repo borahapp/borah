@@ -131,6 +131,11 @@ void main() {
     when(
       () => reviewRepository.countByUser('user-1'),
     ).thenAnswer((_) async => 0);
+    // Padrão: sem fotos - os testes que precisam de outro valor
+    // sobrescrevem no corpo do teste (roda depois do setUp).
+    when(
+      () => reviewRepository.listUserPhotos('user-1'),
+    ).thenAnswer((_) async => []);
   });
 
   testWidgets('mostra username e contadores de seguidores/seguindo', (
@@ -194,6 +199,37 @@ void main() {
       },
     );
   });
+
+  group(
+    'grade de fotos (rodada "perfil individual como centro", '
+    'pós-FASE 09)',
+    () {
+      testWidgets('sem fotos, não mostra a seção "Fotos"', (tester) async {
+        await tester.pumpWidget(
+          _wrap(profileRepository, gamificationRepository, reviewRepository),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Fotos'), findsNothing);
+      });
+
+      testWidgets('com fotos, mostra a seção "Fotos" com uma miniatura '
+          'por URL', (tester) async {
+        when(() => reviewRepository.listUserPhotos('user-1')).thenAnswer(
+          (_) async => ['https://x/photo-1.jpg', 'https://x/photo-2.jpg'],
+        );
+
+        await tester.pumpWidget(
+          _wrap(profileRepository, gamificationRepository, reviewRepository),
+        );
+        await tester.pumpAndSettle();
+        while (tester.takeException() != null) {}
+
+        expect(find.text('Fotos'), findsOneWidget);
+        expect(find.byType(Image), findsNWidgets(2));
+      });
+    },
+  );
 
   testWidgets('tocar em seguidores navega até a lista de seguidores', (
     tester,

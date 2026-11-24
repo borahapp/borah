@@ -100,4 +100,10 @@ abstract interface class ReviewRepository {
     String restaurantId, {
     int limit = 12,
   });
+
+  /// Rodada "perfil individual como centro" (pós-FASE 09) - grade de fotos
+  /// do perfil: mesmo algoritmo de [listRestaurantPhotos] (agrega
+  /// `listPhotoUrls` por review, parando no primeiro [limit] fotos), só
+  /// que filtrando por `user_id` em vez de `restaurant_id`.
+  Future<List<String>> listUserPhotos(String userId, {int limit = 12});
 }

@@ -21,6 +21,7 @@ Map<String, dynamic> _row({
   // derrubava a linha inteira da lista com `!inner`; ver
   // `review_remote_datasource.dart`). `true` (padrão) simula o caso normal.
   bool includeRestaurant = true,
+  int photosCount = 0,
 }) {
   return {
     'id': id,
@@ -29,7 +30,7 @@ Map<String, dynamic> _row({
     'rating': 4.5,
     'comment': 'Ótimo!',
     'likes_count': 3,
-    'photos_count': 0,
+    'photos_count': photosCount,
     'created_at': '2026-01-03T00:00:00.000Z',
     'updated_at': '2026-01-03T00:00:00.000Z',
     'restaurants': includeRestaurant
@@ -184,6 +185,71 @@ void main() {
 
         expect(
           () => repository.countByUser('user-2'),
+          throwsA(isA<ReviewRepositoryException>()),
+        );
+      });
+    },
+  );
+
+  group(
+    'listUserPhotos (rodada "perfil individual como centro", pós-FASE 09)',
+    () {
+      test(
+        'agrega fotos de várias reviews, ignorando as sem foto',
+        () async {
+          when(
+            () => datasource.listByUser('user-2', page: 1, limit: 20),
+          ).thenAnswer(
+            (_) async => [
+              _row(id: 'rv-1', photosCount: 2),
+              _row(id: 'rv-2', photosCount: 0),
+              _row(id: 'rv-3', photosCount: 1),
+            ],
+          );
+          when(() => datasource.listPhotoUrls('rv-1')).thenAnswer(
+            (_) async => ['https://x/rv-1/a.jpg', 'https://x/rv-1/b.jpg'],
+          );
+          when(
+            () => datasource.listPhotoUrls('rv-3'),
+          ).thenAnswer((_) async => ['https://x/rv-3/a.jpg']);
+
+          final photos = await repository.listUserPhotos('user-2');
+
+          expect(photos, [
+            'https://x/rv-1/a.jpg',
+            'https://x/rv-1/b.jpg',
+            'https://x/rv-3/a.jpg',
+          ]);
+          verifyNever(() => datasource.listPhotoUrls('rv-2'));
+        },
+      );
+
+      test('para no primeiro limit fotos, sem resolver reviews a mais', () async {
+        when(
+          () => datasource.listByUser('user-2', page: 1, limit: 20),
+        ).thenAnswer(
+          (_) async => [
+            _row(id: 'rv-1', photosCount: 2),
+            _row(id: 'rv-2', photosCount: 2),
+          ],
+        );
+        when(() => datasource.listPhotoUrls('rv-1')).thenAnswer(
+          (_) async => ['https://x/rv-1/a.jpg', 'https://x/rv-1/b.jpg'],
+        );
+
+        final photos = await repository.listUserPhotos('user-2', limit: 2);
+
+        expect(photos, ['https://x/rv-1/a.jpg', 'https://x/rv-1/b.jpg']);
+        verifyNever(() => datasource.listPhotoUrls('rv-2'));
+      });
+
+      test('erro do datasource propaga como ReviewRepositoryException', () async {
+        when(
+          () => datasource.listByUser('user-2', page: 1, limit: 20),
+        ).thenThrow(const PostgrestException(message: 'erro inesperado'));
+
+        expect(
+          () => repository.listUserPhotos('user-2'),
           throwsA(isA<ReviewRepositoryException>()),
         );
       });

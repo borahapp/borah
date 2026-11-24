@@ -212,6 +212,25 @@ class ReviewRepositoryImpl implements ReviewRepository {
     });
   }
 
+  @override
+  Future<List<String>> listUserPhotos(String userId, {int limit = 12}) {
+    return _guard(() async {
+      final rows = await _datasource.listByUser(userId, page: 1, limit: 20);
+
+      final photos = <String>[];
+      for (final row in rows) {
+        if (photos.length >= limit) break;
+        final photosCount = row['photos_count'] as int;
+        if (photosCount == 0) continue;
+        final reviewPhotos = await _datasource.listPhotoUrls(
+          row['id'] as String,
+        );
+        photos.addAll(reviewPhotos);
+      }
+      return photos.length > limit ? photos.sublist(0, limit) : photos;
+    });
+  }
+
   /// Busca perfis em lote (dedup via `Set`) - nunca 1 consulta por review,
   /// mesmo padrão de `EventReviewRepositoryImpl.listByEvent`/
   /// `FeedRepositoryImpl._compose` (2B.3).
