@@ -10,6 +10,7 @@ class Restaurant {
     this.address,
     this.city,
     this.state,
+    this.country,
     this.latitude,
     this.longitude,
     this.averageRating,
@@ -29,6 +30,13 @@ class Restaurant {
   final String? address;
   final String? city;
   final String? state;
+
+  /// Item F (ranking multi-escopo) - nullable, mesma limitação de
+  /// `city`/`state`: nenhum backfill, nenhuma extração automática do
+  /// fluxo Google Places (que hoje não analisa componentes estruturados
+  /// de endereço) - só preenchido quando alguém digita no cadastro
+  /// manual (`CreateRestaurantPage`).
+  final String? country;
   final double? latitude;
   final double? longitude;
   final double? averageRating;

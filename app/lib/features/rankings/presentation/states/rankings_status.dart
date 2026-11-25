@@ -1,5 +1,5 @@
 import '../../../../core/models/paged_result.dart';
-import '../../../restaurants/domain/restaurant.dart';
+import '../../domain/ranked_restaurant.dart';
 
 /// Estado da listagem de ranking (DV-05 §11), sealed class. Prefixo
 /// `Rankings*` para evitar colisão com estados de outros módulos (mesma
@@ -19,7 +19,7 @@ final class RankingsLoading extends RankingsStatus {
 final class RankingsLoaded extends RankingsStatus {
   const RankingsLoaded(this.result);
 
-  final PagedResult<Restaurant> result;
+  final PagedResult<RankedRestaurant> result;
 }
 
 final class RankingsEmpty extends RankingsStatus {

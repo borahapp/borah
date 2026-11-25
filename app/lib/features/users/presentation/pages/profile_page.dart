@@ -8,6 +8,7 @@ import '../../../../design_system/components/cards/app_card.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
 import '../../../../design_system/components/navigation/app_top_bar.dart';
 import '../../../../design_system/components/navigation/section_header.dart';
@@ -219,6 +220,58 @@ class _ProfileView extends ConsumerWidget {
       _ => null,
     };
 
+    final shortcuts = [
+      _ShortcutCard(
+        icon: Icons.dynamic_feed_outlined,
+        label: 'Feed',
+        onTap: () => context.push('/feed'),
+      ),
+      _ShortcutCard(
+        icon: Icons.emoji_events_outlined,
+        label: 'Gamificação',
+        preview: progress == null
+            ? null
+            : 'Nível ${progress.level} · ${progress.xp} XP',
+        onTap: () => context.push('/gamification'),
+      ),
+      // Item F (ranking multi-escopo) - o ranking de restaurantes ganhou
+      // lugar próprio na barra inferior ("Ranking"), substituindo a antiga
+      // aba "Pontuação" (ranking de usuários). Este atalho ocupa o lugar
+      // que "Rankings de restaurantes" tinha aqui, com o ícone que era da
+      // aba antiga, para não perder o acesso ao ranking de avaliadores.
+      _ShortcutCard(
+        icon: Icons.emoji_events_outlined,
+        label: 'Ranking de avaliadores',
+        onTap: () => context.push('/gamification/ranking'),
+      ),
+      // FASE SOCIAL 4: "Grupos" saiu da barra de navegação principal
+      // (deu lugar a "Explorar") - este atalho é o novo lar de "Meus
+      // Grupos", mesma rota `/groups`/`GroupsListPage` de sempre,
+      // nenhum dado ou comportamento alterado.
+      _ShortcutCard(
+        icon: Icons.groups_outlined,
+        label: 'Meus Grupos',
+        onTap: () => context.push('/groups'),
+      ),
+      _ShortcutCard(
+        icon: Icons.notifications_outlined,
+        label: 'Notificações',
+        onTap: () => context.push('/notifications'),
+      ),
+      // FASE SOCIAL 1: Favoritos saiu da barra de navegação principal
+      // (deu lugar a Rankings) - este atalho é o novo lar da
+      // funcionalidade, mesma rota `/favorites` já existente, nenhum
+      // dado ou comportamento alterado.
+      _ShortcutCard(
+        icon: Icons.favorite_border,
+        label: 'Favoritos',
+        onTap: () => context.push('/favorites'),
+      ),
+    ];
+
+    // Rodada "modernização visual" - entrada escalonada, mesmo
+    // componente já usado pela lista de grupos da Home e pelo Feed
+    // (`AppStaggeredListItem`), nenhuma animação nova inventada aqui.
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -226,49 +279,11 @@ class _ProfileView extends ConsumerWidget {
       mainAxisSpacing: AppSpacing.md,
       crossAxisSpacing: AppSpacing.md,
       childAspectRatio: 1.3,
-      children: [
-        _ShortcutCard(
-          icon: Icons.dynamic_feed_outlined,
-          label: 'Feed',
-          onTap: () => context.push('/feed'),
-        ),
-        _ShortcutCard(
-          icon: Icons.emoji_events_outlined,
-          label: 'Gamificação',
-          preview: progress == null
-              ? null
-              : 'Nível ${progress.level} · ${progress.xp} XP',
-          onTap: () => context.push('/gamification'),
-        ),
-        _ShortcutCard(
-          icon: Icons.leaderboard_outlined,
-          label: 'Rankings de restaurantes',
-          onTap: () => context.push('/rankings'),
-        ),
-        // FASE SOCIAL 4: "Grupos" saiu da barra de navegação principal
-        // (deu lugar a "Explorar") - este atalho é o novo lar de "Meus
-        // Grupos", mesma rota `/groups`/`GroupsListPage` de sempre,
-        // nenhum dado ou comportamento alterado.
-        _ShortcutCard(
-          icon: Icons.groups_outlined,
-          label: 'Meus Grupos',
-          onTap: () => context.push('/groups'),
-        ),
-        _ShortcutCard(
-          icon: Icons.notifications_outlined,
-          label: 'Notificações',
-          onTap: () => context.push('/notifications'),
-        ),
-        // FASE SOCIAL 1: Favoritos saiu da barra de navegação principal
-        // (deu lugar a Rankings) - este atalho é o novo lar da
-        // funcionalidade, mesma rota `/favorites` já existente, nenhum
-        // dado ou comportamento alterado.
-        _ShortcutCard(
-          icon: Icons.favorite_border,
-          label: 'Favoritos',
-          onTap: () => context.push('/favorites'),
-        ),
-      ],
+      children: shortcuts.indexed
+          .map(
+            (entry) => AppStaggeredListItem(index: entry.$1, child: entry.$2),
+          )
+          .toList(),
     );
   }
 }

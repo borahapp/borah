@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../design_system/components/feedback/app_staggered_list_item.dart';
 import '../../../../design_system/components/media/borah_photo_viewer.dart';
 import '../../../../design_system/tokens/app_radius.dart';
 import '../../../../design_system/tokens/app_spacing.dart';
@@ -32,15 +33,20 @@ class ReviewPhotoGrid extends StatelessWidget {
         mainAxisSpacing: AppSpacing.xs,
         crossAxisSpacing: AppSpacing.xs,
       ),
-      itemBuilder: (context, index) => GestureDetector(
-        onTap: () => BorahPhotoViewer.open(
-          context,
-          imageUrls: photoUrls,
-          initialIndex: index,
-        ),
-        child: ClipRRect(
-          borderRadius: AppRadius.radiusSm,
-          child: Image.network(photoUrls[index], fit: BoxFit.cover),
+      // Rodada "modernização visual" - entrada escalonada, mesmo
+      // componente já usado pela lista de grupos da Home e pelo Feed.
+      itemBuilder: (context, index) => AppStaggeredListItem(
+        index: index,
+        child: GestureDetector(
+          onTap: () => BorahPhotoViewer.open(
+            context,
+            imageUrls: photoUrls,
+            initialIndex: index,
+          ),
+          child: ClipRRect(
+            borderRadius: AppRadius.radiusSm,
+            child: Image.network(photoUrls[index], fit: BoxFit.cover),
+          ),
         ),
       ),
     );

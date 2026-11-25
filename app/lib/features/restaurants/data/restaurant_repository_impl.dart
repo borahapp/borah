@@ -42,6 +42,8 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
   @override
   Future<PagedResult<Restaurant>> listRanked({
     String? city,
+    String? state,
+    String? country,
     String? category,
     required int page,
     required int limit,
@@ -49,6 +51,8 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
     return _guard(() async {
       final rows = await _datasource.listRanked(
         city: city,
+        state: state,
+        country: country,
         category: category,
         page: page,
         limit: limit,
@@ -133,6 +137,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
     String? address,
     String? city,
     String? stateProvince,
+    String? country,
     double? latitude,
     double? longitude,
     String? googlePlaceId,
@@ -147,6 +152,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
           'address': address,
           'city': city,
           'state': stateProvince,
+          'country': country,
           'latitude': latitude,
           'longitude': longitude,
           'google_place_id': googlePlaceId,
@@ -222,6 +228,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
       address: row['address'] as String?,
       city: row['city'] as String?,
       state: row['state'] as String?,
+      country: row['country'] as String?,
       latitude: (row['latitude'] as num?)?.toDouble(),
       longitude: (row['longitude'] as num?)?.toDouble(),
       averageRating: (row['average_rating'] as num?)?.toDouble(),

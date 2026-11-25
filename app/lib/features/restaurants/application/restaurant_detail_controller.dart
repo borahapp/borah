@@ -35,6 +35,7 @@ class RestaurantDetailController extends Notifier<RestaurantDetailStatus> {
     String? address,
     String? city,
     String? stateProvince,
+    String? country,
     double? latitude,
     double? longitude,
   }) async {
@@ -48,6 +49,7 @@ class RestaurantDetailController extends Notifier<RestaurantDetailStatus> {
         address: address,
         city: city,
         stateProvince: stateProvince,
+        country: country,
         latitude: latitude,
         longitude: longitude,
       );

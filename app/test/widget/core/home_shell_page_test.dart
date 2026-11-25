@@ -7,7 +7,6 @@ import 'package:app/features/gamification/data/gamification_repository_impl.dart
 import 'package:app/features/gamification/domain/gamification_badge.dart';
 import 'package:app/features/gamification/domain/gamification_repository.dart';
 import 'package:app/features/gamification/domain/groups_activity_summary.dart';
-import 'package:app/features/gamification/domain/ranking_entry.dart';
 import 'package:app/features/gamification/domain/user_progress.dart';
 import 'package:app/features/groups/data/group_repository_impl.dart';
 import 'package:app/features/groups/domain/group_repository.dart';
@@ -111,19 +110,6 @@ Widget _wrap({
     (_) async => const GroupsActivitySummary(eventsCount: 0, reviewsCount: 0),
   );
   when(
-    () => gamificationRepository.listGlobalRanking(
-      page: 1,
-      limit: any(named: 'limit'),
-    ),
-  ).thenAnswer(
-    (_) async => const PagedResult<RankingEntry>(
-      items: [],
-      page: 1,
-      limit: 20,
-      hasNextPage: false,
-    ),
-  );
-  when(
     () => userProfileRepository.getProfile('user-1'),
   ).thenAnswer((_) async => _profile());
   when(
@@ -201,7 +187,7 @@ void main() {
     // do `AppTopBar` da própria `FeedPage` (sempre montada via
     // `IndexedStack`, mesmo fora da aba visível) colidem no mesmo texto.
     expect(find.text('Feed'), findsWidgets);
-    expect(find.text('Pontuação'), findsOneWidget);
+    expect(find.text('Ranking'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
     // Início é a aba inicial (FASE 01) - título + CTA principal da nova
     // Home, sem grupos/rolês mockados (estado vazio).

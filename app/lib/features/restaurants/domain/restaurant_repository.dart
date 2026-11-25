@@ -25,6 +25,8 @@ abstract interface class RestaurantRepository {
   /// a construção de consulta em um datasource próprio.
   Future<PagedResult<Restaurant>> listRanked({
     String? city,
+    String? state,
+    String? country,
     String? category,
     required int page,
     required int limit,
@@ -63,6 +65,7 @@ abstract interface class RestaurantRepository {
     String? address,
     String? city,
     String? stateProvince,
+    String? country,
     double? latitude,
     double? longitude,
     String? googlePlaceId,

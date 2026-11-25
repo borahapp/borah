@@ -48,6 +48,7 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
+  final _countryController = TextEditingController();
 
   @override
   void dispose() {
@@ -57,6 +58,7 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
     _addressController.dispose();
     _cityController.dispose();
     _stateController.dispose();
+    _countryController.dispose();
     super.dispose();
   }
 
@@ -75,6 +77,7 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
           address: _addressController.text.trim(),
           city: _cityController.text.trim(),
           stateProvince: _stateController.text.trim(),
+          country: _countryController.text.trim(),
         );
   }
 
@@ -151,6 +154,11 @@ class _CreateRestaurantPageState extends ConsumerState<CreateRestaurantPage> {
                 AppTextField(
                   controller: _stateController,
                   label: 'Estado (opcional)',
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  controller: _countryController,
+                  label: 'País (opcional)',
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 AppPrimaryButton(

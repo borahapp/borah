@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../design_system/components/navigation/app_bottom_navigation.dart';
-import '../../features/gamification/presentation/pages/ranking_users_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/rankings/presentation/pages/rankings_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/social/presentation/pages/feed_page.dart';
 import '../../features/users/presentation/pages/profile_page.dart';
@@ -43,7 +43,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
     HomePage(),
     SearchPage(),
     FeedPage(),
-    RankingUsersPage(),
+    RankingsPage(),
     ProfilePage(),
   ];
 
@@ -64,9 +64,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
       label: 'Feed',
     ),
     AppBottomNavigationItem(
-      icon: Icons.emoji_events_outlined,
-      selectedIcon: Icons.emoji_events,
-      label: 'Pontuação',
+      icon: Icons.leaderboard_outlined,
+      selectedIcon: Icons.leaderboard,
+      label: 'Ranking',
     ),
     AppBottomNavigationItem(
       icon: Icons.person_outline,

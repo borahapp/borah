@@ -117,19 +117,28 @@ class _HomePageState extends ConsumerState<HomePage> {
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: groups
+                  // Rodada "modernização visual" - entrada escalonada,
+                  // mesmo componente já usado pela lista de grupos da
+                  // própria Home logo abaixo deste sheet.
+                  children: groups.indexed
                       .map(
-                        (group) => Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.xs,
-                          ),
-                          child: GroupCard(
-                            name: group.name,
-                            memberCount: group.memberCount ?? 1,
-                            photoUrl: group.photoUrl,
-                            nextEventLabel: _nextEventLabel(group.nextEvent),
-                            onTap: () => Navigator.of(sheetContext).pop(group),
+                        (entry) => AppStaggeredListItem(
+                          index: entry.$1,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xs,
+                            ),
+                            child: GroupCard(
+                              name: entry.$2.name,
+                              memberCount: entry.$2.memberCount ?? 1,
+                              photoUrl: entry.$2.photoUrl,
+                              nextEventLabel: _nextEventLabel(
+                                entry.$2.nextEvent,
+                              ),
+                              onTap: () =>
+                                  Navigator.of(sheetContext).pop(entry.$2),
+                            ),
                           ),
                         ),
                       )

@@ -51,6 +51,8 @@ class RestaurantRemoteDatasource {
   /// camada de aplicação (DV-05 não tem tabela própria).
   Future<List<Map<String, dynamic>>> listRanked({
     String? city,
+    String? state,
+    String? country,
     String? category,
     required int page,
     required int limit,
@@ -67,6 +69,12 @@ class RestaurantRemoteDatasource {
 
     if (city != null && city.isNotEmpty) {
       builder = builder.eq('city', city);
+    }
+    if (state != null && state.isNotEmpty) {
+      builder = builder.eq('state', state);
+    }
+    if (country != null && country.isNotEmpty) {
+      builder = builder.eq('country', country);
     }
     if (category != null && category.isNotEmpty) {
       builder = builder.eq('category', category);
