@@ -87,6 +87,16 @@ class AuthController extends Notifier<AuthStatus> {
       final current = _repository.currentUser;
       if (current != null) unawaited(AppAnalytics.identify(current.userId));
       unawaited(AppAnalytics.trackSignup());
+      // Onboarding (rodada "visual mais moderno/tutorial"): marca que
+      // este cadastro é recém-criado, nesta mesma sessão do app - o
+      // Router consulta `justSignedUp` para mandar o 1º Authenticated
+      // pós-cadastro para `/onboarding` em vez de `/home` direto. Cobre
+      // tanto confirmação de e-mail desabilitada (sessão já ativa aqui)
+      // quanto habilitada (usuário volta pelo link com o app ainda
+      // rodando, chega a `Authenticated` depois); só não cobre o app
+      // sendo fechado e reaberto entre o cadastro e a confirmação
+      // (fallback aceitável: cai direto na Home nesse caso raro).
+      _justSignedUp = true;
       state = current == null
           ? EmailVerificationPending(email)
           : Authenticated(userId: current.userId, email: current.email);
@@ -95,6 +105,20 @@ class AuthController extends Notifier<AuthStatus> {
     } catch (_) {
       state = const AuthError('Não foi possível concluir o cadastro.');
     }
+  }
+
+  /// Lido (nunca consumido) pelo `redirect` do Router - só leitura, sem
+  /// efeito colateral, para não depender de quantas vezes o GoRouter
+  /// reavalia `redirect` para a mesma navegação.
+  bool get justSignedUp => _justSignedUp;
+
+  bool _justSignedUp = false;
+
+  /// Chamado pela `OnboardingPage` assim que é exibida (não quando o
+  /// usuário termina/pula) - garante que o tutorial apareça exatamente
+  /// uma vez por cadastro, independente de qual botão o usuário aperta.
+  void acknowledgeOnboardingShown() {
+    _justSignedUp = false;
   }
 
   Future<void> signIn({required String email, required String password}) async {

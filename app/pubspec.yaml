@@ -164,6 +164,12 @@ flutter:
     - assets/borah/animations/borah_loading_transparent.webp
     - assets/borah/ui/expressions/symbol_smiling.svg
     - assets/borah/ui/expressions/symbol_surprised.svg
+    # Rodada "visual mais moderno/tutorial" (Onboarding): mais 2
+    # expressões do mesmo conjunto, antes copiadas no repositório mas sem
+    # consumo nenhum (ver IV-06_A_09_BRAND_IDENTITY_COMPLETION.md) -
+    # passam a ser usadas por `onboarding_page.dart`.
+    - assets/borah/ui/expressions/symbol_celebrating.svg
+    - assets/borah/ui/expressions/symbol_winking.svg
     - assets/borah/ui/ranking/medal_1.svg
     - assets/borah/ui/ranking/medal_2.svg
     - assets/borah/ui/ranking/medal_3.svg

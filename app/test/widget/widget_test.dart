@@ -27,6 +27,32 @@ class _FakeAuthenticatedController extends AuthController {
   Future<void> restoreSession() async {}
 }
 
+/// Rodada "visual mais moderno/tutorial": simula um cadastro recém-feito
+/// nesta mesma sessão (`AuthController.justSignedUp`), sem depender de
+/// `signUp()`/`AuthRepository` reais - mesmo princípio de
+/// `_FakeAuthenticatedController`, só que também sobrescrevendo
+/// `justSignedUp`/`acknowledgeOnboardingShown()` (privados na classe
+/// real) com um campo mutável próprio, para poder observar a "1 exibição
+/// só" nos testes abaixo.
+class _FakeJustSignedUpController extends AuthController {
+  bool _fakeJustSignedUp = true;
+
+  @override
+  AuthStatus build() =>
+      const Authenticated(userId: 'user-1', email: 'user@teste.com');
+
+  @override
+  Future<void> restoreSession() async {}
+
+  @override
+  bool get justSignedUp => _fakeJustSignedUp;
+
+  @override
+  void acknowledgeOnboardingShown() {
+    _fakeJustSignedUp = false;
+  }
+}
+
 void main() {
   testWidgets('Sem sessão salva, a Splash redireciona para o Login', (
     tester,
@@ -149,6 +175,39 @@ void main() {
 
       expect(find.text('Entrar em grupo'), findsOneWidget);
       expect(find.text('LATE1234'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Onboarding (rodada "visual mais moderno/tutorial"): cadastro '
+    'recém-feito (justSignedUp) numa rota de auth redireciona para '
+    '/onboarding, não direto para /home',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(
+            _FakeJustSignedUpController.new,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const BorahApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      container.read(appRouterProvider).go('/signup');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Avalie cada restaurante que você visitar'),
+        findsOneWidget,
+      );
+      expect(find.text('Criar conta'), findsNothing);
     },
   );
 }

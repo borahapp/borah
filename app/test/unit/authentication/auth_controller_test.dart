@@ -142,6 +142,104 @@ void main() {
     });
   });
 
+  group(
+    'justSignedUp / acknowledgeOnboardingShown (rodada "visual mais '
+    'moderno/tutorial") - consultado pelo redirect do Router para '
+    'mandar o cadastro recém-feito para o Onboarding',
+    () {
+      test(
+        'após signUp() com confirmação de e-mail pendente, '
+        'justSignedUp é true',
+        () async {
+          when(
+            () => repository.signUp(
+              name: any(named: 'name'),
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            ),
+          ).thenAnswer((_) async {});
+
+          final notifier = container.read(authControllerProvider.notifier);
+          await notifier.signUp(
+            name: 'Ana',
+            email: 'ana@borah.com',
+            password: '123456',
+          );
+
+          expect(notifier.justSignedUp, isTrue);
+        },
+      );
+
+      test(
+        'após signUp() com confirmação de e-mail desabilitada (sessão '
+        'imediata), justSignedUp também é true',
+        () async {
+          when(
+            () => repository.signUp(
+              name: any(named: 'name'),
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => repository.currentUser,
+          ).thenReturn((userId: 'user-1', email: 'ana@borah.com'));
+
+          final notifier = container.read(authControllerProvider.notifier);
+          await notifier.signUp(
+            name: 'Ana',
+            email: 'ana@borah.com',
+            password: '123456',
+          );
+
+          expect(notifier.justSignedUp, isTrue);
+        },
+      );
+
+      test('signIn() normal não liga justSignedUp', () async {
+        when(
+          () => repository.signIn(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => repository.currentUser,
+        ).thenReturn((userId: 'user-1', email: 'a@borah.com'));
+
+        final notifier = container.read(authControllerProvider.notifier);
+        await notifier.signIn(email: 'a@borah.com', password: '123456');
+
+        expect(notifier.justSignedUp, isFalse);
+      });
+
+      test(
+        'acknowledgeOnboardingShown() limpa o flag - 1 exibição só',
+        () async {
+          when(
+            () => repository.signUp(
+              name: any(named: 'name'),
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+            ),
+          ).thenAnswer((_) async {});
+
+          final notifier = container.read(authControllerProvider.notifier);
+          await notifier.signUp(
+            name: 'Ana',
+            email: 'ana@borah.com',
+            password: '123456',
+          );
+          expect(notifier.justSignedUp, isTrue);
+
+          notifier.acknowledgeOnboardingShown();
+
+          expect(notifier.justSignedUp, isFalse);
+        },
+      );
+    },
+  );
+
   // RC-04E: eventos do stream de sessão além de signedIn/signedOut.
   group('onAuthStateChange - eventos do stream', () {
     test('evento passwordRecovery -> PasswordRecoveryInProgress', () async {

@@ -48,6 +48,7 @@ import '../../features/notifications/domain/app_notification.dart';
 import '../../features/notifications/presentation/pages/notification_detail_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
+import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/rankings/presentation/pages/rankings_page.dart';
 import '../../features/restaurants/presentation/pages/create_restaurant_page.dart';
 import '../../features/restaurants/presentation/pages/restaurant_detail_page.dart';
@@ -81,6 +82,7 @@ const _authRoutes = {
 /// com parâmetro, como `/restaurants/:id`.
 const _protectedRoutePrefixes = [
   '/home',
+  '/onboarding',
   '/profile',
   '/settings',
   '/restaurants',
@@ -220,7 +222,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/groups/join';
       }
 
-      if (status is Authenticated && isAuthRoute) return '/home';
+      // Onboarding (rodada "visual mais moderno/tutorial"): o 1º
+      // Authenticated depois de um cadastro recém-feito (nesta mesma
+      // sessão do app - ver `AuthController.justSignedUp`) vai para o
+      // tutorial de boas-vindas em vez de direto para a Home. Só leitura
+      // (`justSignedUp`, nunca `acknowledgeOnboardingShown()`) - seguro
+      // mesmo que o GoRouter reavalie `redirect` mais de uma vez para a
+      // mesma navegação.
+      if (status is Authenticated && isAuthRoute) {
+        return ref.read(authControllerProvider.notifier).justSignedUp
+            ? '/onboarding'
+            : '/home';
+      }
       if (status is! Authenticated && _isProtectedRoute(location)) {
         return '/login';
       }
@@ -269,6 +282,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeShellPage(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
         path: '/profile',
