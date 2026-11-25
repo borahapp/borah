@@ -8,6 +8,7 @@ import '../../../core/models/paged_result.dart';
 import '../../../core/network/supabase_client_provider.dart';
 import '../domain/review.dart';
 import '../domain/review_repository.dart';
+import '../domain/reviewer_ranking_entry.dart';
 import 'review_remote_datasource.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
@@ -209,6 +210,40 @@ class ReviewRepositoryImpl implements ReviewRepository {
         photos.addAll(reviewPhotos);
       }
       return photos.length > limit ? photos.sublist(0, limit) : photos;
+    });
+  }
+
+  @override
+  Future<PagedResult<ReviewerRankingEntry>> listTopReviewers({
+    required int page,
+    required int limit,
+  }) {
+    return _guard(() async {
+      final offset = (page - 1) * limit;
+      final rows = await _datasource.listTopReviewers(
+        limit: limit + 1,
+        offset: offset,
+      );
+
+      final hasNextPage = rows.length > limit;
+      final pageRows = hasNextPage ? rows.sublist(0, limit) : rows;
+
+      final entries = pageRows
+          .map(
+            (row) => ReviewerRankingEntry(
+              userId: row['user_id'] as String,
+              fullName: row['full_name'] as String?,
+              reviewsCount: (row['reviews_count'] as num).toInt(),
+            ),
+          )
+          .toList();
+
+      return PagedResult<ReviewerRankingEntry>(
+        items: entries,
+        page: page,
+        limit: limit,
+        hasNextPage: hasNextPage,
+      );
     });
   }
 

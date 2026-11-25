@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../../core/models/paged_result.dart';
 import 'review.dart';
+import 'reviewer_ranking_entry.dart';
 
 /// Erro traduzido pela camada de dados (mesmo padrão do DV-01/DV-02/DV-03) -
 /// nenhuma camada acima de `data/` conhece exceções do Supabase.
@@ -106,4 +107,13 @@ abstract interface class ReviewRepository {
   /// `listPhotoUrls` por review, parando no primeiro [limit] fotos), só
   /// que filtrando por `user_id` em vez de `restaurant_id`.
   Future<List<String>> listUserPhotos(String userId, {int limit = 12});
+
+  /// Rodada "perfil individual como centro" (pós-FASE 09), Item E -
+  /// Ranking de Avaliadores: quem mais avaliou restaurantes, globalmente.
+  /// Via RPC `get_top_reviewers` (agregação no banco, sem contador
+  /// denormalizado - ver `20261124150000_create_get_top_reviewers.sql`).
+  Future<PagedResult<ReviewerRankingEntry>> listTopReviewers({
+    required int page,
+    required int limit,
+  });
 }

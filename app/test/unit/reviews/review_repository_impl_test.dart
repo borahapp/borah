@@ -256,6 +256,59 @@ void main() {
     },
   );
 
+  group(
+    'listTopReviewers (rodada "perfil individual como centro", '
+    'pós-FASE 09, Item E)',
+    () {
+      test('mapeia as linhas do RPC e detecta próxima página pelo '
+          'limit+1 extra', () async {
+        when(
+          () => datasource.listTopReviewers(limit: 3, offset: 0),
+        ).thenAnswer(
+          (_) async => [
+            {'user_id': 'user-1', 'full_name': 'Ana', 'reviews_count': 10},
+            {'user_id': 'user-2', 'full_name': 'Bruno', 'reviews_count': 7},
+            {'user_id': 'user-3', 'full_name': null, 'reviews_count': 3},
+          ],
+        );
+
+        final result = await repository.listTopReviewers(page: 1, limit: 2);
+
+        expect(result.hasNextPage, isTrue);
+        expect(result.items, hasLength(2));
+        expect(result.items[0].userId, 'user-1');
+        expect(result.items[0].fullName, 'Ana');
+        expect(result.items[0].reviewsCount, 10);
+        expect(result.items[2 - 1].fullName, 'Bruno');
+      });
+
+      test('página seguinte usa o offset correto', () async {
+        when(
+          () => datasource.listTopReviewers(limit: 21, offset: 20),
+        ).thenAnswer((_) async => []);
+
+        final result = await repository.listTopReviewers(page: 2, limit: 20);
+
+        expect(result.items, isEmpty);
+        expect(result.hasNextPage, isFalse);
+        verify(
+          () => datasource.listTopReviewers(limit: 21, offset: 20),
+        ).called(1);
+      });
+
+      test('erro do datasource propaga como ReviewRepositoryException', () async {
+        when(
+          () => datasource.listTopReviewers(limit: 21, offset: 0),
+        ).thenThrow(const PostgrestException(message: 'erro inesperado'));
+
+        expect(
+          () => repository.listTopReviewers(page: 1, limit: 20),
+          throwsA(isA<ReviewRepositoryException>()),
+        );
+      });
+    },
+  );
+
   group('getById', () {
     test('resolve autor e restaurante para uma única review', () async {
       when(

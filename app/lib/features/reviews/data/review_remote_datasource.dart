@@ -205,4 +205,18 @@ class ReviewRemoteDatasource {
         .eq('user_id', userId);
     return List<Map<String, dynamic>>.from(rows).isNotEmpty;
   }
+
+  /// Rodada "perfil individual como centro" (pós-FASE 09), Item E - mesmo
+  /// padrão de `FeedRemoteDatasource.fetchRecentPublicGroupJoins`
+  /// (`p_limit`/`p_offset`, agregação feita inteiramente no banco).
+  Future<List<Map<String, dynamic>>> listTopReviewers({
+    required int limit,
+    required int offset,
+  }) async {
+    final rows = await _client.rpc(
+      'get_top_reviewers',
+      params: {'p_limit': limit, 'p_offset': offset},
+    );
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
 }
