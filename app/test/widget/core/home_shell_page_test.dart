@@ -1,5 +1,6 @@
 import 'package:app/core/models/paged_result.dart';
 import 'package:app/core/router/home_shell_page.dart';
+import 'package:app/core/services/location_service.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/events/data/event_repository_impl.dart';
 import 'package:app/features/events/domain/event_repository.dart';
@@ -38,6 +39,8 @@ class MockGamificationRepository extends Mock
     implements GamificationRepository {}
 
 class MockUserProfileRepository extends Mock implements UserProfileRepository {}
+
+class MockLocationService extends Mock implements LocationService {}
 
 UserProfile _profile() {
   return UserProfile(
@@ -78,6 +81,7 @@ Widget _wrap({
   required MockFeedRepository feedRepository,
   required MockGamificationRepository gamificationRepository,
   required MockUserProfileRepository userProfileRepository,
+  required MockLocationService locationService,
 }) {
   when(() => groupRepository.listMine()).thenAnswer((_) async => []);
   when(
@@ -142,6 +146,7 @@ Widget _wrap({
       feedRepositoryProvider.overrideWithValue(feedRepository),
       gamificationRepositoryProvider.overrideWithValue(gamificationRepository),
       userProfileRepositoryProvider.overrideWithValue(userProfileRepository),
+      locationServiceProvider.overrideWithValue(locationService),
       currentUserIdProvider.overrideWithValue('user-1'),
     ],
     child: const MaterialApp(home: HomeShellPage()),
@@ -156,6 +161,7 @@ void main() {
   late MockFeedRepository feedRepository;
   late MockGamificationRepository gamificationRepository;
   late MockUserProfileRepository userProfileRepository;
+  late MockLocationService locationService;
 
   setUp(() {
     groupRepository = MockGroupRepository();
@@ -165,6 +171,14 @@ void main() {
     feedRepository = MockFeedRepository();
     gamificationRepository = MockGamificationRepository();
     userProfileRepository = MockUserProfileRepository();
+    locationService = MockLocationService();
+    // Explorar (índice 1) busca "Perto de você" ao montar, mesmo fora da
+    // aba visível (`IndexedStack`) - permissão negada é o estado mais
+    // barato de simular e não interfere em nenhuma asserção deste
+    // arquivo (nenhum teste aqui olha o conteúdo de Explorar).
+    when(
+      () => locationService.getCurrentLocation(),
+    ).thenThrow(LocationPermissionDeniedException());
   });
 
   Widget wrap() => _wrap(
@@ -175,6 +189,7 @@ void main() {
     feedRepository: feedRepository,
     gamificationRepository: gamificationRepository,
     userProfileRepository: userProfileRepository,
+    locationService: locationService,
   );
 
   testWidgets('mostra os 5 itens da barra e abre na nova Home', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:app/app.dart';
 import 'package:app/core/deep_link/deep_link.dart';
 import 'package:app/core/router/app_router.dart';
+import 'package:app/core/services/location_service.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/authentication/data/auth_repository_impl.dart';
 import 'package:app/features/authentication/domain/auth_repository.dart';
@@ -50,6 +51,20 @@ class _FakeJustSignedUpController extends AuthController {
   @override
   void acknowledgeOnboardingShown() {
     _fakeJustSignedUp = false;
+  }
+}
+
+/// Item G (sugestão por localização em Explorar) - `HomeShellPage` monta
+/// `SearchPage` via `IndexedStack` assim que a Home é alcançada, mesmo
+/// fora da aba visível, disparando `NearbyRestaurantsController.load()`.
+/// Sem este dublê, os testes abaixo que chegam à Home travariam em
+/// `pumpAndSettle` esperando a chamada real de plataforma do
+/// `geolocator` (sem handler nenhum registrado neste ambiente de teste).
+/// Permissão negada é o estado mais barato de simular.
+class _FakeDeniedLocationService extends LocationService {
+  @override
+  Future<LocationCoordinates> getCurrentLocation() {
+    throw LocationPermissionDeniedException();
   }
 }
 
@@ -149,6 +164,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(_FakeAuthenticatedController.new),
+          locationServiceProvider.overrideWithValue(
+            _FakeDeniedLocationService(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -187,6 +205,9 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(
             _FakeJustSignedUpController.new,
+          ),
+          locationServiceProvider.overrideWithValue(
+            _FakeDeniedLocationService(),
           ),
         ],
       );

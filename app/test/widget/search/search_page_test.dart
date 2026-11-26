@@ -1,9 +1,11 @@
 import 'package:app/core/models/paged_result.dart';
+import 'package:app/core/services/location_service.dart';
 import 'package:app/features/authentication/application/auth_controller.dart';
 import 'package:app/features/groups/data/group_repository_impl.dart';
 import 'package:app/features/groups/domain/group.dart';
 import 'package:app/features/groups/domain/group_repository.dart';
 import 'package:app/features/restaurants/data/restaurant_repository_impl.dart';
+import 'package:app/features/restaurants/domain/nearby_restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant.dart';
 import 'package:app/features/restaurants/domain/restaurant_repository.dart';
 import 'package:app/features/restaurants/domain/restaurant_search_filters.dart';
@@ -26,6 +28,8 @@ class MockGroupRepository extends Mock implements GroupRepository {}
 class MockRestaurantRepository extends Mock implements RestaurantRepository {}
 
 class MockDiscoveryRepository extends Mock implements DiscoveryRepository {}
+
+class MockLocationService extends Mock implements LocationService {}
 
 class _RestaurantSearchFiltersFake extends Fake
     implements RestaurantSearchFilters {}
@@ -80,12 +84,24 @@ Restaurant _restaurant() {
   );
 }
 
+/// Padrão quando o teste não precisa de "Perto de você" - permissão
+/// negada é o estado mais barato de montar (um só `thenThrow`), e a
+/// seção não interfere em nenhuma asserção dos testes que não a citam.
+MockLocationService _defaultLocationService() {
+  final service = MockLocationService();
+  when(
+    () => service.getCurrentLocation(),
+  ).thenThrow(LocationPermissionDeniedException());
+  return service;
+}
+
 Widget _wrap(
   MockFollowerRepository followerRepository,
   MockGroupRepository groupRepository,
   MockRestaurantRepository restaurantRepository,
-  MockDiscoveryRepository discoveryRepository,
-) {
+  MockDiscoveryRepository discoveryRepository, {
+  MockLocationService? locationService,
+}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -124,6 +140,9 @@ Widget _wrap(
       groupRepositoryProvider.overrideWithValue(groupRepository),
       restaurantRepositoryProvider.overrideWithValue(restaurantRepository),
       discoveryRepositoryProvider.overrideWithValue(discoveryRepository),
+      locationServiceProvider.overrideWithValue(
+        locationService ?? _defaultLocationService(),
+      ),
       currentUserIdProvider.overrideWithValue('me'),
     ],
     child: MaterialApp.router(routerConfig: router),
@@ -630,5 +649,156 @@ void main() {
       find.text('Não foi possível buscar. Tente novamente.'),
       findsOneWidget,
     );
+  });
+
+  group('Perto de você (Item G)', () {
+    NearbyRestaurant nearbyRestaurant() {
+      return const NearbyRestaurant(
+        restaurantId: 'near-1',
+        name: 'Trattoria da Esquina',
+        category: 'Italiana',
+        totalReviews: 4,
+        distanceKm: 1.2,
+      );
+    }
+
+    testWidgets('com sucesso, mostra os restaurantes com a distância', (
+      tester,
+    ) async {
+      final locationService = MockLocationService();
+      when(() => locationService.getCurrentLocation()).thenAnswer(
+        (_) async =>
+            const LocationCoordinates(latitude: -23.5, longitude: -46.6),
+      );
+      when(
+        () => restaurantRepository.listNearby(
+          latitude: -23.5,
+          longitude: -46.6,
+          limit: 10,
+        ),
+      ).thenAnswer((_) async => [nearbyRestaurant()]);
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+          locationService: locationService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Trattoria da Esquina'), findsOneWidget);
+      expect(find.text('1.2 km'), findsOneWidget);
+    });
+
+    testWidgets('sem restaurantes próximos, mostra a mensagem vazia', (
+      tester,
+    ) async {
+      final locationService = MockLocationService();
+      when(() => locationService.getCurrentLocation()).thenAnswer(
+        (_) async =>
+            const LocationCoordinates(latitude: -23.5, longitude: -46.6),
+      );
+      when(
+        () => restaurantRepository.listNearby(
+          latitude: -23.5,
+          longitude: -46.6,
+          limit: 10,
+        ),
+      ).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+          locationService: locationService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Nenhum restaurante cadastrado perto de você ainda.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'permissão negada mostra mensagem com "Tentar novamente", que '
+      'rebusca a localização',
+      (tester) async {
+        final locationService = MockLocationService();
+        when(
+          () => locationService.getCurrentLocation(),
+        ).thenThrow(LocationPermissionDeniedException());
+
+        await tester.pumpWidget(
+          _wrap(
+            followerRepository,
+            groupRepository,
+            restaurantRepository,
+            discoveryRepository,
+            locationService: locationService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Permita o acesso à localização para ver restaurantes perto '
+            'de você.',
+          ),
+          findsOneWidget,
+        );
+
+        when(() => locationService.getCurrentLocation()).thenAnswer(
+          (_) async =>
+              const LocationCoordinates(latitude: -23.5, longitude: -46.6),
+        );
+        when(
+          () => restaurantRepository.listNearby(
+            latitude: -23.5,
+            longitude: -46.6,
+            limit: 10,
+          ),
+        ).thenAnswer((_) async => [nearbyRestaurant()]);
+
+        await tester.tap(find.text('Tentar novamente'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Trattoria da Esquina'), findsOneWidget);
+      },
+    );
+
+    testWidgets('serviço de localização desligado mostra mensagem própria', (
+      tester,
+    ) async {
+      final locationService = MockLocationService();
+      when(
+        () => locationService.getCurrentLocation(),
+      ).thenThrow(LocationServiceDisabledException());
+
+      await tester.pumpWidget(
+        _wrap(
+          followerRepository,
+          groupRepository,
+          restaurantRepository,
+          discoveryRepository,
+          locationService: locationService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Ative a localização do seu dispositivo para ver restaurantes '
+          'perto de você.',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }

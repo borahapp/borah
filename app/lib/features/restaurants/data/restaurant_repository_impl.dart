@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 
 import '../../../core/models/paged_result.dart';
 import '../../../core/network/supabase_client_provider.dart';
+import '../domain/nearby_restaurant.dart';
 import '../domain/restaurant.dart';
 import '../domain/restaurant_repository.dart';
 import '../domain/restaurant_search_filters.dart';
@@ -219,6 +220,24 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
     });
   }
 
+  @override
+  Future<List<NearbyRestaurant>> listNearby({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 20,
+    int limit = 10,
+  }) {
+    return _guard(() async {
+      final rows = await _datasource.listNearby(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm,
+        limit: limit,
+      );
+      return rows.map(_mapNearbyRow).toList();
+    });
+  }
+
   Restaurant _mapRow(Map<String, dynamic> row) {
     return Restaurant(
       id: row['id'] as String,
@@ -239,6 +258,19 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
       googlePlaceId: row['google_place_id'] as String?,
+    );
+  }
+
+  NearbyRestaurant _mapNearbyRow(Map<String, dynamic> row) {
+    return NearbyRestaurant(
+      restaurantId: row['restaurant_id'] as String,
+      name: row['name'] as String,
+      category: row['category'] as String,
+      city: row['city'] as String?,
+      coverImage: row['cover_image'] as String?,
+      averageRating: (row['average_rating'] as num?)?.toDouble(),
+      totalReviews: row['total_reviews'] as int,
+      distanceKm: (row['distance_km'] as num).toDouble(),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../../../core/models/paged_result.dart';
+import 'nearby_restaurant.dart';
 import 'restaurant.dart';
 import 'restaurant_search_filters.dart';
 
@@ -92,4 +93,15 @@ abstract interface class RestaurantRepository {
   /// legível pelo próprio dono - o cliente não pode agregar favoritos de
   /// outros membros diretamente.
   Future<List<Restaurant>> suggestForGroup(String groupId);
+
+  /// Item G - restaurantes mais próximos de [latitude]/[longitude],
+  /// dentro de [radiusKm] (default 20km). Via RPC `get_nearby_restaurants`
+  /// - só considera restaurantes com coordenadas preenchidas (hoje, só os
+  /// cadastrados via busca do Google Places, F12).
+  Future<List<NearbyRestaurant>> listNearby({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 20,
+    int limit = 10,
+  });
 }

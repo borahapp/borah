@@ -91,6 +91,12 @@ dependencies:
   # resolvida em `pubspec.lock` (1.6.0), sem baixar nada novo.
   http: ^1.6.0
 
+  # Item G (sugestão por localização em Explorar) - localização atual do
+  # dispositivo (Android/iOS/Web), via `LocationService`
+  # (core/services/location_service.dart). Sem backend próprio de mapas -
+  # só usado para ordenar restaurantes já cadastrados por distância.
+  geolocator: ^14.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

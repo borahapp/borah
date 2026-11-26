@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/components/buttons/app_outlined_button.dart';
 import '../../../../design_system/components/buttons/app_text_button.dart';
+import '../../../../design_system/components/cards/restaurant_card.dart';
 import '../../../../design_system/components/feedback/app_animated_switcher.dart';
 import '../../../../design_system/components/feedback/error_state.dart';
 import '../../../../design_system/components/feedback/loading_indicator.dart';
@@ -22,9 +23,11 @@ import '../../../social/presentation/widgets/person_list_tile.dart';
 import '../../../users/domain/user_profile.dart';
 import '../../application/discovery_controller.dart';
 import '../../application/featured_groups_controller.dart';
+import '../../application/nearby_restaurants_controller.dart';
 import '../../application/search_controller.dart';
 import '../states/discovery_status.dart';
 import '../states/featured_groups_status.dart';
+import '../states/nearby_restaurants_status.dart';
 import '../states/search_status.dart';
 
 /// Tela de Pesquisa/Explorar social (FASE SOCIAL 1-3) - Pessoas, Grupos
@@ -69,6 +72,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         _loadMyGroupIds(userId);
       }
       ref.read(featuredGroupsControllerProvider.notifier).load();
+      ref.read(nearbyRestaurantsControllerProvider.notifier).load();
     });
   }
 
@@ -148,6 +152,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final status = ref.watch(searchControllerProvider);
     final discoveryStatus = ref.watch(discoveryControllerProvider);
     final featuredGroupsStatus = ref.watch(featuredGroupsControllerProvider);
+    final nearbyStatus = ref.watch(nearbyRestaurantsControllerProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
 
     ref.listen<SearchStatus>(searchControllerProvider, (previous, next) {
@@ -176,6 +181,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   key: const ValueKey('explore'),
                   discoveryStatus: discoveryStatus,
                   featuredGroupsStatus: featuredGroupsStatus,
+                  nearbyStatus: nearbyStatus,
                   currentUserId: currentUserId,
                   followingIds: _followingIds,
                   myGroupIds: _myGroupIds,
@@ -183,6 +189,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   onLoadMoreGroups: () => ref
                       .read(featuredGroupsControllerProvider.notifier)
                       .loadMore(),
+                  onRetryNearby: () =>
+                      ref.read(nearbyRestaurantsControllerProvider.notifier).load(),
                   onOpenGroup: _openGroup,
                 ),
                 SearchLoading() => const LoadingScreen(
@@ -224,21 +232,25 @@ class _ExploreView extends StatelessWidget {
     super.key,
     required this.discoveryStatus,
     required this.featuredGroupsStatus,
+    required this.nearbyStatus,
     required this.currentUserId,
     required this.followingIds,
     required this.myGroupIds,
     required this.onLoadMoreSuggestions,
     required this.onLoadMoreGroups,
+    required this.onRetryNearby,
     required this.onOpenGroup,
   });
 
   final DiscoveryStatus discoveryStatus;
   final FeaturedGroupsStatus featuredGroupsStatus;
+  final NearbyRestaurantsStatus nearbyStatus;
   final String? currentUserId;
   final Set<String> followingIds;
   final Set<String> myGroupIds;
   final Future<void> Function() onLoadMoreSuggestions;
   final Future<void> Function() onLoadMoreGroups;
+  final VoidCallback onRetryNearby;
   final void Function(Group) onOpenGroup;
 
   @override
@@ -250,6 +262,12 @@ class _ExploreView extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Text('Busque por pessoas, grupos ou restaurantes.'),
         ),
+        const SizedBox(height: AppSpacing.lg),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: SectionHeader(title: 'Perto de você'),
+        ),
+        _NearbyRestaurantsSection(status: nearbyStatus, onRetry: onRetryNearby),
         const SizedBox(height: AppSpacing.lg),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -356,6 +374,98 @@ class _ExploreView extends StatelessWidget {
           ),
         },
       ],
+    );
+  }
+}
+
+/// "Perto de você" (Item G - sugestão por localização). Diferente das
+/// outras 2 seções desta tela (que degradam silenciosamente em falha),
+/// localização negada/desligada é uma situação acionável pelo usuário -
+/// mostra uma mensagem explicando o porquê e um botão para tentar de
+/// novo (ex.: depois de ativar o GPS/permitir no navegador).
+class _NearbyRestaurantsSection extends StatelessWidget {
+  const _NearbyRestaurantsSection({required this.status, required this.onRetry});
+
+  final NearbyRestaurantsStatus status;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (status) {
+      NearbyRestaurantsInitial() ||
+      NearbyRestaurantsLoading() => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Center(
+          key: ValueKey('nearby-loading'),
+          child: LoadingIndicator(size: 28),
+        ),
+      ),
+      NearbyRestaurantsEmpty() => const Padding(
+        key: ValueKey('nearby-empty'),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
+        child: Text('Nenhum restaurante cadastrado perto de você ainda.'),
+      ),
+      NearbyRestaurantsServiceDisabled() => _NearbyRetry(
+        key: const ValueKey('nearby-service-disabled'),
+        message: 'Ative a localização do seu dispositivo para ver '
+            'restaurantes perto de você.',
+        onRetry: onRetry,
+      ),
+      NearbyRestaurantsPermissionDenied() => _NearbyRetry(
+        key: const ValueKey('nearby-permission-denied'),
+        message: 'Permita o acesso à localização para ver restaurantes '
+            'perto de você.',
+        onRetry: onRetry,
+      ),
+      NearbyRestaurantsError() => _NearbyRetry(
+        key: const ValueKey('nearby-error'),
+        message: 'Não foi possível buscar restaurantes perto de você.',
+        onRetry: onRetry,
+      ),
+      NearbyRestaurantsLoaded(:final restaurants) => Column(
+        key: const ValueKey('nearby-loaded'),
+        children: [
+          for (final restaurant in restaurants)
+            RestaurantCard(
+              name: restaurant.name,
+              category: restaurant.category,
+              city: restaurant.city,
+              rating: restaurant.averageRating,
+              reviewCount: restaurant.totalReviews,
+              trailing: Text('${restaurant.distanceKm.toStringAsFixed(1)} km'),
+              onTap: () =>
+                  context.push('/restaurants/${restaurant.restaurantId}'),
+            ),
+        ],
+      ),
+    };
+  }
+}
+
+class _NearbyRetry extends StatelessWidget {
+  const _NearbyRetry({super.key, required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message),
+          const SizedBox(height: AppSpacing.xs),
+          AppTextButton(label: 'Tentar novamente', onPressed: onRetry),
+        ],
+      ),
     );
   }
 }

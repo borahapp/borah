@@ -28,10 +28,14 @@
 		<true/>
 		<!-- RC-04D: exigida pela revisao da App Store por o app usar selecao de
 	     fotos (avatar, capa de restaurante, fotos de review) via image_picker.
-	     Camera, localizacao e notificacoes nao sao usadas - sem chaves
-	     correspondentes. -->
+	     Camera e notificacoes nao sao usadas - sem chaves correspondentes. -->
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>O BORAH precisa acessar suas fotos para que voce escolha uma imagem de perfil ou adicione fotos às suas avaliações.</string>
+		<!-- Item G (sugestão por localização em Explorar) - geolocator exige
+	     esta chave para solicitar permissão "ao usar o app" (nunca em
+	     segundo plano - sem NSLocationAlwaysUsageDescription). -->
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>O BORAH usa sua localização para sugerir restaurantes perto de você em Explorar.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

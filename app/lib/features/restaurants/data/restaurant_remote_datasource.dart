@@ -169,4 +169,23 @@ class RestaurantRemoteDatasource {
     );
     return List<Map<String, dynamic>>.from(rows as List);
   }
+
+  Future<List<Map<String, dynamic>>> listNearby({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+    required int limit,
+  }) async {
+    final rows = await _client.rpc(
+      'get_nearby_restaurants',
+      params: {
+        'p_lat': latitude,
+        'p_lng': longitude,
+        'p_radius_km': radiusKm,
+        'p_limit': limit,
+        'p_offset': 0,
+      },
+    );
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
 }
